@@ -120,7 +120,7 @@ func TestParse(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			fset := NewFlagSet(!test.stopAtFirstArg)
+			fset := NewFlagSet(!test.stopAtFirstArg, "", "")
 			x := fset.Bool("x", test.xDefault, "")
 			force := fset.Bool("force", test.forceDefault, "")
 			o := fset.String("o", test.oDefault, "")

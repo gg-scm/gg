@@ -18,19 +18,24 @@
 package flag
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"sort"
 	"strconv"
 	"strings"
 )
 
 // A FlagSet represents a set of defined flags.  The zero value of a
-// FlagSet is an empty set of flags and allows non-flag arguments to be
-// interspersed with flags.
+// FlagSet is an empty set of flags, allows non-flag arguments to be
+// interspersed with flags, and has no usage information.
 type FlagSet struct {
-	flags   map[string]*flag
-	args    []string
-	argStop bool
+	flags       map[string]*flag
+	args        []string
+	argStop     bool
+	usage       string
+	description string
 }
 
 type flag struct {
@@ -41,18 +46,20 @@ type flag struct {
 }
 
 // NewFlagSet returns a new, empty flag set with the specified
-// intersperse behavior.
-func NewFlagSet(intersperse bool) *FlagSet {
+// intersperse behavior and usage information.
+func NewFlagSet(intersperse bool, usage, description string) *FlagSet {
 	f := new(FlagSet)
-	f.Init(intersperse)
+	f.Init(intersperse, usage, description)
 	return f
 }
 
-// Init sets the argument intersperse behavior for a flag set.  By
-// default, the zero FlagSet allows non-flag arguments to be
-// interspersed with flags.
-func (f *FlagSet) Init(intersperse bool) {
+// Init sets the argument intersperse behavior and usage information for
+// a flag set.  By default, the zero FlagSet allows non-flag arguments
+// to be interspersed with flags.
+func (f *FlagSet) Init(intersperse bool, usage, description string) {
 	f.argStop = !intersperse
+	f.usage = usage
+	f.description = description
 }
 
 // Bool defines a bool flag with specified name, default value, and
@@ -166,6 +173,92 @@ func (f *FlagSet) Arg(i int) string {
 	return f.args[i]
 }
 
+// Help prints the help.
+func (f *FlagSet) Help(w io.Writer) {
+	var buf bytes.Buffer
+	if f.usage != "" {
+		buf.WriteString("usage: ")
+		buf.WriteString(f.usage)
+		buf.WriteByte('\n')
+	}
+	if f.description != "" {
+		if f.usage != "" {
+			buf.WriteByte('\n')
+		}
+		buf.WriteString(f.description)
+		buf.WriteByte('\n')
+	}
+	if len(f.flags) > 0 {
+		if f.usage != "" || f.description != "" {
+			buf.WriteByte('\n')
+		}
+		buf.WriteString("options:\n")
+		w.Write(buf.Bytes())
+		f.printDefaults(w)
+	} else {
+		w.Write(buf.Bytes())
+	}
+}
+
+// printDefaults prints the default values of all defined command-line
+// flags in the set to the given writer.
+func (f *FlagSet) printDefaults(w io.Writer) {
+	names := make([]string, 0, len(f.flags))
+	for k := range f.flags {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+	var buf bytes.Buffer
+	for _, k := range names {
+		ff := f.flags[k]
+		buf.WriteString("  -")
+		buf.WriteString(ff.name)
+		name, usage := unquoteUsage(ff.value, ff.usage)
+		if name != "" && !ff.value.IsBoolFlag() {
+			buf.WriteByte(' ')
+			buf.WriteString(name)
+		}
+		// Boolean flags of one ASCII letter are so common we
+		// treat them specially, putting their usage on the same line.
+		if buf.Len() <= 4 { // space, space, '-', 'x'.
+			buf.WriteString("\t")
+		} else {
+			// Four spaces before the tab triggers good alignment
+			// for both 4- and 8-space tab stops.
+			buf.WriteString("\n    \t")
+		}
+		buf.WriteString(strings.Replace(usage, "\n", "\n    \t", -1))
+		if ff.defValue != "" && ff.defValue != "0" && ff.defValue != "false" {
+			if _, ok := ff.value.(*stringValue); ok {
+				// put quotes on the value
+				fmt.Fprintf(&buf, " (default %q)", ff.defValue)
+			} else {
+				fmt.Fprintf(&buf, " (default %v)", ff.defValue)
+			}
+		}
+		buf.WriteByte('\n')
+		w.Write(buf.Bytes())
+		buf.Reset()
+	}
+}
+
+func unquoteUsage(val Value, usage string) (name, usage_ string) {
+	if i := strings.IndexByte(usage, '`'); i != -1 {
+		if j := strings.IndexByte(usage[i+1:], '`'); j != -1 {
+			j += i + 1
+			name = usage[i+1 : j]
+			return name, usage[:i] + name + usage[j+1:]
+		}
+	}
+	switch val.(type) {
+	case *boolValue:
+		return "", usage
+	case *stringValue:
+		return "string", usage
+	}
+	return "value", usage
+}
+
 // Value is the interface to the dynamic value stored in a flag.
 type Value interface {
 	// String presents the current value as a string.
@@ -222,9 +315,9 @@ func (s *stringValue) IsBoolFlag() bool {
 	return false
 }
 
-// IsHelpUndefined reports true if e indicates that the -help or -h is
+// IsHelp reports true if e indicates that the -help or -h is
 // invoked but no such flag is defined.
-func IsHelpUndefined(e error) bool {
+func IsHelp(e error) bool {
 	return e == errHelp
 }
 
