@@ -40,6 +40,7 @@ type FlagSet struct {
 
 type flag struct {
 	name     string
+	aliases  []string
 	usage    string
 	value    Value
 	defValue string
@@ -78,6 +79,15 @@ func (f *FlagSet) String(name string, value string, usage string) *string {
 	return &value
 }
 
+// MultiString defines a string flag with specified name and usage
+// string.  The return value is the address of a string slice variable
+// that stores the value of each passed flag.
+func (f *FlagSet) MultiString(name string, usage string) *[]string {
+	v := new(multiStringValue)
+	f.Var(v, name, usage)
+	return (*[]string)(v)
+}
+
 // Var defines a flag with the specified name and usage string.
 func (f *FlagSet) Var(value Value, name string, usage string) {
 	if _, exists := f.flags[name]; exists {
@@ -86,8 +96,23 @@ func (f *FlagSet) Var(value Value, name string, usage string) {
 	if f.flags == nil {
 		f.flags = make(map[string]*flag)
 	}
-	ff := &flag{name, usage, value, value.String()}
+	ff := &flag{name: name, usage: usage, value: value, defValue: value.String()}
 	f.flags[name] = ff
+}
+
+// Alias adds aliases for an already defined flag.
+func (f *FlagSet) Alias(name string, aliases ...string) {
+	ff := f.flags[name]
+	if ff == nil {
+		panic("flag alias for undefined: " + name)
+	}
+	ff.aliases = append(ff.aliases, aliases...)
+	for _, a := range aliases {
+		if f.flags[a] != nil {
+			panic("flag redefined: " + a)
+		}
+		f.flags[a] = ff
+	}
 }
 
 // Parse parses flag definitions from the argument list, which should
@@ -204,8 +229,10 @@ func (f *FlagSet) Help(w io.Writer) {
 // flags in the set to the given writer.
 func (f *FlagSet) printDefaults(w io.Writer) {
 	names := make([]string, 0, len(f.flags))
-	for k := range f.flags {
-		names = append(names, k)
+	for name, ff := range f.flags {
+		if ff.name == name {
+			names = append(names, name)
+		}
 	}
 	sort.Strings(names)
 	var buf bytes.Buffer
@@ -214,9 +241,21 @@ func (f *FlagSet) printDefaults(w io.Writer) {
 		buf.WriteString("  -")
 		buf.WriteString(ff.name)
 		name, usage := unquoteUsage(ff.value, ff.usage)
-		if name != "" && !ff.value.IsBoolFlag() {
+		if name != "" {
 			buf.WriteByte(' ')
 			buf.WriteString(name)
+		}
+		if len(ff.aliases) > 0 {
+			aliases := append([]string(nil), ff.aliases...)
+			sort.Strings(aliases)
+			for _, a := range aliases {
+				buf.WriteString("/-")
+				buf.WriteString(a)
+				if name != "" {
+					buf.WriteByte(' ')
+					buf.WriteString(name)
+				}
+			}
 		}
 		// Boolean flags of one ASCII letter are so common we
 		// treat them specially, putting their usage on the same line.
@@ -255,6 +294,11 @@ func unquoteUsage(val Value, usage string) (name, usage_ string) {
 		return "", usage
 	case *stringValue:
 		return "string", usage
+	case *multiStringValue:
+		return "string", usage
+	}
+	if val.IsBoolFlag() {
+		return "", usage
 	}
 	return "value", usage
 }
@@ -312,6 +356,25 @@ func (s *stringValue) Get() interface{} {
 }
 
 func (s *stringValue) IsBoolFlag() bool {
+	return false
+}
+
+type multiStringValue []string
+
+func (s *multiStringValue) String() string {
+	return strings.Join([]string(*s), " ")
+}
+
+func (s *multiStringValue) Set(v string) error {
+	*s = append(*s, v)
+	return nil
+}
+
+func (s *multiStringValue) Get() interface{} {
+	return []string(*s)
+}
+
+func (s *multiStringValue) IsBoolFlag() bool {
 	return false
 }
 

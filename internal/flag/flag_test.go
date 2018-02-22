@@ -105,6 +105,11 @@ func TestParse(t *testing.T) {
 			parsedArgs: []string{"baz"},
 		},
 		{
+			name: "Alias",
+			args: []string{"-out=foo"},
+			o:    "foo",
+		},
+		{
 			name:       "Divider",
 			args:       []string{"-o", "foo", "--", "-o=bar"},
 			o:          "foo",
@@ -124,6 +129,7 @@ func TestParse(t *testing.T) {
 			x := fset.Bool("x", test.xDefault, "")
 			force := fset.Bool("force", test.forceDefault, "")
 			o := fset.String("o", test.oDefault, "")
+			fset.Alias("o", "out")
 			rev := fset.String("rev", test.revDefault, "")
 			if err := fset.Parse(test.args); err != nil {
 				t.Fatal(err)
