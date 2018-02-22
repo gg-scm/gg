@@ -27,8 +27,10 @@ import (
 	"zombiezen.com/go/gut/internal/gittool"
 )
 
+const statusSynopsis = "show changed files in the working directory"
+
 func status(ctx context.Context, git *gittool.Tool, args []string) error {
-	f := flag.NewFlagSet(true, "gut status [FILE [...]]", "show changed files in the working directory")
+	f := flag.NewFlagSet(true, "gut status [FILE [...]]", statusSynopsis)
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(os.Stdout)
 		return nil
@@ -66,8 +68,11 @@ func status(ctx context.Context, git *gittool.Tool, args []string) error {
 			fmt.Println("?", ent.name)
 		case ent.isIgnored():
 			fmt.Println("I", ent.name)
+		case ent.isUnmerged():
+			fmt.Println("U", ent.name)
+		default:
+			panic("unreachable")
 		}
-		// TODO(someday): unmerged
 	}
 	return p.Wait()
 }
@@ -111,6 +116,16 @@ func (ent *statusEntry) isUntracked() bool {
 
 func (ent *statusEntry) isIgnored() bool {
 	return ent.code[0] == '!' && ent.code[1] == '!'
+}
+
+func (ent *statusEntry) isUnmerged() bool {
+	return ent.code[0] == 'D' && ent.code[1] == 'D' ||
+		ent.code[0] == 'A' && ent.code[1] == 'U' ||
+		ent.code[0] == 'U' && ent.code[1] == 'D' ||
+		ent.code[0] == 'U' && ent.code[1] == 'A' ||
+		ent.code[0] == 'D' && ent.code[1] == 'U' ||
+		ent.code[0] == 'A' && ent.code[1] == 'A' ||
+		ent.code[0] == 'U' && ent.code[1] == 'U'
 }
 
 func readStatusEntry(r io.ByteReader) (*statusEntry, error) {

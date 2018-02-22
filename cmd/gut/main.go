@@ -27,11 +27,11 @@ import (
 var globalFlags flag.FlagSet
 
 func main() {
-	globalFlags.Init(false, "gut [options] <command> [ARG [...]]", `Git that comes from the Gut
-
-basic commands:
-  add           add the specified files on the next commit
-  status        show changed files in the working directory`)
+	globalFlags.Init(false, "gut [options] <command> [ARG [...]]", "Git that comes from the Gut\n\n"+
+		"basic commands:\n"+
+		"  add           "+addSynopsis+"\n"+
+		"  commit        "+commitSynopsis+"\n"+
+		"  status        "+statusSynopsis)
 	gitPath := globalFlags.String("git", "", "`path` to git executable")
 	if err := globalFlags.Parse(os.Args[1:]); flag.IsHelp(err) {
 		globalFlags.Help(os.Stdout)
@@ -74,6 +74,8 @@ func init() {
 	subcmds = map[string]func(context.Context, *gittool.Tool, []string) error{
 		"add":    add,
 		"check":  status,
+		"ci":     commit,
+		"commit": commit,
 		"help":   help,
 		"st":     status,
 		"status": status,
@@ -95,8 +97,10 @@ func help(ctx context.Context, git *gittool.Tool, args []string) error {
 	return sub(ctx, git, []string{"--help"})
 }
 
+const addSynopsis = "add the specified files on the next commit"
+
 func add(ctx context.Context, git *gittool.Tool, args []string) error {
-	f := flag.NewFlagSet(true, "gut add FILE [...]", "add the specified files on the next commit")
+	f := flag.NewFlagSet(true, "gut add FILE [...]", addSynopsis)
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(os.Stdout)
 		return nil
