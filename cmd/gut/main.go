@@ -127,22 +127,6 @@ func help(ctx context.Context, git *gittool.Tool, args []string) error {
 	return sub(ctx, git, []string{"--help"})
 }
 
-const addSynopsis = "add the specified files on the next commit"
-
-func add(ctx context.Context, git *gittool.Tool, args []string) error {
-	f := flag.NewFlagSet(true, "gut add FILE [...]", addSynopsis)
-	if err := f.Parse(args); flag.IsHelp(err) {
-		f.Help(os.Stdout)
-		return nil
-	} else if err != nil {
-		return usagef("%v", err)
-	}
-	if f.NArg() == 0 {
-		return usagef("must pass one or more files to add")
-	}
-	return git.Run(ctx, append([]string{"add", "-N", "--"}, f.Args()...)...)
-}
-
 type usageError string
 
 func usagef(format string, args ...interface{}) error {
