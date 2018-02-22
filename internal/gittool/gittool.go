@@ -124,6 +124,9 @@ func (t *Tool) RunOneLiner(ctx context.Context, delim byte, args ...string) ([]b
 			// Not finding the delimiter is probably due to a command failure.
 			return nil, err
 		}
+		if len(buf) == 0 && peekErr == io.EOF {
+			return nil, nil
+		}
 		if peekErr != nil {
 			return nil, fmt.Errorf("run %s: %v", errorSubject(args), peekErr)
 		}

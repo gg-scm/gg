@@ -34,7 +34,8 @@ func main() {
 		"  commit        "+commitSynopsis+"\n"+
 		"  diff          "+diffSynopsis+"\n"+
 		"  log           "+logSynopsis+"\n"+
-		"  status        "+statusSynopsis)
+		"  status        "+statusSynopsis+"\n"+
+		"  update        "+updateSynopsis)
 	gitPath := globalFlags.String("git", "", "`path` to git executable")
 	showArgs := globalFlags.Bool("show-git", false, "log git invocations")
 	if err := globalFlags.Parse(os.Args[1:]); flag.IsHelp(err) {
@@ -94,16 +95,20 @@ var subcmds map[string]func(context.Context, *gittool.Tool, []string) error
 func init() {
 	// Placed in init to break initialization loop.
 	subcmds = map[string]func(context.Context, *gittool.Tool, []string) error{
-		"add":     add,
-		"check":   status,
-		"ci":      commit,
-		"commit":  commit,
-		"diff":    diff,
-		"history": log,
-		"log":     log,
-		"help":    help,
-		"st":      status,
-		"status":  status,
+		"add":      add,
+		"check":    status,
+		"checkout": update,
+		"ci":       commit,
+		"co":       update,
+		"commit":   commit,
+		"diff":     diff,
+		"history":  log,
+		"log":      log,
+		"help":     help,
+		"st":       status,
+		"status":   status,
+		"up":       update,
+		"update":   update,
 	}
 }
 
