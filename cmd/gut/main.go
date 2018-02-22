@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -33,6 +34,7 @@ func main() {
 		"  commit        "+commitSynopsis+"\n"+
 		"  status        "+statusSynopsis)
 	gitPath := globalFlags.String("git", "", "`path` to git executable")
+	showArgs := globalFlags.Bool("show-git", false, "log git invocations")
 	if err := globalFlags.Parse(os.Args[1:]); flag.IsHelp(err) {
 		globalFlags.Help(os.Stdout)
 		return
@@ -54,6 +56,24 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "gut:", err)
 		os.Exit(exitFail)
+	}
+	if *showArgs {
+		git.SetLogHook(func(_ context.Context, args []string) {
+			var buf bytes.Buffer
+			buf.WriteString("gut: exec: git")
+			for _, a := range args {
+				buf.WriteByte(' ')
+				if strings.IndexByte(a, ' ') == -1 {
+					buf.WriteString(a)
+				} else {
+					buf.WriteByte('"')
+					buf.WriteString(a)
+					buf.WriteByte('"')
+				}
+			}
+			buf.WriteByte('\n')
+			os.Stderr.Write(buf.Bytes())
+		})
 	}
 	sub := subcmds[globalFlags.Arg(0)]
 	if sub == nil {

@@ -33,6 +33,7 @@ import (
 // Tool is an installed copy of git.
 type Tool struct {
 	exe string
+	log func(context.Context, []string)
 }
 
 // New returns a Tool that uses the given absolute path.
@@ -67,10 +68,19 @@ func (t *Tool) cmd(ctx context.Context, args []string) *exec.Cmd {
 	return c
 }
 
+// SetLogHook sets a function to be called at the start of every git
+// subprocess.
+func (t *Tool) SetLogHook(hook func(ctx context.Context, args []string)) {
+	t.log = hook
+}
+
 // Run starts the specified git subcommand and waits for it to finish.
 //
 // stderr will be sent to the current process's stderr.
 func (t *Tool) Run(ctx context.Context, args ...string) error {
+	if t.log != nil {
+		t.log(ctx, args)
+	}
 	if err := t.cmd(ctx, args).Run(); err != nil {
 		return wrapError(errorSubject(args), err)
 	}
@@ -84,6 +94,9 @@ func (t *Tool) RunInteractive(ctx context.Context, args ...string) error {
 	c := t.cmd(ctx, args)
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
+	if t.log != nil {
+		t.log(ctx, args)
+	}
 	if err := c.Run(); err != nil {
 		return wrapError(errorSubject(args), err)
 	}
@@ -137,6 +150,9 @@ func (t *Tool) Start(ctx context.Context, args ...string) (*Process, error) {
 	rc, err := c.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("run %s: %v", errorSubject(args), err)
+	}
+	if t.log != nil {
+		t.log(ctx, args)
 	}
 	if err := c.Start(); err != nil {
 		return nil, fmt.Errorf("run %s: %v", errorSubject(args), err)
