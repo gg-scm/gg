@@ -30,7 +30,8 @@ func main() {
 	globalFlags.Init(false, "gut [options] <command> [ARG [...]]", `Git that comes from the Gut
 
 basic commands:
-  add           add the specified files on the next commit`)
+  add           add the specified files on the next commit
+  status        show changed files in the working directory`)
 	gitPath := globalFlags.String("git", "", "`path` to git executable")
 	if err := globalFlags.Parse(os.Args[1:]); flag.IsHelp(err) {
 		globalFlags.Help(os.Stdout)
@@ -71,8 +72,11 @@ var subcmds map[string]func(context.Context, *gittool.Tool, []string) error
 func init() {
 	// Placed in init to break initialization loop.
 	subcmds = map[string]func(context.Context, *gittool.Tool, []string) error{
-		"add":  add,
-		"help": help,
+		"add":    add,
+		"check":  status,
+		"help":   help,
+		"st":     status,
+		"status": status,
 	}
 }
 
