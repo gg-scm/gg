@@ -47,7 +47,7 @@ func commit(ctx context.Context, git *gittool.Tool, args []string) error {
 		commitArgs = append(commitArgs, "--message="+*msg)
 	}
 	commitArgs = append(commitArgs, "--")
-	if len(args) == 0 {
+	if f.NArg() == 0 {
 		var err error
 		commitArgs, err = inferCommitFiles(ctx, git, commitArgs)
 		if err != nil {
