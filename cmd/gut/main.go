@@ -32,6 +32,7 @@ func main() {
 		"basic commands:\n"+
 		"  add           "+addSynopsis+"\n"+
 		"  commit        "+commitSynopsis+"\n"+
+		"  diff          "+diffSynopsis+"\n"+
 		"  status        "+statusSynopsis)
 	gitPath := globalFlags.String("git", "", "`path` to git executable")
 	showArgs := globalFlags.Bool("show-git", false, "log git invocations")
@@ -96,6 +97,7 @@ func init() {
 		"check":  status,
 		"ci":     commit,
 		"commit": commit,
+		"diff":   diff,
 		"help":   help,
 		"st":     status,
 		"status": status,
