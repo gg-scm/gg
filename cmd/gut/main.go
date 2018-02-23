@@ -31,6 +31,7 @@ func main() {
 	globalFlags.Init(false, "gut [options] <command> [ARG [...]]", "Git that comes from the Gut\n\n"+
 		"basic commands:\n"+
 		"  add           "+addSynopsis+"\n"+
+		"  branch        "+branchSynopsis+"\n"+
 		"  commit        "+commitSynopsis+"\n"+
 		"  diff          "+diffSynopsis+"\n"+
 		"  log           "+logSynopsis+"\n"+
@@ -96,6 +97,7 @@ func init() {
 	// Placed in init to break initialization loop.
 	subcmds = map[string]func(context.Context, *gittool.Tool, []string) error{
 		"add":      add,
+		"branch":   branch,
 		"check":    status,
 		"checkout": update,
 		"ci":       commit,
