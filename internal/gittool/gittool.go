@@ -32,8 +32,9 @@ import (
 
 // Tool is an installed copy of git.
 type Tool struct {
-	exe string
-	log func(context.Context, []string)
+	exe        string
+	configHome string
+	log        func(context.Context, []string)
 }
 
 // New returns a Tool that uses the given absolute path.
@@ -65,6 +66,9 @@ func Find() (*Tool, error) {
 func (t *Tool) cmd(ctx context.Context, args []string) *exec.Cmd {
 	c := exec.CommandContext(ctx, t.exe, args...)
 	c.Stderr = os.Stderr
+	if t.configHome != "" {
+		c.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "HOME="+t.configHome)
+	}
 	return c
 }
 
@@ -72,6 +76,14 @@ func (t *Tool) cmd(ctx context.Context, args []string) *exec.Cmd {
 // subprocess.
 func (t *Tool) SetLogHook(hook func(ctx context.Context, args []string)) {
 	t.log = hook
+}
+
+// SetConfigHome instructs the tool to use global configuration from
+// $HOME/.gitconfig and $HOME/.config/git/config.
+//
+// This is primarily useful for setting up hermetic git test cases.
+func (t *Tool) SetConfigHome(home string) {
+	t.configHome = home
 }
 
 // Run starts the specified git subcommand and waits for it to finish.
