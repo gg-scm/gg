@@ -47,7 +47,7 @@ func TestRun(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := env.git.Run(ctx, "-C", env.root, "init", "repo"); err != nil {
+	if err := env.git.Run(ctx, "init", "repo"); err != nil {
 		t.Fatal(err)
 	}
 	gitDir := filepath.Join(env.root, "repo", ".git")
@@ -105,6 +105,7 @@ func newTestEnv(ctx context.Context) (*testEnv, error) {
 		return nil, err
 	}
 	git.SetConfigHome(root)
+	git.SetDir(root)
 	return &testEnv{root: root, git: git}, nil
 }
 

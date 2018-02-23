@@ -33,6 +33,7 @@ import (
 // Tool is an installed copy of git.
 type Tool struct {
 	exe        string
+	dir        string
 	configHome string
 	log        func(context.Context, []string)
 }
@@ -66,6 +67,7 @@ func Find() (*Tool, error) {
 func (t *Tool) cmd(ctx context.Context, args []string) *exec.Cmd {
 	c := exec.CommandContext(ctx, t.exe, args...)
 	c.Stderr = os.Stderr
+	c.Dir = t.dir
 	if t.configHome != "" {
 		c.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "HOME="+t.configHome)
 	}
@@ -76,6 +78,11 @@ func (t *Tool) cmd(ctx context.Context, args []string) *exec.Cmd {
 // subprocess.
 func (t *Tool) SetLogHook(hook func(ctx context.Context, args []string)) {
 	t.log = hook
+}
+
+// SetDir sets the tool's working directory.
+func (t *Tool) SetDir(dir string) {
+	t.dir = dir
 }
 
 // SetConfigHome instructs the tool to use global configuration from

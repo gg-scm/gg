@@ -83,3 +83,15 @@ func (r *Rev) Branch() string {
 	}
 	return ""
 }
+
+// String returns the shortest symbolic name if possible, falling back
+// to the commit hash.
+func (r *Rev) String() string {
+	if b := r.Branch(); b != "" {
+		return b
+	}
+	if r.refname != "" {
+		return r.refname
+	}
+	return r.CommitHex()
+}
