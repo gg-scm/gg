@@ -16,18 +16,16 @@ package main
 
 import (
 	"context"
-	"os"
 
 	"zombiezen.com/go/gut/internal/flag"
-	"zombiezen.com/go/gut/internal/gittool"
 )
 
 const addSynopsis = "add the specified files on the next commit"
 
-func add(ctx context.Context, git *gittool.Tool, args []string) error {
+func add(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gut add FILE [...]", addSynopsis)
 	if err := f.Parse(args); flag.IsHelp(err) {
-		f.Help(os.Stdout)
+		f.Help(cc.stdout)
 		return nil
 	} else if err != nil {
 		return usagef("%v", err)
@@ -35,5 +33,5 @@ func add(ctx context.Context, git *gittool.Tool, args []string) error {
 	if f.NArg() == 0 {
 		return usagef("must pass one or more files to add")
 	}
-	return git.Run(ctx, append([]string{"add", "-N", "--"}, f.Args()...)...)
+	return cc.git.Run(ctx, append([]string{"add", "-N", "--"}, f.Args()...)...)
 }

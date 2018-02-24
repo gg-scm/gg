@@ -32,17 +32,43 @@ import (
 
 // Tool is an installed copy of git.
 type Tool struct {
-	exe        string
-	dir        string
-	configHome string
-	log        func(context.Context, []string)
+	exe string
+	dir string
+
+	env    []string
+	log    func(context.Context, []string)
+	stdin  io.Reader
+	stdout io.Writer
+	stderr io.Writer
 }
 
-// New returns a Tool that uses the given absolute path.
-func New(path string) (*Tool, error) {
+// Options specifies optional parameters to New.
+type Options struct {
+	// LogHook is a function that will be called at the start of every git
+	// subprocess.
+	LogHook func(ctx context.Context, args []string)
+
+	// Env specifies the environment of the subprocess.
+	Env []string
+
+	// Stderr will receive the stderr from the git subprocess.
+	Stderr io.Writer
+
+	// Stdin and Stdout are hooked up to the git subprocess during
+	// RunInteractive.
+	Stdin  io.Reader
+	Stdout io.Writer
+}
+
+// New creates a new tool.
+func New(path string, wd string, opts *Options) (*Tool, error) {
 	if !filepath.IsAbs(path) {
 		return nil, fmt.Errorf("path to git must be absolute (got %q)", path)
 	}
+	if wd == "" {
+		return nil, errors.New("init git: working directory must not be blank")
+	}
+
 	path = filepath.Clean(path)
 	info, err := os.Stat(path)
 	if err != nil {
@@ -52,45 +78,42 @@ func New(path string) (*Tool, error) {
 	if m.IsDir() || m&0111 == 0 {
 		return nil, fmt.Errorf("stat git: not an executable file")
 	}
-	return &Tool{exe: path}, nil
-}
 
-// Find searches for the git executable in PATH.
-func Find() (*Tool, error) {
-	exe, err := exec.LookPath("git")
+	wd, err = filepath.Abs(wd)
 	if err != nil {
-		return nil, fmt.Errorf("find git: %v", err)
+		return nil, fmt.Errorf("init git: resolve working directory: %v", err)
 	}
-	return &Tool{exe: exe}, nil
+
+	t := &Tool{
+		exe: path,
+		dir: wd,
+	}
+	if opts != nil {
+		t.log = opts.LogHook
+		t.env = append([]string(nil), opts.Env...)
+		t.stdin = opts.Stdin
+		t.stdout = opts.Stdout
+		t.stderr = opts.Stderr
+	} else {
+		t.env = []string{}
+	}
+	return t, nil
 }
 
 func (t *Tool) cmd(ctx context.Context, args []string) *exec.Cmd {
 	c := exec.CommandContext(ctx, t.exe, args...)
-	c.Stderr = os.Stderr
+	c.Env = t.env
+	c.Stderr = t.stderr
 	c.Dir = t.dir
-	if t.configHome != "" {
-		c.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "HOME="+t.configHome)
-	}
 	return c
 }
 
-// SetLogHook sets a function to be called at the start of every git
-// subprocess.
-func (t *Tool) SetLogHook(hook func(ctx context.Context, args []string)) {
-	t.log = hook
-}
-
-// SetDir sets the tool's working directory.
-func (t *Tool) SetDir(dir string) {
-	t.dir = dir
-}
-
-// SetConfigHome instructs the tool to use global configuration from
-// $HOME/.gitconfig and $HOME/.config/git/config.
-//
-// This is primarily useful for setting up hermetic git test cases.
-func (t *Tool) SetConfigHome(home string) {
-	t.configHome = home
+// WithDir returns a new tool that is changed to use dir as its working directory.
+func (t *Tool) WithDir(dir string) *Tool {
+	t2 := new(Tool)
+	*t2 = *t
+	t2.dir = dir
+	return t2
 }
 
 // Run starts the specified git subcommand and waits for it to finish.
@@ -111,8 +134,8 @@ func (t *Tool) Run(ctx context.Context, args ...string) error {
 // corresponding streams of the current process.
 func (t *Tool) RunInteractive(ctx context.Context, args ...string) error {
 	c := t.cmd(ctx, args)
-	c.Stdin = os.Stdin
-	c.Stdout = os.Stdout
+	c.Stdin = t.stdin
+	c.Stdout = t.stdout
 	if t.log != nil {
 		t.log(ctx, args)
 	}

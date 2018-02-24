@@ -17,22 +17,20 @@ package main
 import (
 	"context"
 	"errors"
-	"os"
 
 	"zombiezen.com/go/gut/internal/flag"
-	"zombiezen.com/go/gut/internal/gittool"
 )
 
 const diffSynopsis = "diff repository (or selected files)"
 
-func diff(ctx context.Context, git *gittool.Tool, args []string) error {
+func diff(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gut diff [--stat] [-c REV | -r REV1 [-r REV2]] [FILE [...]]", diffSynopsis)
 	change := f.String("c", "", "change made by `rev`ision")
 	var rev revFlag
 	f.Var(&rev, "r", "`rev`ision")
 	stat := f.Bool("stat", false, "output diffstat-style summary of changes")
 	if err := f.Parse(args); flag.IsHelp(err) {
-		f.Help(os.Stdout)
+		f.Help(cc.stdout)
 		return nil
 	} else if err != nil {
 		return usagef("%v", err)
@@ -57,7 +55,7 @@ func diff(ctx context.Context, git *gittool.Tool, args []string) error {
 	}
 	diffArgs = append(diffArgs, "--")
 	diffArgs = append(diffArgs, f.Args()...)
-	return git.RunInteractive(ctx, diffArgs...)
+	return cc.git.RunInteractive(ctx, diffArgs...)
 }
 
 type revFlag struct {

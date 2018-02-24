@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"zombiezen.com/go/gut/internal/flag"
@@ -26,7 +25,7 @@ import (
 
 const branchSynopsis = "list or manage branches"
 
-func branch(ctx context.Context, git *gittool.Tool, args []string) error {
+func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gut branch [-d] [-f] [-r REV] [NAME [...]]", branchSynopsis+`
 
 	Branches are references to commits to help track lines of
@@ -43,7 +42,7 @@ func branch(ctx context.Context, git *gittool.Tool, args []string) error {
 	f.Alias("f", "force")
 	rev := f.String("r", "", "`rev`ision to place branches on")
 	if err := f.Parse(args); flag.IsHelp(err) {
-		f.Help(os.Stdout)
+		f.Help(cc.stdout)
 		return nil
 	} else if err != nil {
 		return usagef("%v", err)
@@ -63,7 +62,7 @@ func branch(ctx context.Context, git *gittool.Tool, args []string) error {
 		}
 		branchArgs = append(branchArgs, "--")
 		branchArgs = append(branchArgs, f.Args()...)
-		if err := git.Run(ctx, branchArgs...); err != nil {
+		if err := cc.git.Run(ctx, branchArgs...); err != nil {
 			return err
 		}
 	case f.NArg() == 0:
@@ -74,7 +73,7 @@ func branch(ctx context.Context, git *gittool.Tool, args []string) error {
 		if *rev != "" {
 			return usagef("can't pass -r without branch names")
 		}
-		return git.RunInteractive(ctx, "--no-pager", "branch")
+		return cc.git.RunInteractive(ctx, "--no-pager", "branch")
 	default:
 		// Create or update
 		for _, b := range f.Args() {
@@ -84,7 +83,7 @@ func branch(ctx context.Context, git *gittool.Tool, args []string) error {
 		}
 		target := "HEAD"
 		if *rev != "" {
-			r, err := gittool.ParseRev(ctx, git, target)
+			r, err := gittool.ParseRev(ctx, cc.git, target)
 			if err != nil {
 				return err
 			}
@@ -98,12 +97,12 @@ func branch(ctx context.Context, git *gittool.Tool, args []string) error {
 		branchArgs = append(branchArgs, "--", "XXX", target)
 		for _, b := range f.Args() {
 			branchArgs[len(branchArgs)-2] = b
-			if err := git.Run(ctx, branchArgs...); err != nil {
+			if err := cc.git.Run(ctx, branchArgs...); err != nil {
 				return fmt.Errorf("branch %q: %v", b, err)
 			}
 		}
 		if *rev == "" {
-			return git.Run(ctx, "symbolic-ref", "-m", "gut branch", "HEAD", "refs/heads/"+f.Arg(0))
+			return cc.git.Run(ctx, "symbolic-ref", "-m", "gut branch", "HEAD", "refs/heads/"+f.Arg(0))
 		}
 	}
 	return nil

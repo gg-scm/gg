@@ -20,24 +20,22 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"zombiezen.com/go/gut/internal/flag"
-	"zombiezen.com/go/gut/internal/gittool"
 )
 
 const statusSynopsis = "show changed files in the working directory"
 
-func status(ctx context.Context, git *gittool.Tool, args []string) error {
+func status(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gut status [FILE [...]]", statusSynopsis)
 	if err := f.Parse(args); flag.IsHelp(err) {
-		f.Help(os.Stdout)
+		f.Help(cc.stdout)
 		return nil
 	} else if err != nil {
 		return usagef("%v", err)
 	}
-	p, err := git.Start(ctx, append([]string{"status", "--porcelain=v1", "-z", "-unormal", "--"}, f.Args()...)...)
+	p, err := cc.git.Start(ctx, append([]string{"status", "--porcelain=v1", "-z", "-unormal", "--"}, f.Args()...)...)
 	if err != nil {
 		return err
 	}

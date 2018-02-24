@@ -96,16 +96,17 @@ type testEnv struct {
 }
 
 func newTestEnv(ctx context.Context) (*testEnv, error) {
-	git, err := New(gitPath)
-	if err != nil {
-		return nil, err
-	}
 	root, err := ioutil.TempDir("", "gut_gittool_test")
 	if err != nil {
 		return nil, err
 	}
-	git.SetConfigHome(root)
-	git.SetDir(root)
+	git, err := New(gitPath, root, &Options{
+		Env: []string{"GIT_CONFIG_NOSYSTEM=1", "HOME=" + root},
+	})
+	if err != nil {
+		os.Remove(root)
+		return nil, err
+	}
 	return &testEnv{root: root, git: git}, nil
 }
 

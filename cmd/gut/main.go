@@ -18,7 +18,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"strings"
 
 	"zombiezen.com/go/gut/internal/flag"
@@ -28,6 +30,22 @@ import (
 var globalFlags flag.FlagSet
 
 func main() {
+	pctx, err := osProcessContext()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "gut:", err)
+		os.Exit(1)
+	}
+	err = run(context.Background(), pctx, os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "gut:", err)
+		if _, ok := err.(*usageError); ok {
+			os.Exit(64)
+		}
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context, pctx *processContext, args []string) error {
 	globalFlags.Init(false, "gut [options] <command> [ARG [...]]", "Git that comes from the Gut\n\n"+
 		"basic commands:\n"+
 		"  add           "+addSynopsis+"\n"+
@@ -39,30 +57,31 @@ func main() {
 		"  update        "+updateSynopsis)
 	gitPath := globalFlags.String("git", "", "`path` to git executable")
 	showArgs := globalFlags.Bool("show-git", false, "log git invocations")
-	if err := globalFlags.Parse(os.Args[1:]); flag.IsHelp(err) {
-		globalFlags.Help(os.Stdout)
-		return
+	if err := globalFlags.Parse(args); flag.IsHelp(err) {
+		globalFlags.Help(pctx.stdout)
+		return nil
 	} else if err != nil {
-		fmt.Fprintln(os.Stderr, "gut: usage:", err)
-		os.Exit(exitUsage)
+		return usagef("%v", err)
 	}
 	if globalFlags.NArg() == 0 {
-		globalFlags.Help(os.Stdout)
-		return
+		globalFlags.Help(pctx.stdout)
+		return nil
 	}
-	var git *gittool.Tool
-	var err error
 	if *gitPath == "" {
-		git, err = gittool.Find()
-	} else {
-		git, err = gittool.New(*gitPath)
+		var err error
+		*gitPath, err = pctx.lookPath("git")
+		if err != nil {
+			return err
+		}
 	}
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "gut:", err)
-		os.Exit(exitFail)
+	opts := gittool.Options{
+		Env:    pctx.env,
+		Stdin:  pctx.stdin,
+		Stdout: pctx.stdout,
+		Stderr: pctx.stderr,
 	}
 	if *showArgs {
-		git.SetLogHook(func(_ context.Context, args []string) {
+		opts.LogHook = func(_ context.Context, args []string) {
 			var buf bytes.Buffer
 			buf.WriteString("gut: exec: git")
 			for _, a := range args {
@@ -76,57 +95,81 @@ func main() {
 				}
 			}
 			buf.WriteByte('\n')
-			os.Stderr.Write(buf.Bytes())
-		})
+			pctx.stderr.Write(buf.Bytes())
+		}
 	}
-	sub := subcmds[globalFlags.Arg(0)]
-	if sub == nil {
-		fmt.Fprintln(os.Stderr, "gut: usage: unknown command", globalFlags.Arg(0))
-		os.Exit(exitUsage)
+	git, err := gittool.New(*gitPath, pctx.dir, &opts)
+	if err != nil {
+		return err
 	}
-	ctx := context.Background()
-	if err := sub(ctx, git, globalFlags.Args()[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "gut:", err)
-		os.Exit(errorExitCode(err))
+	cc := &cmdContext{
+		git:    git,
+		stdout: pctx.stdout,
+		stderr: pctx.stderr,
+	}
+	return dispatch(ctx, cc, &globalFlags, globalFlags.Arg(0), globalFlags.Args()[1:])
+}
+
+type cmdContext struct {
+	git    *gittool.Tool
+	stdout io.Writer
+	stderr io.Writer
+}
+
+func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, name string, args []string) error {
+	switch name {
+	case "add":
+		return add(ctx, cc, args)
+	case "branch":
+		return branch(ctx, cc, args)
+	case "commit", "ci":
+		return commit(ctx, cc, args)
+	case "diff":
+		return diff(ctx, cc, args)
+	case "log", "history":
+		return log(ctx, cc, args)
+	case "status", "st", "check":
+		return status(ctx, cc, args)
+	case "update", "up", "checkout", "co":
+		return update(ctx, cc, args)
+	case "help":
+		if len(args) == 0 {
+			globalFlags.Help(cc.stdout)
+			return nil
+		}
+		if len(args) > 1 || strings.HasPrefix(args[0], "-") {
+			return usagef("help [command]")
+		}
+		return dispatch(ctx, cc, globalFlags, args[0], []string{"--help"})
+	default:
+		return usagef("unknown command %s", name)
 	}
 }
 
-var subcmds map[string]func(context.Context, *gittool.Tool, []string) error
+type processContext struct {
+	dir string
+	env []string
 
-func init() {
-	// Placed in init to break initialization loop.
-	subcmds = map[string]func(context.Context, *gittool.Tool, []string) error{
-		"add":      add,
-		"branch":   branch,
-		"check":    status,
-		"checkout": update,
-		"ci":       commit,
-		"co":       update,
-		"commit":   commit,
-		"diff":     diff,
-		"history":  log,
-		"log":      log,
-		"help":     help,
-		"st":       status,
-		"status":   status,
-		"up":       update,
-		"update":   update,
-	}
+	stdin  io.Reader
+	stdout io.Writer
+	stderr io.Writer
+
+	lookPath func(string) (string, error)
 }
 
-func help(ctx context.Context, git *gittool.Tool, args []string) error {
-	if len(args) == 0 {
-		globalFlags.Help(os.Stdout)
-		return nil
+func osProcessContext() (*processContext, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return nil, err
 	}
-	if len(args) > 1 || strings.HasPrefix(args[0], "-") {
-		return usagef("help [command]")
-	}
-	sub := subcmds[args[0]]
-	if sub == nil {
-		return fmt.Errorf("no help found for %s", args[0])
-	}
-	return sub(ctx, git, []string{"--help"})
+	return &processContext{
+		dir:      dir,
+		env:      os.Environ(),
+		stdin:    os.Stdin,
+		stdout:   os.Stdout,
+		stderr:   os.Stderr,
+		lookPath: exec.LookPath,
+	}, nil
 }
 
 type usageError string
@@ -138,16 +181,4 @@ func usagef(format string, args ...interface{}) error {
 
 func (ue *usageError) Error() string {
 	return "usage: " + string(*ue)
-}
-
-const (
-	exitFail  = 1
-	exitUsage = 64
-)
-
-func errorExitCode(e error) int {
-	if _, ok := e.(*usageError); ok {
-		return exitUsage
-	}
-	return exitFail
 }

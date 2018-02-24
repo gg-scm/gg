@@ -16,23 +16,21 @@ package main
 
 import (
 	"context"
-	"os"
 	"strings"
 
 	"zombiezen.com/go/gut/internal/flag"
-	"zombiezen.com/go/gut/internal/gittool"
 )
 
 const logSynopsis = "show revision history of entire repository or files"
 
-func log(ctx context.Context, git *gittool.Tool, args []string) error {
+func log(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gut log [OPTION [...]] [FILE]", logSynopsis)
 	follow := f.Bool("follow", false, "follow file history across copies and renames")
 	graph := f.Bool("graph", false, "show the revision DAG")
 	f.Alias("graph", "G")
 	rev := f.MultiString("r", "show the specified `rev`ision or range")
 	if err := f.Parse(args); flag.IsHelp(err) {
-		f.Help(os.Stdout)
+		f.Help(cc.stdout)
 		return nil
 	} else if err != nil {
 		return usagef("%v", err)
@@ -56,5 +54,5 @@ func log(ctx context.Context, git *gittool.Tool, args []string) error {
 	logArgs = append(logArgs, *rev...)
 	logArgs = append(logArgs, "--")
 	logArgs = append(logArgs, f.Args()...)
-	return git.RunInteractive(ctx, logArgs...)
+	return cc.git.RunInteractive(ctx, logArgs...)
 }

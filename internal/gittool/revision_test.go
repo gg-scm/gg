@@ -39,7 +39,7 @@ func TestParseRev(t *testing.T) {
 	if err := env.git.Run(ctx, "init", repoPath); err != nil {
 		t.Fatal(err)
 	}
-	env.git.SetDir(repoPath)
+	git := env.git.WithDir(repoPath)
 
 	// First commit
 	const fileName = "foo.txt"
@@ -48,20 +48,20 @@ func TestParseRev(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "add", fileName); err != nil {
+	if err := git.Run(ctx, "add", fileName); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "commit", "-m", "first commit"); err != nil {
+	if err := git.Run(ctx, "commit", "-m", "first commit"); err != nil {
 		t.Fatal(err)
 	}
-	commit1, err := env.git.RunOneLiner(ctx, '\n', "rev-parse", "HEAD")
+	commit1, err := git.RunOneLiner(ctx, '\n', "rev-parse", "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(commit1) != 40 {
 		t.Fatalf("rev-parse returned %q; need 40-digit hash", commit1)
 	}
-	if err := env.git.Run(ctx, "tag", "initial"); err != nil {
+	if err := git.Run(ctx, "tag", "initial"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -70,10 +70,10 @@ func TestParseRev(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {
+	if err := git.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {
 		t.Fatal(err)
 	}
-	commit2, err := env.git.RunOneLiner(ctx, '\n', "rev-parse", "HEAD")
+	commit2, err := git.RunOneLiner(ctx, '\n', "rev-parse", "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,25 +128,25 @@ func TestParseRev(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		rev, err := ParseRev(ctx, env.git, test.refspec)
+		rev, err := ParseRev(ctx, git, test.refspec)
 		if err != nil {
 			if !test.err {
-				t.Errorf("ParseRev(ctx, env.git, %q) error: %v", test.refspec, err)
+				t.Errorf("ParseRev(ctx, git, %q) error: %v", test.refspec, err)
 			}
 			continue
 		}
 		if test.err {
-			t.Errorf("ParseRev(ctx, env.git, %q) = %v; want error", test.refspec, rev)
+			t.Errorf("ParseRev(ctx, git, %q) = %v; want error", test.refspec, rev)
 			continue
 		}
 		if got := rev.CommitHex(); got != test.commitHex {
-			t.Errorf("ParseRev(ctx, env.git, %q).CommitHex() = %q; want %q", test.refspec, got, test.commitHex)
+			t.Errorf("ParseRev(ctx, git, %q).CommitHex() = %q; want %q", test.refspec, got, test.commitHex)
 		}
 		if got := rev.RefName(); got != test.refname {
-			t.Errorf("ParseRev(ctx, env.git, %q).RefName() = %q; want %q", test.refspec, got, test.refname)
+			t.Errorf("ParseRev(ctx, git, %q).RefName() = %q; want %q", test.refspec, got, test.refname)
 		}
 		if got := rev.Branch(); got != test.branch {
-			t.Errorf("ParseRev(ctx, env.git, %q).Branch() = %q; want %q", test.refspec, got, test.branch)
+			t.Errorf("ParseRev(ctx, git, %q).Branch() = %q; want %q", test.refspec, got, test.branch)
 		}
 	}
 }

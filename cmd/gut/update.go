@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"os"
 
 	"zombiezen.com/go/gut/internal/flag"
 	"zombiezen.com/go/gut/internal/gittool"
@@ -24,14 +23,14 @@ import (
 
 const updateSynopsis = "update working directory (or switch revisions)"
 
-func update(ctx context.Context, git *gittool.Tool, args []string) error {
+func update(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gut update [-m] [[-r] REV]", updateSynopsis+"\n\n"+
 		"aliases: up, checkout, co")
 	merge := f.Bool("m", false, "merge uncommitted changes")
 	f.Alias("m", "merge")
 	rev := f.String("r", "", "`rev`ision")
 	if err := f.Parse(args); flag.IsHelp(err) {
-		f.Help(os.Stdout)
+		f.Help(cc.stdout)
 		return nil
 	} else if err != nil {
 		return usagef("%v", err)
@@ -40,16 +39,16 @@ func update(ctx context.Context, git *gittool.Tool, args []string) error {
 	switch {
 	case f.NArg() == 0 && *rev == "":
 		// TODO(someday): how to apply --merge?
-		return git.Run(ctx, "merge", "--quiet", "--ff-only")
+		return cc.git.Run(ctx, "merge", "--quiet", "--ff-only")
 	case f.NArg() == 0 && *rev != "":
 		var err error
-		r, err = gittool.ParseRev(ctx, git, *rev)
+		r, err = gittool.ParseRev(ctx, cc.git, *rev)
 		if err != nil {
 			return err
 		}
 	case f.NArg() == 1 && *rev == "":
 		var err error
-		r, err = gittool.ParseRev(ctx, git, f.Arg(0))
+		r, err = gittool.ParseRev(ctx, cc.git, f.Arg(0))
 		if err != nil {
 			return err
 		}
@@ -67,5 +66,5 @@ func update(ctx context.Context, git *gittool.Tool, args []string) error {
 		coArgs = append(coArgs, "--detach", r.CommitHex())
 	}
 	coArgs = append(coArgs, "--")
-	return git.Run(ctx, coArgs...)
+	return cc.git.Run(ctx, coArgs...)
 }

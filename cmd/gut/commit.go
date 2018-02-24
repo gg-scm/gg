@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 
 	"zombiezen.com/go/gut/internal/flag"
 	"zombiezen.com/go/gut/internal/gittool"
@@ -28,12 +27,12 @@ import (
 
 const commitSynopsis = "commit the specified files or all outstanding changes"
 
-func commit(ctx context.Context, git *gittool.Tool, args []string) error {
+func commit(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gut commit [--amend] [-m MSG] [FILE [...]]", commitSynopsis)
 	amend := f.Bool("amend", false, "amend the parent of the working directory")
 	msg := f.String("m", "", "use text as commit `message`")
 	if err := f.Parse(args); flag.IsHelp(err) {
-		f.Help(os.Stdout)
+		f.Help(cc.stdout)
 		return nil
 	} else if err != nil {
 		return usagef("%v", err)
@@ -49,14 +48,14 @@ func commit(ctx context.Context, git *gittool.Tool, args []string) error {
 	commitArgs = append(commitArgs, "--")
 	if f.NArg() == 0 {
 		var err error
-		commitArgs, err = inferCommitFiles(ctx, git, commitArgs)
+		commitArgs, err = inferCommitFiles(ctx, cc.git, commitArgs)
 		if err != nil {
 			return err
 		}
 	} else {
 		commitArgs = append(commitArgs, f.Args()...)
 	}
-	return git.RunInteractive(ctx, commitArgs...)
+	return cc.git.RunInteractive(ctx, commitArgs...)
 }
 
 func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([]string, error) {
