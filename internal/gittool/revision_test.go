@@ -81,6 +81,11 @@ func TestParseRev(t *testing.T) {
 		t.Fatalf("rev-parse returned %q; need 40-digit hash", commit2)
 	}
 
+	// Run fetch (to write FETCH_HEAD)
+	if err := git.Run(ctx, "fetch", repoPath, "HEAD"); err != nil {
+		t.Fatal(err)
+	}
+
 	// Now verify:
 	tests := []struct {
 		refspec   string
@@ -106,6 +111,11 @@ func TestParseRev(t *testing.T) {
 			commitHex: string(commit2),
 			refname:   "refs/heads/master",
 			branch:    "master",
+		},
+		{
+			refspec:   "FETCH_HEAD",
+			commitHex: string(commit2),
+			refname:   "FETCH_HEAD",
 		},
 		{
 			refspec:   "master",

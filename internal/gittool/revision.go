@@ -15,7 +15,6 @@
 package gittool
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -52,14 +51,9 @@ func ParseRev(ctx context.Context, git *Tool, refspec string) (*Rev, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse revision %q: %v", refspec, err)
 	}
-	if len(refname) > 0 && !bytes.HasPrefix(refname, refPrefix) {
-		return nil, fmt.Errorf("parse revision %q: invalid output from git rev-parse", refspec)
-	}
 	r.refname = string(refname)
 	return r, nil
 }
-
-var refPrefix = []byte("refs/")
 
 // CommitHex returns the full hex-encoded commit hash.
 func (r *Rev) CommitHex() string {
