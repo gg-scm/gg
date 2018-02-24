@@ -52,6 +52,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  branch        "+branchSynopsis+"\n"+
 		"  commit        "+commitSynopsis+"\n"+
 		"  diff          "+diffSynopsis+"\n"+
+		"  init          "+initSynopsis+"\n"+
 		"  log           "+logSynopsis+"\n"+
 		"  status        "+statusSynopsis+"\n"+
 		"  update        "+updateSynopsis)
@@ -126,6 +127,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return commit(ctx, cc, args)
 	case "diff":
 		return diff(ctx, cc, args)
+	case "init":
+		return init_(ctx, cc, args)
 	case "log", "history":
 		return log(ctx, cc, args)
 	case "status", "st", "check":
