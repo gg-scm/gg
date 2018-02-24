@@ -27,8 +27,6 @@ import (
 	"zombiezen.com/go/gut/internal/gittool"
 )
 
-var globalFlags flag.FlagSet
-
 func main() {
 	pctx, err := osProcessContext()
 	if err != nil {
@@ -46,16 +44,19 @@ func main() {
 }
 
 func run(ctx context.Context, pctx *processContext, args []string) error {
-	globalFlags.Init(false, "gut [options] <command> [ARG [...]]", "Git that comes from the Gut\n\n"+
-		"basic commands:\n"+
-		"  add           "+addSynopsis+"\n"+
-		"  branch        "+branchSynopsis+"\n"+
-		"  commit        "+commitSynopsis+"\n"+
-		"  diff          "+diffSynopsis+"\n"+
-		"  init          "+initSynopsis+"\n"+
-		"  log           "+logSynopsis+"\n"+
-		"  status        "+statusSynopsis+"\n"+
-		"  update        "+updateSynopsis)
+	const synopsis = "gut [options] <command> [ARG [...]]"
+	const description = "Git that comes from the Gut\n\n" +
+		"basic commands:\n" +
+		"  add           " + addSynopsis + "\n" +
+		"  branch        " + branchSynopsis + "\n" +
+		"  commit        " + commitSynopsis + "\n" +
+		"  diff          " + diffSynopsis + "\n" +
+		"  init          " + initSynopsis + "\n" +
+		"  log           " + logSynopsis + "\n" +
+		"  status        " + statusSynopsis + "\n" +
+		"  update        " + updateSynopsis
+
+	globalFlags := flag.NewFlagSet(false, synopsis, description)
 	gitPath := globalFlags.String("git", "", "`path` to git executable")
 	showArgs := globalFlags.Bool("show-git", false, "log git invocations")
 	if err := globalFlags.Parse(args); flag.IsHelp(err) {
@@ -108,7 +109,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		stdout: pctx.stdout,
 		stderr: pctx.stderr,
 	}
-	return dispatch(ctx, cc, &globalFlags, globalFlags.Arg(0), globalFlags.Args()[1:])
+	return dispatch(ctx, cc, globalFlags, globalFlags.Arg(0), globalFlags.Args()[1:])
 }
 
 type cmdContext struct {
