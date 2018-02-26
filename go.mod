@@ -12,4 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module "zombiezen.com/go/gut"
+module "zombiezen.com/go/gg"

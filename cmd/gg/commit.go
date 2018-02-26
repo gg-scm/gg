@@ -21,14 +21,14 @@ import (
 	"fmt"
 	"io"
 
-	"zombiezen.com/go/gut/internal/flag"
-	"zombiezen.com/go/gut/internal/gittool"
+	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gittool"
 )
 
 const commitSynopsis = "commit the specified files or all outstanding changes"
 
 func commit(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gut commit [--amend] [-m MSG] [FILE [...]]", commitSynopsis)
+	f := flag.NewFlagSet(true, "gg commit [--amend] [-m MSG] [FILE [...]]", commitSynopsis)
 	amend := f.Bool("amend", false, "amend the parent of the working directory")
 	msg := f.String("m", "", "use text as commit `message`")
 	if err := f.Parse(args); flag.IsHelp(err) {
@@ -93,26 +93,26 @@ func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([
 		}
 	}
 	if unmerged == 1 {
-		return files[:filesStart], errors.New("1 unmerged file; see 'gut status'")
+		return files[:filesStart], errors.New("1 unmerged file; see 'gg status'")
 	}
 	if unmerged > 1 {
-		return files[:filesStart], fmt.Errorf("%d unmerged files; see 'gut status'", unmerged)
+		return files[:filesStart], fmt.Errorf("%d unmerged files; see 'gg status'", unmerged)
 	}
 	if len(files) == filesStart {
 		switch missing {
 		case 0:
 			return files[:filesStart], errors.New("nothing changed")
 		case 1:
-			return files[:filesStart], errors.New("nothing changed (1 missing file; see 'gut status')")
+			return files[:filesStart], errors.New("nothing changed (1 missing file; see 'gg status')")
 		default:
-			return files[:filesStart], fmt.Errorf("nothing changed (%d missing files; see 'gut status')", missing)
+			return files[:filesStart], fmt.Errorf("nothing changed (%d missing files; see 'gg status')", missing)
 		}
 	}
 	if missingStaged == 1 {
-		return files[:filesStart], errors.New("git has staged changes for 1 missing file; see 'gut status'")
+		return files[:filesStart], errors.New("git has staged changes for 1 missing file; see 'gg status'")
 	}
 	if missingStaged > 1 {
-		return files[:filesStart], fmt.Errorf("git has staged changes for %d missing file; see 'gut status'", missingStaged)
+		return files[:filesStart], fmt.Errorf("git has staged changes for %d missing file; see 'gg status'", missingStaged)
 	}
 	return files, p.Wait()
 }

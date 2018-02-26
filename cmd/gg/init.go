@@ -17,13 +17,13 @@ package main
 import (
 	"context"
 
-	"zombiezen.com/go/gut/internal/flag"
+	"zombiezen.com/go/gg/internal/flag"
 )
 
 const initSynopsis = "create a new repository in the given directory"
 
 func init_(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gut init [DEST]", initSynopsis+`
+	f := flag.NewFlagSet(true, "gg init [DEST]", initSynopsis+`
 
 	If no directory is given, the current directory is used.`)
 	if err := f.Parse(args); flag.IsHelp(err) {

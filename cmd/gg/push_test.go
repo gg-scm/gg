@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"zombiezen.com/go/gut/internal/gittool"
+	"zombiezen.com/go/gg/internal/gittool"
 )
 
 func TestPush(t *testing.T) {
@@ -59,7 +59,7 @@ func TestPush(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gut(ctx, repoA, "push", repoB); err != nil {
+	if err := env.gg(ctx, repoA, "push", repoB); err != nil {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(repoB)

@@ -23,19 +23,19 @@ import (
 	"os/exec"
 	"strings"
 
-	"zombiezen.com/go/gut/internal/flag"
-	"zombiezen.com/go/gut/internal/gittool"
+	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gittool"
 )
 
 func main() {
 	pctx, err := osProcessContext()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "gut:", err)
+		fmt.Fprintln(os.Stderr, "gg:", err)
 		os.Exit(1)
 	}
 	err = run(context.Background(), pctx, os.Args[1:])
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "gut:", err)
+		fmt.Fprintln(os.Stderr, "gg:", err)
 		if _, ok := err.(*usageError); ok {
 			os.Exit(64)
 		}
@@ -44,8 +44,8 @@ func main() {
 }
 
 func run(ctx context.Context, pctx *processContext, args []string) error {
-	const synopsis = "gut [options] <command> [ARG [...]]"
-	const description = "Git that comes from the Gut\n\n" +
+	const synopsis = "gg [options] <command> [ARG [...]]"
+	const description = "Git like Mercurial\n\n" +
 		"basic commands:\n" +
 		"  add           " + addSynopsis + "\n" +
 		"  branch        " + branchSynopsis + "\n" +
@@ -87,7 +87,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 	if *showArgs {
 		opts.LogHook = func(_ context.Context, args []string) {
 			var buf bytes.Buffer
-			buf.WriteString("gut: exec: git")
+			buf.WriteString("gg: exec: git")
 			for _, a := range args {
 				buf.WriteByte(' ')
 				if strings.IndexByte(a, ' ') == -1 {

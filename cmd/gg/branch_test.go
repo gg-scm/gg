@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"zombiezen.com/go/gut/internal/gittool"
+	"zombiezen.com/go/gg/internal/gittool"
 )
 
 func TestBranch(t *testing.T) {
@@ -55,7 +55,7 @@ func TestBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gut(ctx, repoPath, "branch", "foo", "bar"); err != nil {
+	if err := env.gg(ctx, repoPath, "branch", "foo", "bar"); err != nil {
 		t.Fatal(err)
 	}
 	if r, err := gittool.ParseRev(ctx, git, "HEAD"); err != nil {

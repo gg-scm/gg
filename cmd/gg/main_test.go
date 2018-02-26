@@ -22,7 +22,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"zombiezen.com/go/gut/internal/gittool"
+	"zombiezen.com/go/gg/internal/gittool"
 )
 
 var (
@@ -75,7 +75,7 @@ func (env *testEnv) cleanup() {
 	os.RemoveAll(env.root)
 }
 
-func (env *testEnv) gut(ctx context.Context, dir string, args ...string) error {
+func (env *testEnv) gg(ctx context.Context, dir string, args ...string) error {
 	pctx := &processContext{
 		dir: dir,
 		env: []string{"GIT_CONFIG_NOSYSTEM=1", "HOME=" + env.root},

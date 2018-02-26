@@ -19,14 +19,14 @@ import (
 	"context"
 	"errors"
 
-	"zombiezen.com/go/gut/internal/flag"
-	"zombiezen.com/go/gut/internal/gittool"
+	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gittool"
 )
 
 const pullSynopsis = "pull changes from the specified source"
 
 func pull(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gut pull [-u] [-r REF] [SOURCE]", pullSynopsis)
+	f := flag.NewFlagSet(true, "gg pull [-u] [-r REF] [SOURCE]", pullSynopsis)
 	remoteRefs := f.MultiString("r", "remote `ref`erences intended to be pulled")
 	update := f.Bool("u", false, "update to new head if new descendants were pulled")
 	if err := f.Parse(args); flag.IsHelp(err) {

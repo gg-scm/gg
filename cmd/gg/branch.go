@@ -19,14 +19,14 @@ import (
 	"fmt"
 	"strings"
 
-	"zombiezen.com/go/gut/internal/flag"
-	"zombiezen.com/go/gut/internal/gittool"
+	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gittool"
 )
 
 const branchSynopsis = "list or manage branches"
 
 func branch(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gut branch [-d] [-f] [-r REV] [NAME [...]]", branchSynopsis+`
+	f := flag.NewFlagSet(true, "gg branch [-d] [-f] [-r REV] [NAME [...]]", branchSynopsis+`
 
 	Branches are references to commits to help track lines of
 	development. Branches are unversioned and can be moved, renamed, and
@@ -34,7 +34,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	
 	Creating or updating to a branch causes it to be marked as active.
 	When a commit is made, the active branch will advance to the new
-	commit. A plain 'gut update' will also advance an active branch, if
+	commit. A plain 'gg update' will also advance an active branch, if
 	possible.`)
 	delete := f.Bool("d", false, "delete the given branches")
 	f.Alias("d", "delete")
@@ -102,7 +102,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 			}
 		}
 		if *rev == "" {
-			return cc.git.Run(ctx, "symbolic-ref", "-m", "gut branch", "HEAD", "refs/heads/"+f.Arg(0))
+			return cc.git.Run(ctx, "symbolic-ref", "-m", "gg branch", "HEAD", "refs/heads/"+f.Arg(0))
 		}
 	}
 	return nil

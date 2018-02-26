@@ -18,14 +18,14 @@ import (
 	"context"
 	"errors"
 
-	"zombiezen.com/go/gut/internal/flag"
-	"zombiezen.com/go/gut/internal/gittool"
+	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gittool"
 )
 
 const pushSynopsis = "push changes to the specified destination"
 
 func push(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gut push [-r REV] [-d REF] [DST]", pushSynopsis)
+	f := flag.NewFlagSet(true, "gg push [-r REV] [-d REF] [DST]", pushSynopsis)
 	dstRef := f.String("d", "", "destination `ref`")
 	f.Alias("d", "dest")
 	rev := f.String("r", "HEAD", "source `rev`ision")

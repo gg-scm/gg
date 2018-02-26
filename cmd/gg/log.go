@@ -18,13 +18,13 @@ import (
 	"context"
 	"strings"
 
-	"zombiezen.com/go/gut/internal/flag"
+	"zombiezen.com/go/gg/internal/flag"
 )
 
 const logSynopsis = "show revision history of entire repository or files"
 
 func log(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gut log [OPTION [...]] [FILE]", logSynopsis)
+	f := flag.NewFlagSet(true, "gg log [OPTION [...]] [FILE]", logSynopsis)
 	follow := f.Bool("follow", false, "follow file history across copies and renames")
 	graph := f.Bool("graph", false, "show the revision DAG")
 	f.Alias("graph", "G")

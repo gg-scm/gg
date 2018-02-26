@@ -17,14 +17,14 @@ package main
 import (
 	"context"
 
-	"zombiezen.com/go/gut/internal/flag"
-	"zombiezen.com/go/gut/internal/gittool"
+	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gittool"
 )
 
 const updateSynopsis = "update working directory (or switch revisions)"
 
 func update(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gut update [-m] [[-r] REV]", updateSynopsis+"\n\n"+
+	f := flag.NewFlagSet(true, "gg update [-m] [[-r] REV]", updateSynopsis+"\n\n"+
 		"aliases: up, checkout, co")
 	merge := f.Bool("m", false, "merge uncommitted changes")
 	f.Alias("m", "merge")

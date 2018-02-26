@@ -16,29 +16,22 @@ package main
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-	"testing"
+
+	"zombiezen.com/go/gg/internal/flag"
 )
 
-func TestInit(t *testing.T) {
-	ctx := context.Background()
-	env, err := newTestEnv(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer env.cleanup()
+const addSynopsis = "add the specified files on the next commit"
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := env.gut(ctx, env.root, "init", repoPath); err != nil {
-		t.Fatal(err)
+func add(ctx context.Context, cc *cmdContext, args []string) error {
+	f := flag.NewFlagSet(true, "gg add FILE [...]", addSynopsis)
+	if err := f.Parse(args); flag.IsHelp(err) {
+		f.Help(cc.stdout)
+		return nil
+	} else if err != nil {
+		return usagef("%v", err)
 	}
-	gitDirPath := filepath.Join(repoPath, ".git")
-	info, err := os.Stat(gitDirPath)
-	if err != nil {
-		t.Fatal(err)
+	if f.NArg() == 0 {
+		return usagef("must pass one or more files to add")
 	}
-	if !info.IsDir() {
-		t.Errorf("%s is not a directory", gitDirPath)
-	}
+	return cc.git.Run(ctx, append([]string{"add", "-N", "--"}, f.Args()...)...)
 }

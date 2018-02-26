@@ -18,13 +18,13 @@ import (
 	"context"
 	"errors"
 
-	"zombiezen.com/go/gut/internal/flag"
+	"zombiezen.com/go/gg/internal/flag"
 )
 
 const diffSynopsis = "diff repository (or selected files)"
 
 func diff(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gut diff [--stat] [-c REV | -r REV1 [-r REV2]] [FILE [...]]", diffSynopsis)
+	f := flag.NewFlagSet(true, "gg diff [--stat] [-c REV | -r REV1 [-r REV2]] [FILE [...]]", diffSynopsis)
 	change := f.String("c", "", "change made by `rev`ision")
 	var rev revFlag
 	f.Var(&rev, "r", "`rev`ision")

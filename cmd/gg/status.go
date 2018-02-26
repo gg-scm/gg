@@ -22,13 +22,13 @@ import (
 	"io"
 	"strings"
 
-	"zombiezen.com/go/gut/internal/flag"
+	"zombiezen.com/go/gg/internal/flag"
 )
 
 const statusSynopsis = "show changed files in the working directory"
 
 func status(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gut status [FILE [...]]", statusSynopsis)
+	f := flag.NewFlagSet(true, "gg status [FILE [...]]", statusSynopsis)
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
