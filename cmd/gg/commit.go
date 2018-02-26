@@ -81,9 +81,12 @@ func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([
 			if ent.code[0] != ' ' {
 				missingStaged++
 			}
-		case ent.isAdded() || ent.isModified() || ent.isRemoved() || ent.isCopied() || ent.isRenamed():
+		case ent.isAdded() || ent.isModified() || ent.isRemoved() || ent.isCopied():
 			// Prepend ":/:" pathspec prefix, because status reports from top of repository.
 			files = append(files, ":/:"+ent.name)
+		case ent.isRenamed():
+			// Prepend ":/:" pathspec prefix, because status reports from top of repository.
+			files = append(files, ":/:"+ent.name, ":/:"+ent.from)
 		case ent.isIgnored() || ent.isUntracked():
 			// Skip
 		case ent.isUnmerged():
