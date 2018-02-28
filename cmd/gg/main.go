@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
@@ -55,6 +56,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  log           " + logSynopsis + "\n" +
 		"  pull          " + pullSynopsis + "\n" +
 		"  push          " + pushSynopsis + "\n" +
+		"  remove        " + removeSynopsis + "\n" +
 		"  status        " + statusSynopsis + "\n" +
 		"  update        " + updateSynopsis
 
@@ -107,6 +109,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		return err
 	}
 	cc := &cmdContext{
+		dir:    pctx.dir,
 		git:    git,
 		stdout: pctx.stdout,
 		stderr: pctx.stderr,
@@ -115,9 +118,19 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 }
 
 type cmdContext struct {
-	git    *gittool.Tool
+	dir string
+
+	git *gittool.Tool
+
 	stdout io.Writer
 	stderr io.Writer
+}
+
+func (cc *cmdContext) abs(path string) string {
+	if filepath.IsAbs(path) {
+		return filepath.Clean(path)
+	}
+	return filepath.Join(cc.dir, path)
 }
 
 func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, name string, args []string) error {
@@ -140,6 +153,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return pull(ctx, cc, args)
 	case "push":
 		return push(ctx, cc, args)
+	case "remove", "rm":
+		return remove(ctx, cc, args)
 	case "update", "up", "checkout", "co":
 		return update(ctx, cc, args)
 	case "help":

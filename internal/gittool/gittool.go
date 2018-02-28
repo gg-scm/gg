@@ -218,6 +218,26 @@ func Config(ctx context.Context, git *Tool, name string) (string, error) {
 	return string(line), nil
 }
 
+// GitDir determines the absolute path of the ".git" directory given the
+// tool's configuration, resolving any symlinks.
+func GitDir(ctx context.Context, git *Tool) (string, error) {
+	line, err := git.RunOneLiner(ctx, '\n', "rev-parse", "--absolute-git-dir")
+	if err != nil {
+		return "", err
+	}
+	return filepath.EvalSymlinks(string(line))
+}
+
+// WorkTree determines the absolute path of the root of the working
+// tree given the tool's configuration, resolving any symlinks.
+func WorkTree(ctx context.Context, git *Tool) (string, error) {
+	line, err := git.RunOneLiner(ctx, '\n', "rev-parse", "--show-toplevel")
+	if err != nil {
+		return "", err
+	}
+	return filepath.EvalSymlinks(string(line))
+}
+
 // Process is a running git subprocess that can be read from.
 type Process struct {
 	cmd     *exec.Cmd
