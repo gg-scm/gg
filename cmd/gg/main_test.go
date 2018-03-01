@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -44,16 +45,18 @@ func TestMain(m *testing.M) {
 }
 
 type testEnv struct {
-	root string
-	git  *gittool.Tool
+	root   string
+	git    *gittool.Tool
+	stderr *bytes.Buffer
+	tb     testing.TB
 }
 
-func newTestEnv(ctx context.Context, s skipper) (*testEnv, error) {
+func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	if testing.Short() {
-		s.Skipf("skipping integration test due to -short")
+		tb.Skipf("skipping integration test due to -short")
 	}
 	if gitPathError != nil {
-		s.Skipf("could not find git, skipping (error: %v)", gitPathError)
+		tb.Skipf("could not find git, skipping (error: %v)", gitPathError)
 	}
 	if exePathError != nil {
 		return nil, fmt.Errorf("could not determine executable path: %v", exePathError)
@@ -62,27 +65,36 @@ func newTestEnv(ctx context.Context, s skipper) (*testEnv, error) {
 	if err != nil {
 		return nil, err
 	}
+	stderr := new(bytes.Buffer)
 	git, err := gittool.New(gitPath, root, &gittool.Options{
-		Env: append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "HOME="+root),
+		Env:    append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "HOME="+root),
+		Stderr: stderr,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &testEnv{root: root, git: git}, nil
+	return &testEnv{
+		root:   root,
+		git:    git,
+		stderr: stderr,
+		tb:     tb,
+	}, nil
 }
 
 func (env *testEnv) cleanup() {
-	os.RemoveAll(env.root)
+	if env.tb.Failed() && env.stderr.Len() > 0 {
+		env.tb.Log("stderr:", env.stderr)
+	}
+	if err := os.RemoveAll(env.root); err != nil {
+		env.tb.Error("cleanup:", err)
+	}
 }
 
 func (env *testEnv) gg(ctx context.Context, dir string, args ...string) error {
 	pctx := &processContext{
-		dir: dir,
-		env: []string{"GIT_CONFIG_NOSYSTEM=1", "HOME=" + env.root},
+		dir:    dir,
+		env:    []string{"GIT_CONFIG_NOSYSTEM=1", "HOME=" + env.root},
+		stderr: env.stderr,
 	}
 	return run(ctx, pctx, append([]string{"-git=" + gitPath}, args...))
-}
-
-type skipper interface {
-	Skipf(string, ...interface{})
 }
