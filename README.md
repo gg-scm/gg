@@ -37,6 +37,7 @@ basic commands:
   pull          pull changes from the specified source
   push          push changes to the specified destination
   remove        remove the specified files on the next commit
+  revert        restore files to their checkout state
   status        show changed files in the working directory
   update        update working directory (or switch revisions)
 
