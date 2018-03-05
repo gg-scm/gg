@@ -38,7 +38,7 @@ func commit(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("%v", err)
 	}
 	var commitArgs []string
-	commitArgs = append(commitArgs, "commit")
+	commitArgs = append(commitArgs, "commit", "--quiet")
 	if *amend {
 		commitArgs = append(commitArgs, "--amend")
 	}
