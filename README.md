@@ -1,10 +1,13 @@
 # gg
 
+[![Build Status](https://travis-ci.org/zombiezen/gg.svg?branch=master)][travis]
+
 gg is a wrapper around [Git][] that behaves like [Mercurial][]. It works well enough for
 my everyday use.
 
 [Git]: https://git-scm.com/
 [Mercurial]: https://www.mercurial-scm.org/
+[travis]: https://travis-ci.org/zombiezen/gg
 
 ## Building
 
