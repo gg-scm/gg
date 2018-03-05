@@ -45,7 +45,7 @@ func main() {
 }
 
 func run(ctx context.Context, pctx *processContext, args []string) error {
-	const synopsis = "gg [options] <command> [ARG [...]]"
+	const synopsis = "gg [options] COMMAND [ARG [...]]"
 	const description = "Git like Mercurial\n\n" +
 		"basic commands:\n" +
 		"  add           " + addSynopsis + "\n" +

@@ -22,19 +22,21 @@ You must have a moderately recent copy of git in your PATH to run gg.
 Use `gg help` to get more help.
 
 ```
-usage: gg [options] <command> [ARG [...]]
+usage: gg [options] COMMAND [ARG [...]]
 
 Git like Mercurial
 
 basic commands:
   add           add the specified files on the next commit
   branch        list or manage branches
+  clone         make a copy of an existing repository
   commit        commit the specified files or all outstanding changes
   diff          diff repository (or selected files)
   init          create a new repository in the given directory
   log           show revision history of entire repository or files
   pull          pull changes from the specified source
   push          push changes to the specified destination
+  remove        remove the specified files on the next commit
   status        show changed files in the working directory
   update        update working directory (or switch revisions)
 
