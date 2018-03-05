@@ -1,0 +1,11 @@
+language: go
+go_import_path: zombiezen.com/go/gg
+go:
+  - "1.10.x"
+env:
+  - VGO=0
+  - VGO=1
+install:
+  - "if [[ \"$VGO\" == 1 ]]; then go get -u golang.org/x/vgo; else; go get -t ./...; fi"
+script:
+  - "if [[ \"$VGO\" == 1 ]]; then vgo test -v all; else; go test -v ./...; fi"
