@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -61,6 +60,11 @@ func TestClone(t *testing.T) {
 		t.Error(err)
 	} else if r.CommitHex() != head {
 		t.Errorf("refs/remotes/origin/master = %s; want %s", r.CommitHex(), head)
+	}
+	if r, err := gittool.ParseRev(ctx, gitB, "refs/remotes/origin/foo"); err != nil {
+		t.Error(err)
+	} else if r.CommitHex() != head {
+		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.CommitHex(), head)
 	}
 	got, err := ioutil.ReadFile(filepath.Join(env.root, "repoB", "foo.txt"))
 	if err != nil {
@@ -106,49 +110,16 @@ func TestClone_Branch(t *testing.T) {
 	} else if r.CommitHex() != head {
 		t.Errorf("refs/remotes/origin/master = %s; want %s", r.CommitHex(), head)
 	}
+	if r, err := gittool.ParseRev(ctx, gitB, "refs/remotes/origin/foo"); err != nil {
+		t.Error(err)
+	} else if r.CommitHex() != head {
+		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.CommitHex(), head)
+	}
 	got, err := ioutil.ReadFile(filepath.Join(env.root, "repoB", "foo.txt"))
 	if err != nil {
 		t.Error(err)
 	} else if string(got) != cloneFileMsg {
 		t.Errorf("repoB/foo.txt content = %q; want %q", got, cloneFileMsg)
-	}
-}
-
-func TestClone_Bare(t *testing.T) {
-	ctx := context.Background()
-	env, err := newTestEnv(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer env.cleanup()
-
-	head, err := setupCloneTest(ctx, env)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.gg(ctx, env.root, "clone", "-u=0", "repoA", "repoB"); err != nil {
-		t.Fatal(err)
-	}
-	gitB := env.git.WithDir(filepath.Join(env.root, "repoB"))
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
-		t.Error(err)
-	} else if r.CommitHex() != head {
-		t.Errorf("refs/heads/master = %s; want %s", r.CommitHex(), head)
-	}
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/foo"); err != nil {
-		t.Error(err)
-	} else if r.CommitHex() != head {
-		t.Errorf("refs/heads/foo = %s; want %s", r.CommitHex(), head)
-	}
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/remotes/origin/master"); err != nil {
-		t.Error(err)
-	} else if r.CommitHex() != head {
-		t.Errorf("refs/remotes/origin/master = %s; want %s", r.CommitHex(), head)
-	}
-	if _, err := os.Stat(filepath.Join(env.root, "repoB", "foo.txt")); err == nil {
-		t.Error("repoB/foo.txt exists")
-	} else if !os.IsNotExist(err) {
-		t.Error(err)
 	}
 }
 
