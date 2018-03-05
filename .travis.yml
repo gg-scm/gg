@@ -6,6 +6,6 @@ env:
   - VGO=0
   - VGO=1
 install:
-  - "if [[ \"$VGO\" == 1 ]]; then go get -u golang.org/x/vgo; else; go get -t ./...; fi"
+  - "if [[ \"$VGO\" == 1 ]]; then go get -u golang.org/x/vgo; else go get -t ./...; fi"
 script:
-  - "if [[ \"$VGO\" == 1 ]]; then vgo test -v all; else; go test -v ./...; fi"
+  - "if [[ \"$VGO\" == 1 ]]; then vgo test -v all; else go test -v ./...; fi"
