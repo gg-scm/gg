@@ -209,7 +209,8 @@ func (t *Tool) Start(ctx context.Context, args ...string) (*Process, error) {
 	}, nil
 }
 
-// Config reads the string value of a git configuration variable.
+// Config reads the string value of a git configuration variable.  It
+// will return an exit error if the config variable does not exist.
 func Config(ctx context.Context, git *Tool, name string) (string, error) {
 	line, err := git.RunOneLiner(ctx, 0, "config", "-z", "--get", "--", name)
 	if err != nil {
