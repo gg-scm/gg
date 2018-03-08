@@ -27,7 +27,7 @@ const pullSynopsis = "pull changes from the specified source"
 
 func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg pull [-u] [-r REF] [SOURCE]", pullSynopsis)
-	remoteRefs := f.MultiString("r", "remote `ref`erences intended to be pulled")
+	remoteRef := f.String("r", "", "remote `ref`erence intended to be pulled")
 	update := f.Bool("u", false, "update to new head if new descendants were pulled")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
@@ -39,38 +39,31 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("can't pass multiple sources")
 	}
 	repo := f.Arg(0)
-	if repo == "" || len(*remoteRefs) == 0 {
-		branch := currentBranch(ctx, cc)
-		remotes, _ := listRemotes(ctx, cc)
-		if repo == "" {
-			if branch != "" {
-				var err error
-				repo, err = gittool.Config(ctx, cc.git, "branch."+branch+".remote")
-				if err != nil {
-					return err
-				}
-			}
-			if repo == "" {
-				if _, ok := remotes["origin"]; !ok {
-					return errors.New("no source given and no remote found")
-				}
-				repo = "origin"
+	var branch string
+	if repo == "" || *remoteRef == "" {
+		branch = currentBranch(ctx, cc)
+	}
+	if repo == "" {
+		if branch != "" {
+			var err error
+			repo, err = gittool.Config(ctx, cc.git, "branch."+branch+".remote")
+			if err != nil {
+				return err
 			}
 		}
-		if len(*remoteRefs) == 0 {
-			if _, isRemote := remotes[repo]; !isRemote {
-				// Anonymous remotes should attempt to fetch the ref most like
-				// the current head. In Mercurial, pull fetches all revisions
-				// not present in the local repository. There does not appear to
-				// be a cheap way to do this in Git, so instead we must only
-				// capture one ref. Likely, the user is trying to capture the
-				// same-named branch.
-				if branch != "" {
-					*remoteRefs = append(*remoteRefs, branch)
-				} else {
-					*remoteRefs = append(*remoteRefs, "HEAD")
-				}
+		if repo == "" {
+			remotes, _ := listRemotes(ctx, cc.git)
+			if _, ok := remotes["origin"]; !ok {
+				return errors.New("no source given and no remote named \"origin\" found")
 			}
+			repo = "origin"
+		}
+	}
+	if *remoteRef == "" {
+		if branch != "" {
+			*remoteRef = branch
+		} else {
+			*remoteRef = "HEAD"
 		}
 	}
 
@@ -80,8 +73,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	} else {
 		gitArgs = append(gitArgs, "fetch")
 	}
-	gitArgs = append(gitArgs, "--", repo)
-	gitArgs = append(gitArgs, *remoteRefs...)
+	gitArgs = append(gitArgs, "--", repo, *remoteRef)
 	return cc.git.Run(ctx, gitArgs...)
 }
 
@@ -93,8 +85,8 @@ func currentBranch(ctx context.Context, cc *cmdContext) string {
 	return r.Branch()
 }
 
-func listRemotes(ctx context.Context, cc *cmdContext) (map[string]struct{}, error) {
-	p, err := cc.git.Start(ctx, "remote")
+func listRemotes(ctx context.Context, git *gittool.Tool) (map[string]struct{}, error) {
+	p, err := git.Start(ctx, "remote")
 	if err != nil {
 		return nil, err
 	}

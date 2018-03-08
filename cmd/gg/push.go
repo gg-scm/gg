@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
 	"zombiezen.com/go/gg/internal/gittool"
@@ -25,7 +26,25 @@ import (
 const pushSynopsis = "push changes to the specified destination"
 
 func push(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg push [-r REV] [-d REF] [DST]", pushSynopsis)
+	f := flag.NewFlagSet(true, "gg push [-r REV] [-d REF] [DST]", pushSynopsis+`
+
+	When no destination repository is given, push uses the first non-
+	empty configuration value of:
+
+	1.  branch.*.pushRemote, if the source is a branch
+	2.  remote.pushDefault
+	3.  branch.*.remote, if the source is a branch
+	4.  Otherwise, the remote called "origin" is used.
+
+	(This is the same repository selection logic that git uses.)
+
+	If -d is given and begins with "refs/", then it specifies the remote
+	ref to update. If the argument passed to -d does not begin with
+	"refs/", it is assumed to be a branch name ("refs/heads/<arg>").
+	If -d is not given and the source is a ref, then the same ref name is
+	used. Otherwise, push exits with a failure exit code. This differs
+	from git, which will consult remote.*.push and push.default. You can
+	imagine this being the most similar to push.default=current.`)
 	dstRef := f.String("d", "", "destination `ref`")
 	f.Alias("d", "dest")
 	rev := f.String("r", "HEAD", "source `rev`ision")
@@ -44,24 +63,52 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	dstRepo := f.Arg(0)
 	if dstRepo == "" {
-		if src.Branch() != "" {
-			var err error
-			dstRepo, err = gittool.Config(ctx, cc.git, "branch."+src.Branch()+".remote")
-			if err != nil {
-				return err
-			}
-		}
-		if dstRepo == "" {
-			// TODO(someday): check that origin exists
-			dstRepo = "origin"
+		var err error
+		dstRepo, err = inferPushRepo(ctx, cc.git, src.Branch())
+		if err != nil {
+			return err
 		}
 	}
 	if *dstRef == "" {
-		if src.Branch() == "" {
-			return errors.New("not on a checked out branch, so can't infer destination. Use -d to specify destination branch.")
+		if src.RefName() == "" {
+			return errors.New("cannot infer destination (source is not a ref). Use -d to specify destination ref.")
 		}
-		// TODO(maybe): check remote.*.push
 		*dstRef = src.RefName()
+	} else if !strings.HasPrefix(*dstRef, "refs/") {
+		*dstRef = "refs/heads/" + *dstRef
 	}
 	return cc.git.RunInteractive(ctx, "push", "--", dstRepo, src.CommitHex()+":"+*dstRef)
+}
+
+func inferPushRepo(ctx context.Context, git *gittool.Tool, branch string) (string, error) {
+	if branch != "" {
+		r, err := gittool.Config(ctx, git, "branch."+branch+".pushRemote")
+		if err != nil {
+			return "", err
+		}
+		if r != "" {
+			return r, nil
+		}
+	}
+	r, err := gittool.Config(ctx, git, "remote.pushDefault")
+	if err != nil {
+		return "", err
+	}
+	if r != "" {
+		return r, nil
+	}
+	if branch != "" {
+		r, err := gittool.Config(ctx, git, "branch."+branch+".remote")
+		if err != nil {
+			return "", err
+		}
+		if r != "" {
+			return r, nil
+		}
+	}
+	remotes, _ := listRemotes(ctx, git)
+	if _, ok := remotes["origin"]; !ok {
+		return "", errors.New("no destination given and no remote named \"origin\" found")
+	}
+	return "origin", nil
 }

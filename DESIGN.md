@@ -14,3 +14,9 @@
     Mercurial's.  Branches act like Mercurial bookmarks rather than Mercurial's
     branches, since Git doesn't have an equivalent concept.  Simplicity is
     preferred over exact compatibility.
+
+Specific decisions:
+
+-   Push and pull only operate on one ref at a time.  The Git CLI does not
+    provide enough control over multi-ref pulls and pushes without additional
+    configuration variables.
