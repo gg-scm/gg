@@ -44,10 +44,9 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		remotes, _ := listRemotes(ctx, cc)
 		if repo == "" {
 			if branch != "" {
-				r, err := gittool.Config(ctx, cc.git, "branch."+branch+".remote")
-				if err == nil {
-					repo = r
-				} else if !gittool.IsExitError(err) {
+				var err error
+				repo, err = gittool.Config(ctx, cc.git, "branch."+branch+".remote")
+				if err != nil {
 					return err
 				}
 			}

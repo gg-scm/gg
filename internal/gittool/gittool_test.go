@@ -81,12 +81,15 @@ func TestConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	email, err := Config(ctx, env.git, "user.email")
-	if err != nil {
-		t.Fatal(err)
+	if email, err := Config(ctx, env.git, "user.email"); err != nil {
+		t.Error("for user.email:", err)
+	} else if want := "foo@example.com"; email != want {
+		t.Errorf("user.email = %q; want %q", email, want)
 	}
-	if want := "foo@example.com"; email != want {
-		t.Errorf("email = %q; want %q", email, want)
+	if notfound, err := Config(ctx, env.git, "foo.notfound"); err != nil {
+		t.Error("for foo.notfound:", err)
+	} else if notfound != "" {
+		t.Errorf("foo.notfound = %q; want empty", notfound)
 	}
 }
 

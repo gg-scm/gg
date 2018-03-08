@@ -138,18 +138,18 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 
 func branchUpstream(ctx context.Context, git *gittool.Tool, name string) (string, error) {
 	remote, err := gittool.Config(ctx, git, "branch."+name+".remote")
-	if gittool.IsExitError(err) {
-		return "", nil
-	}
 	if err != nil {
 		return "", fmt.Errorf("get branch %q upstream: %v", name, err)
+	}
+	if remote == "" {
+		return "", nil
 	}
 	merge, err := gittool.Config(ctx, git, "branch."+name+".merge")
-	if gittool.IsExitError(err) {
-		return "", nil
-	}
 	if err != nil {
 		return "", fmt.Errorf("get branch %q upstream: %v", name, err)
+	}
+	if merge == "" {
+		return "", nil
 	}
 	const headsPrefix = "refs/heads/"
 	if !strings.HasPrefix(merge, headsPrefix) {

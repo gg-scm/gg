@@ -45,10 +45,9 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	dstRepo := f.Arg(0)
 	if dstRepo == "" {
 		if src.Branch() != "" {
-			remote, err := gittool.Config(ctx, cc.git, "branch."+src.Branch()+".remote")
-			if err == nil {
-				dstRepo = remote
-			} else if !gittool.IsExitError(err) {
+			var err error
+			dstRepo, err = gittool.Config(ctx, cc.git, "branch."+src.Branch()+".remote")
+			if err != nil {
 				return err
 			}
 		}
