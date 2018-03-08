@@ -79,3 +79,67 @@ func TestBranch(t *testing.T) {
 		}
 	}
 }
+
+func TestBranch_Upstream(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	repoPath1 := filepath.Join(env.root, "repo1")
+	if err := env.git.Run(ctx, "init", repoPath1); err != nil {
+		t.Fatal(err)
+	}
+	const fileName = "foo.txt"
+	err = ioutil.WriteFile(
+		filepath.Join(repoPath1, fileName),
+		[]byte("Hello, World!\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	git1 := env.git.WithDir(repoPath1)
+	if err := git1.Run(ctx, "add", fileName); err != nil {
+		t.Fatal(err)
+	}
+	if err := git1.Run(ctx, "commit", "-m", "initial commit"); err != nil {
+		t.Fatal(err)
+	}
+	first, err := gittool.ParseRev(ctx, git1, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "clone", "repo1", "repo2"); err != nil {
+		t.Fatal(err)
+	}
+
+	repoPath2 := filepath.Join(env.root, "repo2")
+	if err := env.gg(ctx, repoPath2, "branch", "foo"); err != nil {
+		t.Fatal(err)
+	}
+	git2 := env.git.WithDir(repoPath2)
+	if r, err := gittool.ParseRev(ctx, git2, "HEAD"); err != nil {
+		t.Error(err)
+	} else {
+		if r.CommitHex() != first.CommitHex() {
+			t.Errorf("HEAD = %s; want %s", r.CommitHex(), first.CommitHex())
+		}
+		if r.RefName() != "refs/heads/foo" {
+			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.RefName())
+		}
+	}
+	remote, err := gittool.Config(ctx, git2, "branch.foo.remote")
+	if err != nil {
+		t.Errorf("config --get branch.foo.remote: %v", err)
+	} else if remote != "origin" {
+		t.Errorf("branch.foo.remote = %q; want \"origin\"", remote)
+	}
+	mergeBranch, err := gittool.Config(ctx, git2, "branch.foo.merge")
+	if err != nil {
+		t.Errorf("config --get branch.foo.merge: %v", err)
+	} else if mergeBranch != "refs/heads/master" {
+		t.Errorf("branch.foo.remote = %q; want \"refs/heads/master\"", mergeBranch)
+	}
+}

@@ -35,7 +35,8 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	Creating or updating to a branch causes it to be marked as active.
 	When a commit is made, the active branch will advance to the new
 	commit. A plain 'gg update' will also advance an active branch, if
-	possible.`)
+	possible. If the revision specifies a branch with an upstream, then
+	any new branch will use the named branch's upstream.`)
 	delete := f.Bool("d", false, "delete the given branches")
 	f.Alias("d", "delete")
 	force := f.Bool("f", false, "force")
@@ -83,11 +84,19 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		target := "HEAD"
 		if *rev != "" {
-			r, err := gittool.ParseRev(ctx, cc.git, target)
+			target = *rev
+		}
+		r, err := gittool.ParseRev(ctx, cc.git, target)
+		if err != nil {
+			return err
+		}
+		var upstream string
+		if b := r.Branch(); b != "" {
+			var err error
+			upstream, err = branchUpstream(ctx, cc.git, b)
 			if err != nil {
 				return err
 			}
-			target = r.CommitHex()
 		}
 		var branchArgs []string
 		branchArgs = append(branchArgs, "branch", "--quiet")
@@ -95,10 +104,29 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 			branchArgs = append(branchArgs, "--force")
 		}
 		branchArgs = append(branchArgs, "--", "XXX", target)
+		var upstreamArgs []string
+		if upstream != "" {
+			upstreamArgs = append(upstreamArgs, "branch", "--quiet", "--set-upstream-to="+upstream, "--", "XXX")
+		}
 		for _, b := range f.Args() {
+			exists := false
+			if len(upstreamArgs) > 0 && *force {
+				// This check for existence is only necessary during -force,
+				// since branch would fail otherwise. We need to check for
+				// existence because we don't want to clobber upstream.
+				// TODO(someday): write test that exercises this.
+				_, err := gittool.ParseRev(ctx, cc.git, "refs/heads/"+b)
+				exists = err == nil
+			}
 			branchArgs[len(branchArgs)-2] = b
 			if err := cc.git.Run(ctx, branchArgs...); err != nil {
 				return fmt.Errorf("branch %q: %v", b, err)
+			}
+			if len(upstreamArgs) > 0 && !exists {
+				upstreamArgs[len(upstreamArgs)-1] = b
+				if err := cc.git.Run(ctx, upstreamArgs...); err != nil {
+					return fmt.Errorf("branch %q: %v", b, err)
+				}
 			}
 		}
 		if *rev == "" {
@@ -106,4 +134,26 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	return nil
+}
+
+func branchUpstream(ctx context.Context, git *gittool.Tool, name string) (string, error) {
+	remote, err := gittool.Config(ctx, git, "branch."+name+".remote")
+	if gittool.IsExitError(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("get branch %q upstream: %v", name, err)
+	}
+	merge, err := gittool.Config(ctx, git, "branch."+name+".merge")
+	if gittool.IsExitError(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("get branch %q upstream: %v", name, err)
+	}
+	const headsPrefix = "refs/heads/"
+	if !strings.HasPrefix(merge, headsPrefix) {
+		return "", nil
+	}
+	return remote + "/" + merge[len(headsPrefix):], nil
 }
