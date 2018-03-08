@@ -118,7 +118,7 @@ func listRefs(ctx context.Context, git *gittool.Tool) (refList, error) {
 		if _, err := hex.Decode(ent.commit[:], line[:spaceLoc]); err != nil {
 			return refs[:len(refs)-1], errors.New("parse git show-ref: line must start with SHA1")
 		}
-		ent.name = line[spaceLoc+1:]
+		ent.name = append([]byte(nil), line[spaceLoc+1:]...)
 	}
 	if err := p.Wait(); err != nil {
 		return refs, err
