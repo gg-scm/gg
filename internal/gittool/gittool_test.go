@@ -110,6 +110,12 @@ func newTestEnv(ctx context.Context) (*testEnv, error) {
 		os.Remove(root)
 		return nil, err
 	}
+	gitConfigPath := filepath.Join(root, ".gitconfig")
+	gitConfig := []byte("[user]\nname = User\nemail = foo@example.com\n")
+	if err := ioutil.WriteFile(gitConfigPath, gitConfig, 0666); err != nil {
+		os.RemoveAll(root)
+		return nil, err
+	}
 	return &testEnv{root: root, git: git}, nil
 }
 

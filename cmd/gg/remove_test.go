@@ -45,7 +45,7 @@ func TestRemove(t *testing.T) {
 		t.Fatal(err)
 	}
 	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestRemove_AddedFails(t *testing.T) {
 	} else if _, isUsage := err.(*usageError); isUsage {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func TestRemove_AddedForce(t *testing.T) {
 	if err := env.gg(ctx, repoPath, "rm", "-f", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +203,7 @@ func TestRemove_ModifiedFails(t *testing.T) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
 	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,7 +256,7 @@ func TestRemove_ModifiedForce(t *testing.T) {
 		t.Fatal(err)
 	}
 	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,7 +307,7 @@ func TestRemove_MissingFails(t *testing.T) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
 	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +356,7 @@ func TestRemove_MissingAfter(t *testing.T) {
 		t.Fatal(err)
 	}
 	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}

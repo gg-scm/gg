@@ -35,7 +35,7 @@ func status(ctx context.Context, cc *cmdContext, args []string) error {
 	} else if err != nil {
 		return usagef("%v", err)
 	}
-	p, err := cc.git.Start(ctx, append([]string{"status", "--porcelain=v1", "-z", "-unormal", "--"}, f.Args()...)...)
+	p, err := cc.git.Start(ctx, append([]string{"status", "--porcelain", "-z", "-unormal", "--"}, f.Args()...)...)
 	if err != nil {
 		return err
 	}

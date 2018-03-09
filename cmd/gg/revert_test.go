@@ -91,7 +91,7 @@ func TestRevert(t *testing.T) {
 	} else if string(data2) != revertTestContent2 {
 		t.Errorf("staged modified file content = %q after revert; want %q", data2, revertTestContent2)
 	}
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestRevert_All(t *testing.T) {
 		t.Errorf("staged modified file content = %q after revert; want %q", data2, revertTestContent2)
 	}
 
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +209,7 @@ func TestRevert_Rev(t *testing.T) {
 		t.Errorf("file content = %q after revert; want %q", data1, revertTestContent1)
 	}
 
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +265,7 @@ func TestRevert_Missing(t *testing.T) {
 	}
 
 	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}

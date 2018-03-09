@@ -60,7 +60,7 @@ func commit(ctx context.Context, cc *cmdContext, args []string) error {
 
 func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([]string, error) {
 	missing, missingStaged, unmerged := 0, 0, 0
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		return files, err
 	}

@@ -73,7 +73,7 @@ func remove(ctx context.Context, cc *cmdContext, args []string) error {
 }
 
 func verifyPresent(ctx context.Context, git *gittool.Tool, repoPaths []string) error {
-	p, err := git.Start(ctx, "status", "--porcelain=v1", "-z", "-unormal")
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		return err
 	}

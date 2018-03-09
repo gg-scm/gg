@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"zombiezen.com/go/gg/internal/gittool"
@@ -71,6 +72,13 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 		Stderr: stderr,
 	})
 	if err != nil {
+		os.RemoveAll(root)
+		return nil, err
+	}
+	gitConfigPath := filepath.Join(root, ".gitconfig")
+	gitConfig := []byte("[user]\nname = User\nemail = foo@example.com\n")
+	if err := ioutil.WriteFile(gitConfigPath, gitConfig, 0666); err != nil {
+		os.RemoveAll(root)
 		return nil, err
 	}
 	return &testEnv{

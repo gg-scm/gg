@@ -94,7 +94,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 }
 
 func verifyRemoteRef(ctx context.Context, git *gittool.Tool, remote string, ref string) error {
-	p, err := git.Start(ctx, "ls-remote", "--quiet", "--refs", "--", remote, ref)
+	p, err := git.Start(ctx, "ls-remote", "--quiet", remote, ref)
 	if err != nil {
 		return fmt.Errorf("verify remote ref %s: %v", ref, err)
 	}
