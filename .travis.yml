@@ -3,10 +3,10 @@ go_import_path: zombiezen.com/go/gg
 go:
   - "1.10.x"
 env:
-  - VGO=0
-  - VGO=1
-  - GIT_VERSION=2.7.6
-  - GIT_VERSION=2.16.2
+  - VGO=0 GIT_VERSION=2.7.4
+  - VGO=0 GIT_VERSION=2.16.2
+  - VGO=1 GIT_VERSION=2.7.4
+  - VGO=1 GIT_VERSION=2.16.2
 install:
   - "misc/build-git.bash ~/git \"$GIT_VERSION\""
   - "if [[ \"$VGO\" == 1 ]]; then go get -u golang.org/x/vgo; else go get -t ./...; fi"
