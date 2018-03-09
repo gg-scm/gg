@@ -15,8 +15,11 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
@@ -26,7 +29,7 @@ import (
 const pushSynopsis = "push changes to the specified destination"
 
 func push(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg push [-r REV] [-d REF] [DST]", pushSynopsis+`
+	f := flag.NewFlagSet(true, "gg push [-r REV] [-d REF] [--create] [DST]", pushSynopsis+`
 
 	When no destination repository is given, push uses the first non-
 	empty configuration value of:
@@ -44,7 +47,12 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	If -d is not given and the source is a ref, then the same ref name is
 	used. Otherwise, push exits with a failure exit code. This differs
 	from git, which will consult remote.*.push and push.default. You can
-	imagine this being the most similar to push.default=current.`)
+	imagine this being the most similar to push.default=current.
+
+	By default, gg push will fail instead of creating a new ref on the
+	remote. If this is desired (e.g. you are creating a new branch), then
+	you can pass -create to override this check.`)
+	create := f.Bool("create", false, "allow pushing a new ref")
 	dstRef := f.String("d", "", "destination `ref`")
 	f.Alias("d", "dest")
 	rev := f.String("r", "HEAD", "source `rev`ision")
@@ -77,7 +85,40 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	} else if !strings.HasPrefix(*dstRef, "refs/") {
 		*dstRef = "refs/heads/" + *dstRef
 	}
+	if !*create {
+		if err := verifyRemoteRef(ctx, cc.git, dstRepo, *dstRef); err != nil {
+			return err
+		}
+	}
 	return cc.git.RunInteractive(ctx, "push", "--", dstRepo, src.CommitHex()+":"+*dstRef)
+}
+
+func verifyRemoteRef(ctx context.Context, git *gittool.Tool, remote string, ref string) error {
+	p, err := git.Start(ctx, "ls-remote", "--quiet", "--refs", "--", remote, ref)
+	if err != nil {
+		return fmt.Errorf("verify remote ref %s: %v", ref, err)
+	}
+	defer p.Wait()
+	refBytes := []byte(ref)
+	s := bufio.NewScanner(p)
+	for s.Scan() {
+		const tabLoc = 40
+		line := s.Bytes()
+		if tabLoc >= len(line) || line[tabLoc] != '\t' || !isHex(line[:tabLoc]) {
+			return errors.New("parse git ls-remote: line must start with SHA1")
+		}
+		remoteRef := line[tabLoc+1:]
+		if bytes.Equal(remoteRef, refBytes) {
+			return nil
+		}
+	}
+	if s.Err() != nil {
+		return fmt.Errorf("verify remote ref %s: %v", ref, err)
+	}
+	if err := p.Wait(); err != nil {
+		return fmt.Errorf("verify remote ref %s: %v", ref, err)
+	}
+	return fmt.Errorf("remote %s does not have ref %s", remote, ref)
 }
 
 func inferPushRepo(ctx context.Context, git *gittool.Tool, branch string) (string, error) {
@@ -111,4 +152,13 @@ func inferPushRepo(ctx context.Context, git *gittool.Tool, branch string) (strin
 		return "", errors.New("no destination given and no remote named \"origin\" found")
 	}
 	return "origin", nil
+}
+
+func isHex(b []byte) bool {
+	for _, bb := range b {
+		if !(bb >= '0' && bb <= '9') && !(bb >= 'a' && bb <= 'f') && !(bb >= 'A' && bb <= 'F') {
+			return false
+		}
+	}
+	return true
 }
