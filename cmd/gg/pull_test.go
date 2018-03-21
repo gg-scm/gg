@@ -145,6 +145,50 @@ func TestPullUpdate(t *testing.T) {
 	}
 }
 
+func TestInferUpstream(t *testing.T) {
+	tests := []struct {
+		localBranch string
+		merge       string
+		want        string
+	}{
+		{localBranch: "", want: "HEAD"},
+		{localBranch: "master", want: "refs/heads/master"},
+		{localBranch: "master", merge: "refs/heads/master", want: "refs/heads/master"},
+		{localBranch: "foo", want: "refs/heads/foo"},
+		{localBranch: "foo", merge: "refs/heads/bar", want: "refs/heads/bar"},
+	}
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.git.Run(ctx, "init"); err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range tests {
+		if test.merge != "" {
+			if err := env.git.Run(ctx, "config", "--local", "branch."+test.localBranch+".merge", test.merge); err != nil {
+				t.Errorf("for localBranch = %q, merge = %q: %v", test.localBranch, test.merge, err)
+				continue
+			}
+		}
+		got, err := inferUpstream(ctx, env.git, test.localBranch)
+		if test.merge != "" {
+			if err := env.git.Run(ctx, "config", "--local", "--unset", "branch."+test.localBranch+".merge"); err != nil {
+				t.Errorf("cleaning up localBranch = %q, merge = %q: %v", test.localBranch, test.merge, err)
+			}
+		}
+		if err != nil {
+			t.Errorf("inferUpstream(ctx, env.git, %q) (with branch.%s.merge = %q): %v", test.localBranch, test.localBranch, test.merge, err)
+			continue
+		}
+		if got != test.want {
+			t.Errorf("inferUpstream(ctx, env.git, %q) (with branch.%s.merge = %q) = %q; want %q", test.localBranch, test.localBranch, test.merge, got, test.want)
+		}
+	}
+}
+
 type pullEnv struct {
 	repoA, repoB     string
 	commit1, commit2 string

@@ -26,7 +26,18 @@ import (
 const pullSynopsis = "pull changes from the specified source"
 
 func pull(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg pull [-u] [-r REF] [SOURCE]", pullSynopsis)
+	f := flag.NewFlagSet(true, "gg pull [-u] [-r REF] [SOURCE]", pullSynopsis+`
+
+	The fetched reference is written to FETCH_HEAD.
+
+	If no source repository is given and a branch with a remote tracking
+	branch is currently checked out, then that remote is used. Otherwise,
+	the remote called "origin" is used.
+
+	If no remote reference is given and a branch is currently checked out,
+	then the branch's remote tracking branch is used or the branch with
+	the same name if the branch has no remote tracking branch. Otherwise,
+	"HEAD" is used.`)
 	remoteRef := f.String("r", "", "remote `ref`erence intended to be pulled")
 	update := f.Bool("u", false, "update to new head if new descendants were pulled")
 	if err := f.Parse(args); flag.IsHelp(err) {
@@ -60,10 +71,10 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	if *remoteRef == "" {
-		if branch != "" {
-			*remoteRef = branch
-		} else {
-			*remoteRef = "HEAD"
+		var err error
+		*remoteRef, err = inferUpstream(ctx, cc.git, branch)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -73,7 +84,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	} else {
 		gitArgs = append(gitArgs, "fetch")
 	}
-	gitArgs = append(gitArgs, "--", repo, *remoteRef)
+	gitArgs = append(gitArgs, "--", repo, *remoteRef+":")
 	return cc.git.Run(ctx, gitArgs...)
 }
 
@@ -83,6 +94,22 @@ func currentBranch(ctx context.Context, cc *cmdContext) string {
 		return ""
 	}
 	return r.Branch()
+}
+
+// inferUpstream returns the default remote ref to pull from.
+// localBranch may be empty.
+func inferUpstream(ctx context.Context, git *gittool.Tool, localBranch string) (string, error) {
+	if localBranch == "" {
+		return "HEAD", nil
+	}
+	merge, err := gittool.Config(ctx, git, "branch."+localBranch+".merge")
+	if err != nil {
+		return "", err
+	}
+	if merge != "" {
+		return merge, nil
+	}
+	return "refs/heads/" + localBranch, nil
 }
 
 func listRemotes(ctx context.Context, git *gittool.Tool) (map[string]struct{}, error) {
