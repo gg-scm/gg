@@ -18,7 +18,9 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"zombiezen.com/go/gg/internal/gittool"
@@ -154,6 +156,198 @@ func TestPush_CreateRef(t *testing.T) {
 			t.Errorf("refs/heads/foo = %s; want %s", r.CommitHex(), pushEnv.commit2)
 		}
 	}
+}
+
+func TestGerritPushRef(t *testing.T) {
+	tests := []struct {
+		branch string
+		opts   *gerritOptions
+
+		wantRef  string
+		wantOpts map[string][]string
+	}{
+		{
+			branch:   "master",
+			wantRef:  "refs/for/master",
+			wantOpts: map[string][]string{"no-publish-comments": nil},
+		},
+		{
+			branch: "master",
+			opts: &gerritOptions{
+				publishComments: true,
+			},
+			wantRef:  "refs/for/master",
+			wantOpts: map[string][]string{"publish-comments": nil},
+		},
+		{
+			branch: "master",
+			opts: &gerritOptions{
+				message: "This is a rebase on master!",
+			},
+			wantRef: "refs/for/master",
+			wantOpts: map[string][]string{
+				"m": {"This is a rebase on master!"},
+				"no-publish-comments": nil,
+			},
+		},
+		{
+			branch: "master",
+			opts: &gerritOptions{
+				reviewers: []string{"a@a.com", "c@r.com"},
+				cc:        []string{"b@o.com", "d@zombo.com"},
+			},
+			wantRef: "refs/for/master",
+			wantOpts: map[string][]string{
+				"r":  {"a@a.com", "c@r.com"},
+				"cc": {"b@o.com", "d@zombo.com"},
+				"no-publish-comments": nil,
+			},
+		},
+		{
+			branch: "master",
+			opts: &gerritOptions{
+				reviewers: []string{"a@a.com,c@r.com"},
+				cc:        []string{"b@o.com,d@zombo.com"},
+			},
+			wantRef: "refs/for/master",
+			wantOpts: map[string][]string{
+				"r":  {"a@a.com", "c@r.com"},
+				"cc": {"b@o.com", "d@zombo.com"},
+				"no-publish-comments": nil,
+			},
+		},
+	}
+	for _, test := range tests {
+		out := gerritPushRef(test.branch, test.opts)
+		ref, opts, err := parseGerritRef(out)
+		if err != nil {
+			t.Errorf("gerritPushRef(%q, %+v) = %q; cannot parse: %v", test.branch, test.opts, out, err)
+			continue
+		}
+		if ref != test.wantRef || !gerritOptionsEqual(opts, test.wantOpts) {
+			t.Errorf("gerritPushRef(%q, %+v) = %q; want ref %q and options %q", test.branch, test.opts, out, test.wantRef, test.wantOpts)
+		}
+	}
+}
+
+func TestParseGerritRef(t *testing.T) {
+	tests := []struct {
+		ref  string
+		base string
+		opts map[string][]string
+	}{
+		{
+			ref:  "refs/for/master",
+			base: "refs/for/master",
+		},
+		{
+			ref:  "refs/for/master%no-publish-comments",
+			base: "refs/for/master",
+			opts: map[string][]string{"no-publish-comments": nil},
+		},
+		{
+			ref:  "refs/for/expiremental%topic=driver/i42",
+			base: "refs/for/expiremental",
+			opts: map[string][]string{"topic": {"driver/i42"}},
+		},
+		{
+			ref:  "refs/for/master%notify=NONE,notify-to=a@a.com",
+			base: "refs/for/master",
+			opts: map[string][]string{"notify": {"NONE"}, "notify-to": {"a@a.com"}},
+		},
+		{
+			ref:  "refs/for/master%m=This_is_a_rebase_on_master%21",
+			base: "refs/for/master",
+			opts: map[string][]string{"m": {"This is a rebase on master!"}},
+		},
+		{
+			ref:  "refs/for/master%m=This+is+a+rebase+on+master%21",
+			base: "refs/for/master",
+			opts: map[string][]string{"m": {"This is a rebase on master!"}},
+		},
+		{
+			ref:  "refs/for/master%l=Code-Review+1,l=Verified+1",
+			base: "refs/for/master",
+			opts: map[string][]string{"l": {"Code-Review+1", "Verified+1"}},
+		},
+		{
+			ref:  "refs/for/master%r=a@a.com,cc=b@o.com",
+			base: "refs/for/master",
+			opts: map[string][]string{"r": {"a@a.com"}, "cc": {"b@o.com"}},
+		},
+		{
+			ref:  "refs/for/master%r=a@a.com,cc=b@o.com,r=c@r.com",
+			base: "refs/for/master",
+			opts: map[string][]string{"r": {"a@a.com", "c@r.com"}, "cc": {"b@o.com"}},
+		},
+	}
+	for _, test := range tests {
+		base, opts, err := parseGerritRef(test.ref)
+		if err != nil {
+			t.Errorf("parseGerritRef(%q) = _, _, %v; want no error", test.ref, err)
+			continue
+		}
+		if base != test.base || !gerritOptionsEqual(opts, test.opts) {
+			t.Errorf("parseGerritRef(%q) = %q, %q, <nil>; want %q, %q, <nil>", test.ref, base, opts, test.base, test.opts)
+		}
+	}
+}
+
+func parseGerritRef(ref string) (string, map[string][]string, error) {
+	start := strings.IndexByte(ref, '%')
+	if start == -1 {
+		return ref, nil, nil
+	}
+	opts := make(map[string][]string)
+	q := ref[start+1:]
+	for len(q) > 0 {
+		sep := strings.IndexByte(q, ',')
+		if sep == -1 {
+			sep = len(q)
+		}
+		if eq := strings.IndexByte(q[:sep], '='); eq != -1 {
+			k := q[:eq]
+			v := q[eq+1 : sep]
+			if k == "m" || k == "message" { // special-cased in Gerrit (see ReceiveCommits.java)
+				var err error
+				v, err = url.QueryUnescape(strings.Replace(q[eq+1:sep], "_", "+", -1))
+				if err != nil {
+					return "", nil, err
+				}
+			}
+			opts[k] = append(opts[k], v)
+		} else {
+			k := q[:sep]
+			if v := opts[k]; v != nil {
+				opts[k] = append(v, "")
+			} else {
+				opts[k] = nil
+			}
+		}
+		if sep >= len(q) {
+			break
+		}
+		q = q[sep+1:]
+	}
+	return ref[:start], opts, nil
+}
+
+func gerritOptionsEqual(m1, m2 map[string][]string) bool {
+	if len(m1) != len(m2) {
+		return false
+	}
+	for k, v1 := range m1 {
+		v2, ok := m2[k]
+		if !ok || len(v1) != len(v2) || (v1 == nil) != (v2 == nil) {
+			return false
+		}
+		for i := range v1 {
+			if v1[i] != v2[i] {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 type pushEnv struct {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package flag provides a command-line flag parser.  Unlike the Go
+// Package flag provides a command-line flag parser. Unlike the Go
 // standard library flag package, it permits flags to be interspersed
 // with arguments.
 package flag
@@ -27,7 +27,7 @@ import (
 	"strings"
 )
 
-// A FlagSet represents a set of defined flags.  The zero value of a
+// A FlagSet represents a set of defined flags. The zero value of a
 // FlagSet is an empty set of flags, allows non-flag arguments to be
 // interspersed with flags, and has no usage information.
 type FlagSet struct {
@@ -55,7 +55,7 @@ func NewFlagSet(intersperse bool, usage, description string) *FlagSet {
 }
 
 // Init sets the argument intersperse behavior and usage information for
-// a flag set.  By default, the zero FlagSet allows non-flag arguments
+// a flag set. By default, the zero FlagSet allows non-flag arguments
 // to be interspersed with flags.
 func (f *FlagSet) Init(intersperse bool, usage, description string) {
 	f.argStop = !intersperse
@@ -64,28 +64,51 @@ func (f *FlagSet) Init(intersperse bool, usage, description string) {
 }
 
 // Bool defines a bool flag with specified name, default value, and
-// usage string.  The return value is the address of a bool variable
+// usage string. The return value is the address of a bool variable
 // that stores the value of the flag.
 func (f *FlagSet) Bool(name string, value bool, usage string) *bool {
 	f.Var((*boolValue)(&value), name, usage)
 	return &value
 }
 
+// BoolVar defines a bool flag with specified name, default value, and
+// usage string. The argument p points to a bool variable in which to
+// store the value of the flag.
+func (f *FlagSet) BoolVar(p *bool, name string, value bool, usage string) {
+	*p = value
+	f.Var((*boolValue)(p), name, usage)
+}
+
 // String defines a string flag with specified name, default value, and
-// usage string.  The return value is the address of a string variable
+// usage string. The return value is the address of a string variable
 // that stores the value of the flag.
 func (f *FlagSet) String(name string, value string, usage string) *string {
 	f.Var((*stringValue)(&value), name, usage)
 	return &value
 }
 
+// StringVar defines a string flag with specified name, default value, and
+// usage string. The argument p points to a string variable in which to
+// store the value of the flag.
+func (f *FlagSet) StringVar(p *string, name string, value string, usage string) {
+	*p = value
+	f.Var((*stringValue)(p), name, usage)
+}
+
 // MultiString defines a string flag with specified name and usage
-// string.  The return value is the address of a string slice variable
+// string. The return value is the address of a string slice variable
 // that stores the value of each passed flag.
 func (f *FlagSet) MultiString(name string, usage string) *[]string {
 	v := new(multiStringValue)
 	f.Var(v, name, usage)
 	return (*[]string)(v)
+}
+
+// MultiStringVar defines a string flag with specified name and usage
+// string. The argument p points to a []string variable in which to
+// store the value of each passed flag.
+func (f *FlagSet) MultiStringVar(p *[]string, name string, usage string) {
+	f.Var((*multiStringValue)(p), name, usage)
 }
 
 // Var defines a flag with the specified name and usage string.
@@ -116,7 +139,7 @@ func (f *FlagSet) Alias(name string, aliases ...string) {
 }
 
 // Parse parses flag definitions from the argument list, which should
-// not include the command name.  Must be called after all flags in the
+// not include the command name. Must be called after all flags in the
 // FlagSet are defined and before flags are accessed by the program.
 // The returned error can be tested with IsHelpUndefined if -help or -h
 // were set but not defined.

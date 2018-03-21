@@ -34,6 +34,7 @@ basic commands:
   diff          diff repository (or selected files)
   init          create a new repository in the given directory
   log           show revision history of entire repository or files
+  mail          creates or updates a Gerrit change
   pull          pull changes from the specified source
   push          push changes to the specified destination
   remove        remove the specified files on the next commit

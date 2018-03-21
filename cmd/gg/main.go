@@ -55,6 +55,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  diff          " + diffSynopsis + "\n" +
 		"  init          " + initSynopsis + "\n" +
 		"  log           " + logSynopsis + "\n" +
+		"  mail          " + mailSynopsis + "\n" +
 		"  pull          " + pullSynopsis + "\n" +
 		"  push          " + pushSynopsis + "\n" +
 		"  remove        " + removeSynopsis + "\n" +
@@ -151,6 +152,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return init_(ctx, cc, args)
 	case "log", "history":
 		return log(ctx, cc, args)
+	case "mail":
+		return mail(ctx, cc, args)
 	case "status", "st", "check":
 		return status(ctx, cc, args)
 	case "pull":
