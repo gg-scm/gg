@@ -29,7 +29,7 @@ import (
 const pushSynopsis = "push changes to the specified destination"
 
 func push(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg push [-r REV] [-d REF] [--create] [DST]", pushSynopsis+`
+	f := flag.NewFlagSet(true, "gg push [-n] [-r REV] [-d REF] [--create] [DST]", pushSynopsis+`
 
 	When no destination repository is given, push uses the first non-
 	empty configuration value of:
@@ -55,6 +55,8 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	create := f.Bool("create", false, "allow pushing a new ref")
 	dstRef := f.String("d", "", "destination `ref`")
 	f.Alias("d", "dest")
+	dryRun := f.Bool("n", false, "do everything except send the changes")
+	f.Alias("n", "dry-run")
 	rev := f.String("r", "HEAD", "source `rev`ision")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
@@ -90,7 +92,13 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 			return err
 		}
 	}
-	return cc.git.RunInteractive(ctx, "push", "--", dstRepo, src.CommitHex()+":"+*dstRef)
+	var pushArgs []string
+	pushArgs = append(pushArgs, "push")
+	if *dryRun {
+		pushArgs = append(pushArgs, "--dry-run")
+	}
+	pushArgs = append(pushArgs, "--", dstRepo, src.CommitHex()+":"+*dstRef)
+	return cc.git.RunInteractive(ctx, pushArgs...)
 }
 
 const mailSynopsis = "creates or updates a Gerrit change"
