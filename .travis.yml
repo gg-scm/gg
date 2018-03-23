@@ -14,10 +14,9 @@ script:
   - "PATH=\"$HOME/git:$PATH\"; if [[ \"$VGO\" == 1 ]]; then vgo test -v all; else go test -v ./...; fi"
 jobs:
   include:
-    - stage: deploy
-      language: go
+    - stage: release
       go: "1.10.x"
-      go_import_path: zombiezen.com/go/gg
+      env: ""
       install: go get -u golang.org/x/vgo
       script: "mkdir -p dist && cd dist && ../release.bash"
       deploy:
@@ -29,3 +28,7 @@ jobs:
         skip_cleanup: true
         on:
           tags: true
+stages:
+  - test
+  - name: release
+    if: tag IS present
