@@ -9,13 +9,28 @@ my everyday use.
 [Mercurial]: https://www.mercurial-scm.org/
 [travis]: https://travis-ci.org/zombiezen/gg
 
+## Installing
+
+Download the latest [release][releases] from GitHub.  Binaries are available for
+Linux and macOS.
+
+You must have a moderately recent copy of git in your PATH to run gg.
+
+[releases]: https://github.com/zombiezen/gg/releases
+
 ## Building
 
+You must have Go 1.10 or later with [vgo][] to build gg.
+
 ```
+# From a release tarball:
+./build.bash ~/bin/gg
+
+# Or using go tool:
 go get -u zombiezen.com/go/gg/cmd/gg
 ```
 
-You must have a moderately recent copy of git in your PATH to run gg.
+[vgo]: https://godoc.org/golang.org/x/vgo
 
 ## Using
 
