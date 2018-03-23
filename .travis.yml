@@ -10,22 +10,36 @@ script:
 jobs:
   include:
     - os: linux
-      env: VGO=1 GIT_VERSION=2.16.2
+      env: &stdenv "VGO=1 GIT_VERSION=2.16.2"
     - os: linux
       env: VGO=1 GIT_VERSION=2.7.4
     - os: linux
       env: VGO=0 GIT_VERSION=2.16.2
     - os: osx
-      env: VGO=1 GIT_VERSION=2.16.2
+      env: *stdenv
     - stage: release
       os: linux
       env: ""
       install: go get -u golang.org/x/vgo
-      script: "mkdir -p dist && (cd dist && GOOS=linux GOARCH=amd64 ../release.bash && GOOS=darwin GOARCH=amd64 ../release.bash)"
+      script: &releaseScript "mkdir -p dist && (cd dist && ../release.bash)"
       deploy:
         provider: releases
         api_key:
-          secure: "QtVCVH5kYdM7GGaSZ4kuAuFKbclpp/hlT0ZaXJx6n/dYFeDkeVUawb/8bJRxC8pPIfkO1mVgFn4Y1DRBxCpuDsw68ts/nhwlV6E8LTE6t3JvshHwF/8yO9a6H2T1TVf1XRRhAvz4cNPav450uzH/7ZsAElNNDoeq7rdynZEbZVlS+BsESG4+o1DmZbSK6GUTkjZFFPMC++G4NGUk3LXI4qp6cFs5VPFAvmjf/ASiGP4rKo3a12H2o12OFagPhcXdA/1OrPDgYO/GMls3/VnRwp6Ne6aq1bYnMoVdFOjjPg9yCinJUt2LCJZ78T4QNhY9cG7hJ2iRTzj66KcU0WTrsGVuoP27uugPagsYmH87PglEWFtYDXlaAQHb22toJLnwfqFeCYwsz+nk1XoPBriLgt5GAhJXK2sJ5CNwEfjOiIDSjwXrV+sJ/vsXVmD5207J3ZW81D358jVGLoeMEKDwEdlYSCQUtRGSM7qcVaz3XOWWclLTVKwNyE4jBDqeiUWZHqf9GNKGsoTXHwcGhBUhuJ2Lo7PKumiPbMqnsj5hi+M51ebOHg+DBuQvf/YLTbNOIIzn3QXAnF2Tw4ZoiZlJFiU1YoXIUQqeC7Az2kBpVigLJcy20FxzOAvWscIlI3P6BClkA54dpF+gRmYRQH3TxjY5c3AfExO5Uv9eyKAQHew="
+          secure: &releaseKey "QtVCVH5kYdM7GGaSZ4kuAuFKbclpp/hlT0ZaXJx6n/dYFeDkeVUawb/8bJRxC8pPIfkO1mVgFn4Y1DRBxCpuDsw68ts/nhwlV6E8LTE6t3JvshHwF/8yO9a6H2T1TVf1XRRhAvz4cNPav450uzH/7ZsAElNNDoeq7rdynZEbZVlS+BsESG4+o1DmZbSK6GUTkjZFFPMC++G4NGUk3LXI4qp6cFs5VPFAvmjf/ASiGP4rKo3a12H2o12OFagPhcXdA/1OrPDgYO/GMls3/VnRwp6Ne6aq1bYnMoVdFOjjPg9yCinJUt2LCJZ78T4QNhY9cG7hJ2iRTzj66KcU0WTrsGVuoP27uugPagsYmH87PglEWFtYDXlaAQHb22toJLnwfqFeCYwsz+nk1XoPBriLgt5GAhJXK2sJ5CNwEfjOiIDSjwXrV+sJ/vsXVmD5207J3ZW81D358jVGLoeMEKDwEdlYSCQUtRGSM7qcVaz3XOWWclLTVKwNyE4jBDqeiUWZHqf9GNKGsoTXHwcGhBUhuJ2Lo7PKumiPbMqnsj5hi+M51ebOHg+DBuQvf/YLTbNOIIzn3QXAnF2Tw4ZoiZlJFiU1YoXIUQqeC7Az2kBpVigLJcy20FxzOAvWscIlI3P6BClkA54dpF+gRmYRQH3TxjY5c3AfExO5Uv9eyKAQHew="
+        file_glob: true
+        file: dist/*
+        skip_cleanup: true
+        on:
+          tags: true
+    - stage: release
+      os: osx
+      env: ""
+      install: go get -u golang.org/x/vgo
+      script: *releaseScript
+      deploy:
+        provider: releases
+        api_key:
+          secure: *releaseKey
         file_glob: true
         file: dist/*
         skip_cleanup: true
