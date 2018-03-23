@@ -2,6 +2,7 @@ language: go
 go_import_path: zombiezen.com/go/gg
 go:
   - "1.10.x"
+os: linux
 env:
   - VGO=0 GIT_VERSION=2.7.4
   - VGO=0 GIT_VERSION=2.16.2
@@ -12,13 +13,20 @@ install:
   - "if [[ \"$VGO\" == 1 ]]; then go get -u golang.org/x/vgo; else go get -t ./...; fi"
 script:
   - "PATH=\"$HOME/git:$PATH\"; if [[ \"$VGO\" == 1 ]]; then vgo test -v all; else go test -v ./...; fi"
+matrix:
+  include:
+    - os: osx
+      env: VGO=0 GIT_VERSION=2.7.4
 jobs:
   include:
     - stage: release
       go: "1.10.x"
       env: ""
+      os:
+        - linux
+        - osx
       install: go get -u golang.org/x/vgo
-      script: "mkdir -p dist && cd dist && ../release.bash"
+      script: "mkdir -p dist && (cd dist && GOOS=linux GOARCH=amd64 ../release.bash && GOOS=darwin GOARCH=amd64 ../release.bash)"
       deploy:
         provider: releases
         api_key:
