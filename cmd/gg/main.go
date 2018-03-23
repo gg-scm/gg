@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
@@ -66,13 +67,14 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 	globalFlags := flag.NewFlagSet(false, synopsis, description)
 	gitPath := globalFlags.String("git", "", "`path` to git executable")
 	showArgs := globalFlags.Bool("show-git", false, "log git invocations")
+	versionFlag := globalFlags.Bool("version", false, "display version information")
 	if err := globalFlags.Parse(args); flag.IsHelp(err) {
 		globalFlags.Help(pctx.stdout)
 		return nil
 	} else if err != nil {
 		return usagef("%v", err)
 	}
-	if globalFlags.NArg() == 0 {
+	if globalFlags.NArg() == 0 && !*versionFlag {
 		globalFlags.Help(pctx.stdout)
 		return nil
 	}
@@ -116,6 +118,9 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		git:    git,
 		stdout: pctx.stdout,
 		stderr: pctx.stderr,
+	}
+	if *versionFlag {
+		return showVersion(ctx, cc)
 	}
 	return dispatch(ctx, cc, globalFlags, globalFlags.Arg(0), globalFlags.Args()[1:])
 }
@@ -166,6 +171,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return revert(ctx, cc, args)
 	case "update", "up", "checkout", "co":
 		return update(ctx, cc, args)
+	case "version":
+		return showVersion(ctx, cc)
 	case "help":
 		if len(args) == 0 {
 			globalFlags.Help(cc.stdout)
@@ -178,6 +185,53 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 	default:
 		return usagef("unknown command %s", name)
 	}
+}
+
+// Build information filled in at link time (see -X link flag).
+var (
+	// versionInfo is a human-readable version number like "1.0.0".
+	versionInfo = ""
+
+	// buildCommit is the full hex-formatted hash of the commit that the
+	// build came from, optionally ending with a plus if the source had
+	// local modifications.
+	buildCommit = ""
+
+	// buildTime is the time the build started in RFC 3339 format.
+	buildTime = ""
+)
+
+func showVersion(ctx context.Context, cc *cmdContext) error {
+	commit := buildCommit
+	localMods := strings.HasSuffix(buildCommit, "+")
+	if localMods {
+		commit = commit[:len(commit)-1]
+	}
+	var err error
+	switch {
+	case versionInfo != "" && buildTime != "":
+		_, err = fmt.Fprintf(cc.stdout, "gg version %s, built on %s\n", versionInfo, buildTime)
+	case versionInfo != "" && buildTime == "":
+		_, err = fmt.Fprintf(cc.stdout, "gg version %s\n", versionInfo)
+	case versionInfo == "" && commit != "" && localMods && buildTime != "":
+		_, err = fmt.Fprintf(cc.stdout, "gg built from source at %s on %s with local modifications\n", commit, buildTime)
+	case versionInfo == "" && commit != "" && !localMods && buildTime != "":
+		_, err = fmt.Fprintf(cc.stdout, "gg built from source at %s on %s\n", commit, buildTime)
+	case versionInfo == "" && commit != "" && localMods && buildTime == "":
+		_, err = fmt.Fprintf(cc.stdout, "gg built from source at %s with local modifications\n", commit)
+	case versionInfo == "" && commit != "" && !localMods && buildTime == "":
+		_, err = fmt.Fprintf(cc.stdout, "gg built from source at %s\n", commit)
+	default:
+		_, err = fmt.Fprintln(cc.stdout, "gg built from source")
+	}
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(cc.stdout, "go: %s %s %s/%s\n", runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH)
+	if err != nil {
+		return err
+	}
+	return cc.git.RunInteractive(ctx, "--version")
 }
 
 type processContext struct {
