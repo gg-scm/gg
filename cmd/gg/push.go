@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
@@ -109,6 +110,7 @@ const mailSynopsis = "creates or updates a Gerrit change"
 
 func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg mail [options] [DST]", mailSynopsis)
+	allowDirty := f.Bool("allow-dirty", false, "allow mailing when working copy has uncommitted changes")
 	dstBranch := f.String("d", "", "destination `branch`")
 	f.Alias("d", "dest", "for")
 	rev := f.String("r", "HEAD", "source `rev`ision")
@@ -135,6 +137,16 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	src, err := gittool.ParseRev(ctx, cc.git, *rev)
 	if err != nil {
 		return err
+	}
+	if !*allowDirty {
+		clean, err := isClean(ctx, cc.git)
+		if err != nil {
+			return err
+		}
+		if !clean {
+			return errors.New("working copy has uncommitted changes. " +
+				"Either commit them, stash them, or use gg mail --allow-dirty if this is intentional.")
+		}
 	}
 	dstRepo := f.Arg(0)
 	if dstRepo == "" {
@@ -279,6 +291,30 @@ func inferPushRepo(ctx context.Context, git *gittool.Tool, branch string) (strin
 		return "", errors.New("no destination given and no remote named \"origin\" found")
 	}
 	return "origin", nil
+}
+
+// isClean returns true iff all tracked files are unmodified in the
+// working copy.  Untracked and ignored files are not considered.
+func isClean(ctx context.Context, git *gittool.Tool) (bool, error) {
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	if err != nil {
+		return false, err
+	}
+	defer p.Wait()
+	r := bufio.NewReader(p)
+	for {
+		ent, err := readStatusEntry(r)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return false, err
+		}
+		if !ent.isUntracked() && !ent.isIgnored() {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func isHex(b []byte) bool {
