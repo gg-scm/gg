@@ -29,7 +29,7 @@ import (
 const pushSynopsis = "push changes to the specified destination"
 
 func push(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg push [-n] [-r REV] [-d REF] [--create] [DST]", pushSynopsis+`
+	f := flag.NewFlagSet(true, "gg push [-f] [-n] [-r REV] [-d REF] [--create] [DST]", pushSynopsis+`
 
 	When no destination repository is given, push uses the first non-
 	empty configuration value of:
@@ -55,6 +55,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	create := f.Bool("create", false, "allow pushing a new ref")
 	dstRef := f.String("d", "", "destination `ref`")
 	f.Alias("d", "dest")
+	force := f.Bool("f", false, "allow overwriting ref if it is not an ancestor, as long as it matches the remote-tracking branch")
 	dryRun := f.Bool("n", false, "do everything except send the changes")
 	f.Alias("n", "dry-run")
 	rev := f.String("r", "HEAD", "source `rev`ision")
@@ -94,6 +95,9 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	var pushArgs []string
 	pushArgs = append(pushArgs, "push")
+	if *force {
+		pushArgs = append(pushArgs, "--force-with-lease")
+	}
 	if *dryRun {
 		pushArgs = append(pushArgs, "--dry-run")
 	}
