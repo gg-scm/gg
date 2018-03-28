@@ -37,7 +37,7 @@ func TestCommit_NoArgs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := stageCommitTest(ctx, env); err != nil {
+	if err := stageCommitTest(ctx, env, true); err != nil {
 		t.Fatal(err)
 	}
 	r1, err := gittool.ParseRev(ctx, env.git, "HEAD")
@@ -56,7 +56,7 @@ func TestCommit_NoArgs(t *testing.T) {
 		t.Fatal("commit did not create a new commit in the working copy")
 	}
 	if ref := r2.RefName(); ref != "refs/heads/master" {
-		t.Fatalf("HEAD ref = %q; want refs/heads/master", ref)
+		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "added.txt"); err != nil {
 		t.Error(err)
@@ -84,7 +84,7 @@ func TestCommit_Selective(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := stageCommitTest(ctx, env); err != nil {
+	if err := stageCommitTest(ctx, env, true); err != nil {
 		t.Fatal(err)
 	}
 	r1, err := gittool.ParseRev(ctx, env.git, "HEAD")
@@ -103,7 +103,7 @@ func TestCommit_Selective(t *testing.T) {
 		t.Fatal("commit did not create a new commit in the working copy")
 	}
 	if ref := r2.RefName(); ref != "refs/heads/master" {
-		t.Fatalf("HEAD ref = %q; want refs/heads/master", ref)
+		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "modified.txt"); err != nil {
 		t.Error(err)
@@ -129,7 +129,7 @@ func TestCommit_Amend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := stageCommitTest(ctx, env); err != nil {
+	if err := stageCommitTest(ctx, env, true); err != nil {
 		t.Fatal(err)
 	}
 	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~")
@@ -159,7 +159,7 @@ func TestCommit_Amend(t *testing.T) {
 		t.Fatal("commit --amend did not create a new commit in the working copy")
 	}
 	if ref := r2.RefName(); ref != "refs/heads/master" {
-		t.Fatalf("HEAD ref = %q; want refs/heads/master", ref)
+		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "added.txt"); err != nil {
 		t.Error(err)
@@ -181,7 +181,37 @@ func TestCommit_Amend(t *testing.T) {
 	}
 }
 
-func stageCommitTest(ctx context.Context, env *testEnv) error {
+func TestCommit_NoChanges(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := stageCommitTest(ctx, env, false); err != nil {
+		t.Fatal(err)
+	}
+	r1, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.gg(ctx, env.root, "commit", "-m", "nothing to see here"); err == nil {
+		t.Error("commit with no changes did not return error")
+	} else if _, isUsage := err.(*usageError); isUsage {
+		t.Errorf("commit with no changes returned usage error: %v", err)
+	}
+	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r1.CommitHex() != r2.CommitHex() {
+		t.Errorf("commit created new commit %s; wanted to stay on %s", r2.CommitHex(), r1.CommitHex())
+	}
+	if ref := r2.RefName(); ref != "refs/heads/master" {
+		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
+	}
+}
+
+func stageCommitTest(ctx context.Context, env *testEnv, changeWC bool) error {
 	if err := env.git.Run(ctx, "init"); err != nil {
 		return err
 	}
@@ -207,19 +237,21 @@ func stageCommitTest(ctx context.Context, env *testEnv) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(filepath.Join(env.root, "added.txt"), []byte(commitAddedFileContent), 0666)
-	if err != nil {
-		return err
-	}
-	if err := env.git.Run(ctx, "add", "-N", "added.txt"); err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(filepath.Join(env.root, "modified.txt"), []byte(commitModifiedFileContent), 0666)
-	if err != nil {
-		return err
-	}
-	if err := env.git.Run(ctx, "rm", "deleted.txt"); err != nil {
-		return err
+	if changeWC {
+		err = ioutil.WriteFile(filepath.Join(env.root, "added.txt"), []byte(commitAddedFileContent), 0666)
+		if err != nil {
+			return err
+		}
+		if err := env.git.Run(ctx, "add", "-N", "added.txt"); err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(filepath.Join(env.root, "modified.txt"), []byte(commitModifiedFileContent), 0666)
+		if err != nil {
+			return err
+		}
+		if err := env.git.Run(ctx, "rm", "deleted.txt"); err != nil {
+			return err
+		}
 	}
 
 	return nil
