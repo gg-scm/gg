@@ -48,9 +48,13 @@ func commit(ctx context.Context, cc *cmdContext, args []string) error {
 	commitArgs = append(commitArgs, "--")
 	if f.NArg() == 0 {
 		var err error
+		fileStart := len(commitArgs)
 		commitArgs, err = inferCommitFiles(ctx, cc.git, commitArgs)
 		if err != nil {
 			return err
+		}
+		if len(commitArgs) == fileStart && !*amend {
+			return errors.New("nothing changed")
 		}
 	} else {
 		commitArgs = append(commitArgs, f.Args()...)
@@ -104,7 +108,7 @@ func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([
 	if len(files) == filesStart {
 		switch missing {
 		case 0:
-			return files[:filesStart], errors.New("nothing changed")
+			return files[:filesStart], nil
 		case 1:
 			return files[:filesStart], errors.New("nothing changed (1 missing file; see 'gg status')")
 		default:

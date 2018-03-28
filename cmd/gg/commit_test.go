@@ -211,6 +211,59 @@ func TestCommit_NoChanges(t *testing.T) {
 	}
 }
 
+func TestCommit_AmendJustMessage(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := stageCommitTest(ctx, env, false); err != nil {
+		t.Fatal(err)
+	}
+	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r1, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const wantMessage = "gg amended this commit"
+	if err := env.gg(ctx, env.root, "commit", "--amend", "-m", wantMessage); err != nil {
+		t.Fatal(err)
+	}
+	if newParent, err := gittool.ParseRev(ctx, env.git, "HEAD~"); err != nil {
+		t.Error(err)
+	} else if newParent.CommitHex() == r1.CommitHex() {
+		t.Error("commit --amend created new commit descending from HEAD")
+	} else if newParent.CommitHex() != parent.CommitHex() {
+		t.Errorf("HEAD~ = %s; want %s", newParent.CommitHex(), parent.CommitHex())
+	}
+	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r1.CommitHex() == r2.CommitHex() {
+		t.Fatal("commit --amend did not create a new commit in the working copy")
+	}
+	if ref := r2.RefName(); ref != "refs/heads/master" {
+		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
+	}
+	if msg, err := readCommitMessage(ctx, env.git, r2.CommitHex()); err != nil {
+		t.Error(err)
+	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
+		t.Errorf("commit message = %q; want %q", got, wantMessage)
+	}
+	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "modified.txt"); err != nil {
+		t.Error(err)
+	} else if string(data) != commitModifiedFileOldContent {
+		t.Errorf("modified.txt = %q; want %q", data, commitModifiedFileContent)
+	}
+	if err := objectExists(ctx, env.git, r2.CommitHex()+":deleted.txt"); err != nil {
+		t.Error("deleted.txt was removed:", err)
+	}
+}
+
 func stageCommitTest(ctx context.Context, env *testEnv, changeWC bool) error {
 	if err := env.git.Run(ctx, "init"); err != nil {
 		return err
