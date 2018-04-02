@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module "zombiezen.com/go/gg"
+//+build darwin dragonfly freebsd netbsd openbsd
 
-require "golang.org/x/sys" v0.0.0-20180329131831-378d26f46672
+package terminal
+
+import (
+	"golang.org/x/sys/unix"
+)
+
+func isTerminal(fd uintptr) bool {
+	_, err := unix.IoctlGetTermios(int(fd), unix.TIOCGETA)
+	return err == nil
+}

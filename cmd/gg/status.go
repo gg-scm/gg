@@ -23,6 +23,8 @@ import (
 	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gittool"
+	"zombiezen.com/go/gg/internal/terminal"
 )
 
 const statusSynopsis = "show changed files in the working directory"
@@ -35,12 +37,59 @@ func status(ctx context.Context, cc *cmdContext, args []string) error {
 	} else if err != nil {
 		return usagef("%v", err)
 	}
+	var (
+		addedColor     []byte
+		modifiedColor  []byte
+		removedColor   []byte
+		missingColor   []byte
+		ignoredColor   []byte
+		untrackedColor []byte
+		unmergedColor  []byte
+	)
+	colorize, err := gittool.ColorBool(ctx, cc.git, "color.ggstatus", terminal.IsTerminal(cc.stdout))
+	if err != nil {
+		fmt.Fprintln(cc.stderr, "gg:", err)
+	} else if colorize {
+		addedColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.added", "green")
+		if err != nil {
+			fmt.Fprintln(cc.stderr, "gg:", err)
+		}
+		modifiedColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.modified", "blue")
+		if err != nil {
+			fmt.Fprintln(cc.stderr, "gg:", err)
+		}
+		removedColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.removed", "red")
+		if err != nil {
+			fmt.Fprintln(cc.stderr, "gg:", err)
+		}
+		missingColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.deleted", "cyan")
+		if err != nil {
+			fmt.Fprintln(cc.stderr, "gg:", err)
+		}
+		untrackedColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.unknown", "magenta")
+		if err != nil {
+			fmt.Fprintln(cc.stderr, "gg:", err)
+		}
+		ignoredColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.ignored", "black")
+		if err != nil {
+			fmt.Fprintln(cc.stderr, "gg:", err)
+		}
+		unmergedColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.unmerged", "blue")
+		if err != nil {
+			fmt.Fprintln(cc.stderr, "gg:", err)
+		}
+	}
 	p, err := cc.git.Start(ctx, append([]string{"status", "--porcelain", "-z", "-unormal", "--"}, f.Args()...)...)
 	if err != nil {
 		return err
 	}
 	defer p.Wait()
 	r := bufio.NewReader(p)
+	if colorize {
+		if err := terminal.ResetTextStyle(cc.stdout); err != nil {
+			return err
+		}
+	}
 	for {
 		ent, err := readStatusEntry(r)
 		if err == io.EOF {
@@ -51,25 +100,47 @@ func status(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		switch {
 		case ent.isModified():
-			fmt.Println("M", ent.name)
+			_, err = fmt.Fprintf(cc.stdout, "%sM %s\n", modifiedColor, ent.name)
 		case ent.isAdded():
-			fmt.Println("A", ent.name)
+			_, err = fmt.Fprintf(cc.stdout, "%sA %s\n", addedColor, ent.name)
 		case ent.isRemoved():
-			fmt.Println("R", ent.name)
+			_, err = fmt.Fprintf(cc.stdout, "%sR %s\n", removedColor, ent.name)
 		case ent.isCopied():
-			fmt.Printf("A %s\n  %s\n", ent.name, ent.from)
+			if _, err := fmt.Fprintf(cc.stdout, "%sA %s\n", addedColor, ent.name); err != nil {
+				return err
+			}
+			if colorize {
+				if err := terminal.ResetTextStyle(cc.stdout); err != nil {
+					return err
+				}
+			}
+			_, err = fmt.Fprintf(cc.stdout, "  %s\n", ent.from)
 		case ent.isRenamed():
-			fmt.Printf("A %s\n  %s\nR %s\n", ent.name, ent.from, ent.from)
+			fmt.Fprintf(cc.stdout, "%sA %s\n", addedColor, ent.name)
+			if colorize {
+				if err := terminal.ResetTextStyle(cc.stdout); err != nil {
+					return err
+				}
+			}
+			_, err = fmt.Fprintf(cc.stdout, "  %s\n%sR %s\n", ent.from, removedColor, ent.from)
 		case ent.isMissing():
-			fmt.Println("!", ent.name)
+			_, err = fmt.Fprintf(cc.stdout, "%s! %s\n", missingColor, ent.name)
 		case ent.isUntracked():
-			fmt.Println("?", ent.name)
+			_, err = fmt.Fprintf(cc.stdout, "%s? %s\n", untrackedColor, ent.name)
 		case ent.isIgnored():
-			fmt.Println("I", ent.name)
+			_, err = fmt.Fprintf(cc.stdout, "%sI %s\n", ignoredColor, ent.name)
 		case ent.isUnmerged():
-			fmt.Println("U", ent.name)
+			_, err = fmt.Fprintf(cc.stdout, "%sU %s\n", unmergedColor, ent.name)
 		default:
 			panic("unreachable")
+		}
+		if err != nil {
+			return err
+		}
+		if colorize {
+			if err := terminal.ResetTextStyle(cc.stdout); err != nil {
+				return err
+			}
 		}
 	}
 	return p.Wait()

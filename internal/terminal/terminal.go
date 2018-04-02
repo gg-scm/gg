@@ -12,6 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module "zombiezen.com/go/gg"
+// Package terminal provides functions for querying and manipulating an
+// interactive terminal.
+package terminal
 
-require "golang.org/x/sys" v0.0.0-20180329131831-378d26f46672
+import (
+	"io"
+	"os"
+)
+
+// IsTerminal reports whether w writes directly to a terminal.
+func IsTerminal(w io.Writer) bool {
+	f, ok := w.(*os.File)
+	if !ok {
+		return false
+	}
+	return isTerminal(f.Fd())
+}
+
+// ResetTextStyle clears any text styles on the writer. The behavior of
+// calling this function on a non-terminal is undefined.
+func ResetTextStyle(w io.Writer) error {
+	return resetTextStyle(w)
+}
