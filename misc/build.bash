@@ -26,11 +26,11 @@ commitinfo() {
 }
 
 if [[ $# -ne 1 && $# -ne 2 ]]; then
-  echo "usage: build.bash OUT [VERSION]" 1>&2
+  echo "usage: misc/build.bash OUT [VERSION]" 1>&2
   exit 64
 fi
 buildtime="$(date -u '+%Y-%m-%dT%TZ')"
-cd "$(dirname "${BASH_SOURCE[0]}")"
+cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")"
 commit="${TRAVIS_COMMIT:-$(commitinfo)}"
 version="${2:-$(echo "$TRAVIS_TAG" | sed -n -e 's/v\([0-9].*\)/\1/p')}"
 vgo build -o "$1" -ldflags="-X main.versionInfo=${version} -X main.buildCommit=${commit} -X main.buildTime=${buildtime}" zombiezen.com/go/gg/cmd/gg

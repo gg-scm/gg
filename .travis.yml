@@ -21,7 +21,7 @@ jobs:
       os: linux
       env: ""
       install: go get -u golang.org/x/vgo
-      script: &releaseScript "mkdir -p dist && (cd dist && ../release.bash)"
+      script: &releaseScript "mkdir -p dist && (cd dist && ../misc/release.bash)"
       deploy:
         provider: releases
         api_key:
