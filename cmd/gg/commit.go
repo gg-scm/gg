@@ -20,6 +20,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
+	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
 	"zombiezen.com/go/gg/internal/gittool"
@@ -37,6 +39,14 @@ func commit(ctx context.Context, cc *cmdContext, args []string) error {
 	} else if err != nil {
 		return usagef("%v", err)
 	}
+	// git does not always operate correctly on specified files when
+	// running from a subdirectory (see https://github.com/zombiezen/gg/issues/10).
+	// To work around, we always run commit from the top directory.
+	topBytes, err := cc.git.RunOneLiner(ctx, '\n', "rev-parse", "--show-toplevel")
+	if err != nil {
+		return err
+	}
+	top := string(topBytes)
 	var commitArgs []string
 	commitArgs = append(commitArgs, "commit", "--quiet")
 	if *amend {
@@ -58,8 +68,38 @@ func commit(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	} else {
 		commitArgs = append(commitArgs, f.Args()...)
+		if err := toPathspecs(cc.dir, top, commitArgs[len(commitArgs)-f.NArg():]); err != nil {
+			return err
+		}
 	}
-	return cc.git.RunInteractive(ctx, commitArgs...)
+	return cc.git.WithDir(top).RunInteractive(ctx, commitArgs...)
+}
+
+// toPathspecs rewrites the given set of arguments into either absolute
+// path specs or top-level path specs.
+func toPathspecs(wd, top string, files []string) error {
+	var err error
+	wd, err = filepath.EvalSymlinks(wd)
+	if err != nil {
+		return fmt.Errorf("find current directory: %v", err)
+	}
+	top, err = filepath.EvalSymlinks(top)
+	if err != nil {
+		return fmt.Errorf("find top directory: %v", err)
+	}
+	for i := range files {
+		if !filepath.IsAbs(files[i]) {
+			files[i] = filepath.Join(wd, files[i])
+		}
+		if strings.HasPrefix(files[i], top+string(filepath.Separator)) {
+			// Prepend pathspec options to interpret relative to top of
+			// repository and ignore globs. See gitglossary(7) for more details.
+			files[i] = ":(top,literal)" + files[i][len(top)+len(string(filepath.Separator)):]
+		} else {
+			files[i] = ":(literal)" + files[i]
+		}
+	}
+	return nil
 }
 
 func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([]string, error) {
@@ -86,11 +126,11 @@ func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([
 				missingStaged++
 			}
 		case ent.isAdded() || ent.isModified() || ent.isRemoved() || ent.isCopied():
-			// Prepend ":/:" pathspec prefix, because status reports from top of repository.
-			files = append(files, ":/:"+ent.name)
+			// Prepend pathspec options to interpret relative to top of
+			// repository and ignore globs. See gitglossary(7) for more details.
+			files = append(files, ":(top,literal)"+ent.name)
 		case ent.isRenamed():
-			// Prepend ":/:" pathspec prefix, because status reports from top of repository.
-			files = append(files, ":/:"+ent.name, ":/:"+ent.from)
+			files = append(files, ":(top,literal)"+ent.name, ":(top,literal)"+ent.from)
 		case ent.isIgnored() || ent.isUntracked():
 			// Skip
 		case ent.isUnmerged():

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -266,6 +267,244 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 	}
 	if err := objectExists(ctx, env.git, r2.CommitHex()+":deleted.txt"); err != nil {
 		t.Error("deleted.txt was removed:", err)
+	}
+}
+
+func TestCommit_NoArgs_InSubdir(t *testing.T) {
+	// Regression test for https://github.com/zombiezen/gg/issues/10
+
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := stageCommitTest(ctx, env, true); err != nil {
+		t.Fatal(err)
+	}
+	r1, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	subdir := filepath.Join(env.root, "foo")
+	if err := os.Mkdir(subdir, 0777); err != nil {
+		t.Fatal(err)
+	}
+	const wantMessage = "gg made this commit"
+	if err := env.gg(ctx, subdir, "commit", "-m", wantMessage); err != nil {
+		t.Fatal(err)
+	}
+	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r1.CommitHex() == r2.CommitHex() {
+		t.Fatal("commit did not create a new commit in the working copy")
+	}
+	if ref := r2.RefName(); ref != "refs/heads/master" {
+		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
+	}
+	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "added.txt"); err != nil {
+		t.Error(err)
+	} else if string(data) != commitAddedFileContent {
+		t.Errorf("added.txt = %q; want %q", data, commitAddedFileContent)
+	}
+	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "modified.txt"); err != nil {
+		t.Error(err)
+	} else if string(data) != commitModifiedFileContent {
+		t.Errorf("modified.txt = %q; want %q", data, commitModifiedFileContent)
+	}
+	if err := objectExists(ctx, env.git, r2.CommitHex()+":deleted.txt"); err == nil {
+		t.Error("deleted.txt exists")
+	}
+	if msg, err := readCommitMessage(ctx, env.git, r2.CommitHex()); err != nil {
+		t.Error(err)
+	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
+		t.Errorf("commit message = %q; want %q", got, wantMessage)
+	}
+}
+
+func TestCommit_Named_InSubdir(t *testing.T) {
+	// Regression test for https://github.com/zombiezen/gg/issues/10
+
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := stageCommitTest(ctx, env, true); err != nil {
+		t.Fatal(err)
+	}
+	r1, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	subdir := filepath.Join(env.root, "foo")
+	if err := os.Mkdir(subdir, 0777); err != nil {
+		t.Fatal(err)
+	}
+	const wantMessage = "gg made this commit"
+	if err := env.gg(ctx, subdir, "commit", "-m", wantMessage, "../added.txt", "../deleted.txt", "../modified.txt"); err != nil {
+		t.Fatal(err)
+	}
+	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r1.CommitHex() == r2.CommitHex() {
+		t.Fatal("commit did not create a new commit in the working copy")
+	}
+	if ref := r2.RefName(); ref != "refs/heads/master" {
+		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
+	}
+	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "added.txt"); err != nil {
+		t.Error(err)
+	} else if string(data) != commitAddedFileContent {
+		t.Errorf("added.txt = %q; want %q", data, commitAddedFileContent)
+	}
+	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "modified.txt"); err != nil {
+		t.Error(err)
+	} else if string(data) != commitModifiedFileContent {
+		t.Errorf("modified.txt = %q; want %q", data, commitModifiedFileContent)
+	}
+	if err := objectExists(ctx, env.git, r2.CommitHex()+":deleted.txt"); err == nil {
+		t.Error("deleted.txt exists")
+	}
+	if msg, err := readCommitMessage(ctx, env.git, r2.CommitHex()); err != nil {
+		t.Error(err)
+	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
+		t.Errorf("commit message = %q; want %q", got, wantMessage)
+	}
+}
+
+func TestToPathspecs(t *testing.T) {
+	tests := []struct {
+		top  string
+		wd   string
+		file string
+
+		wantTop bool
+		want    string
+	}{
+		{
+			top:     "foo",
+			wd:      "foo",
+			file:    "bar.txt",
+			wantTop: true,
+			want:    "bar.txt",
+		},
+		{
+			top:     "foo",
+			wd:      "foo/bar",
+			file:    "baz.txt",
+			wantTop: true,
+			want:    "bar/baz.txt",
+		},
+		{
+			top:     "foo",
+			wd:      "foo/bar",
+			file:    "../baz.txt",
+			wantTop: true,
+			want:    "baz.txt",
+		},
+		{
+			top:     "foo",
+			wd:      "foo",
+			file:    "../baz.txt",
+			wantTop: false,
+			want:    "baz.txt",
+		},
+		{
+			top:     "foo",
+			wd:      "bar",
+			file:    "../baz.txt",
+			wantTop: false,
+			want:    "baz.txt",
+		},
+		{
+			top:     "foo",
+			wd:      "bar",
+			file:    "../foo/baz.txt",
+			wantTop: true,
+			want:    "baz.txt",
+		},
+	}
+	root, err := ioutil.TempDir("", "gg_pathspec_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(root)
+	root, err = filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range tests {
+		wd := filepath.Join(root, filepath.FromSlash(test.wd))
+		if err := os.MkdirAll(wd, 0777); err != nil {
+			t.Error(err)
+			continue
+		}
+		top := filepath.Join(root, filepath.FromSlash(test.top))
+		if err := os.MkdirAll(top, 0777); err != nil {
+			t.Error(err)
+			continue
+		}
+		files := []string{test.file}
+		if err := toPathspecs(wd, top, files); err != nil {
+			t.Errorf("toPathspecs(%q, %q, [%q]): %v", test.wd, test.top, test.file, err)
+			continue
+		}
+		magic, got := parsePathspec(files[0])
+		isLiteral, isTop := false, false
+		for _, word := range magic {
+			switch word {
+			case "literal":
+				isLiteral = true
+			case "top":
+				isTop = true
+			default:
+				t.Errorf("toPathspecs(%q, %q, [%q]) has magic word %q (full spec: %v)", test.wd, test.top, test.file, word, files[0])
+			}
+		}
+		if !isLiteral {
+			t.Errorf("toPathspecs(%q, %q, [%q]) does not have expected magic word \"literal\" (full spec: %v)", test.wd, test.top, test.file, files[0])
+		}
+		if isTop {
+			if !test.wantTop {
+				t.Errorf("toPathspecs(%q, %q, [%q]) has magic word \"top\" (full spec: %v)", test.wd, test.top, test.file, files[0])
+			}
+			if want := filepath.FromSlash(test.want); got != want {
+				t.Errorf("toPathspecs(%q, %q, [%q]) = %q; want %q", test.wd, test.top, test.file, files[0], ":(top,literal)"+want)
+			}
+		} else {
+			if test.wantTop {
+				t.Errorf("toPathspecs(%q, %q, [%q]) does not have expected magic word \"top\" (full spec: %v)", test.wd, test.top, test.file, files[0])
+			}
+			if want := filepath.Join(root, filepath.FromSlash(test.want)); got != want {
+				t.Errorf("toPathspecs(%q, %q, [%q]) = %q; want %q", test.wd, test.top, test.file, files[0], ":(literal)"+want)
+			}
+		}
+	}
+}
+
+func parsePathspec(spec string) ([]string, string) {
+	switch {
+	case strings.HasPrefix(spec, ":("):
+		i := strings.IndexByte(spec, ')')
+		if i == -1 {
+			return nil, spec
+		}
+		return strings.Split(spec[2:i], ","), spec[i+1:]
+	case strings.HasPrefix(spec, ":"):
+		i := strings.IndexByte(spec[1:], ':')
+		if i == -1 {
+			return nil, spec
+		}
+		// Test only cares about long-form magic.
+		return nil, spec[i+2:]
+	default:
+		return nil, spec
 	}
 }
 
