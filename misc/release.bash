@@ -35,6 +35,6 @@ stagedir="$(mktemp -d 2>/dev/null || mktemp -d -t gg_release)" || exit 1
 trap 'rm -rf $stagedir' EXIT
 distroot="$stagedir/$release_name"
 mkdir "$distroot" || exit 1
-cp "$srcroot/README.md" "$srcroot/LICENSE" "$distroot/" || exit 1
+cp "$srcroot/README.md" "$srcroot/CHANGELOG.md" "$srcroot/LICENSE" "$distroot/" || exit 1
 "$srcroot/misc/build.bash" "$distroot/gg" "$release_version" || exit 1
 tar -zcf - -C "$stagedir" "$release_name" > "${release_name}.tar.gz" || exit 1
