@@ -65,3 +65,45 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	return cc.git.RunInteractive(ctx, rebaseArgs...)
 }
+
+const histeditSynopsis = "interactively edit revision history"
+
+func histedit(ctx context.Context, cc *cmdContext, args []string) error {
+	f := flag.NewFlagSet(true, "gg histedit [options] [ANCESTOR]", histeditSynopsis)
+	abort := f.Bool("abort", false, "abort an edit already in progress")
+	continue_ := f.Bool("continue", false, "continue an edit already in progress")
+	editPlan := f.Bool("edit-plan", false, "edit remaining actions list")
+	if err := f.Parse(args); flag.IsHelp(err) {
+		f.Help(cc.stdout)
+		return nil
+	} else if err != nil {
+		return usagef("%v", err)
+	}
+	switch {
+	case !*abort && !*continue_ && !*editPlan:
+		if f.NArg() > 1 {
+			return usagef("no more than one ancestor should be given")
+		}
+		if ancestor := f.Arg(0); ancestor != "" {
+			return cc.git.RunInteractive(ctx, "rebase", "-i", "--", ancestor)
+		}
+		return cc.git.RunInteractive(ctx, "rebase", "-i")
+	case *abort && !*continue_ && !*editPlan:
+		if f.NArg() == 0 {
+			return usagef("can't pass arguments with --abort")
+		}
+		return cc.git.RunInteractive(ctx, "rebase", "--abort")
+	case !*abort && *continue_ && !*editPlan:
+		if f.NArg() == 0 {
+			return usagef("can't pass arguments with --continue")
+		}
+		return cc.git.RunInteractive(ctx, "rebase", "--continue")
+	case !*abort && !*continue_ && *editPlan:
+		if f.NArg() == 0 {
+			return usagef("can't pass arguments with --edit-todo")
+		}
+		return cc.git.RunInteractive(ctx, "rebase", "--edit-todo")
+	default:
+		return usagef("must specify at most one of --abort, --continue, or --edit-plan")
+	}
+}

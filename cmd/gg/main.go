@@ -54,6 +54,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  clone         " + cloneSynopsis + "\n" +
 		"  commit        " + commitSynopsis + "\n" +
 		"  diff          " + diffSynopsis + "\n" +
+		"  histedit      " + histeditSynopsis + "\n" +
 		"  init          " + initSynopsis + "\n" +
 		"  log           " + logSynopsis + "\n" +
 		"  mail          " + mailSynopsis + "\n" +
@@ -154,6 +155,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return commit(ctx, cc, args)
 	case "diff":
 		return diff(ctx, cc, args)
+	case "histedit":
+		return histedit(ctx, cc, args)
 	case "init":
 		return init_(ctx, cc, args)
 	case "log", "history":
