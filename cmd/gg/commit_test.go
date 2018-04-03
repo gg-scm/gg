@@ -37,6 +37,7 @@ func TestCommit_NoArgs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer env.cleanup()
 	if err := stageCommitTest(ctx, env, true); err != nil {
 		t.Fatal(err)
 	}
@@ -84,6 +85,7 @@ func TestCommit_Selective(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer env.cleanup()
 	if err := stageCommitTest(ctx, env, true); err != nil {
 		t.Fatal(err)
 	}
@@ -129,6 +131,7 @@ func TestCommit_Amend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer env.cleanup()
 	if err := stageCommitTest(ctx, env, true); err != nil {
 		t.Fatal(err)
 	}
@@ -187,6 +190,7 @@ func TestCommit_NoChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer env.cleanup()
 	if err := stageCommitTest(ctx, env, false); err != nil {
 		t.Fatal(err)
 	}
@@ -217,6 +221,7 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer env.cleanup()
 	if err := stageCommitTest(ctx, env, false); err != nil {
 		t.Fatal(err)
 	}
