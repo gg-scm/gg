@@ -59,6 +59,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  mail          " + mailSynopsis + "\n" +
 		"  pull          " + pullSynopsis + "\n" +
 		"  push          " + pushSynopsis + "\n" +
+		"  rebase        " + rebaseSynopsis + "\n" +
 		"  remove        " + removeSynopsis + "\n" +
 		"  revert        " + revertSynopsis + "\n" +
 		"  status        " + statusSynopsis + "\n" +
@@ -167,6 +168,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return push(ctx, cc, args)
 	case "remove", "rm":
 		return remove(ctx, cc, args)
+	case "rebase":
+		return rebase(ctx, cc, args)
 	case "revert":
 		return revert(ctx, cc, args)
 	case "update", "up", "checkout", "co":
