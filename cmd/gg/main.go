@@ -58,6 +58,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  init          " + initSynopsis + "\n" +
 		"  log           " + logSynopsis + "\n" +
 		"  mail          " + mailSynopsis + "\n" +
+		"  merge         " + mergeSynopsis + "\n" +
 		"  pull          " + pullSynopsis + "\n" +
 		"  push          " + pushSynopsis + "\n" +
 		"  rebase        " + rebaseSynopsis + "\n" +
@@ -163,6 +164,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return log(ctx, cc, args)
 	case "mail":
 		return mail(ctx, cc, args)
+	case "merge":
+		return merge(ctx, cc, args)
 	case "status", "st", "check":
 		return status(ctx, cc, args)
 	case "pull":
