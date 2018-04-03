@@ -62,7 +62,7 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	if exePathError != nil {
 		return nil, fmt.Errorf("could not determine executable path: %v", exePathError)
 	}
-	root, err := ioutil.TempDir("", "gut_integration_test")
+	root, err := ioutil.TempDir("", "gg_integration_test")
 	if err != nil {
 		return nil, err
 	}

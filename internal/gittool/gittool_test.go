@@ -99,7 +99,7 @@ type testEnv struct {
 }
 
 func newTestEnv(ctx context.Context) (*testEnv, error) {
-	root, err := ioutil.TempDir("", "gut_gittool_test")
+	root, err := ioutil.TempDir("", "gg_gittool_test")
 	if err != nil {
 		return nil, err
 	}
