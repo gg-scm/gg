@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.2.1
+
+### Bug Fixes
+
+-   `histedit` flags no longer give incorrect usage errors. ([#11](https://github.com/zombiezen/gg/issues/11))
+
 ## 0.2.0
 
 ### Features
