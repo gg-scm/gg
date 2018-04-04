@@ -89,17 +89,17 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		return cc.git.RunInteractive(ctx, "rebase", "-i")
 	case *abort && !*continue_ && !*editPlan:
-		if f.NArg() == 0 {
+		if f.NArg() != 0 {
 			return usagef("can't pass arguments with --abort")
 		}
 		return cc.git.RunInteractive(ctx, "rebase", "--abort")
 	case !*abort && *continue_ && !*editPlan:
-		if f.NArg() == 0 {
+		if f.NArg() != 0 {
 			return usagef("can't pass arguments with --continue")
 		}
 		return cc.git.RunInteractive(ctx, "rebase", "--continue")
 	case !*abort && !*continue_ && *editPlan:
-		if f.NArg() == 0 {
+		if f.NArg() != 0 {
 			return usagef("can't pass arguments with --edit-todo")
 		}
 		return cc.git.RunInteractive(ctx, "rebase", "--edit-todo")
