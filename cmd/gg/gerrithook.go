@@ -15,7 +15,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -115,7 +114,7 @@ func commitMsgHookPath(ctx context.Context, cc *cmdContext) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	common := cc.abs(string(bytes.TrimSuffix(commonBytes, []byte{'\n'})))
+	common := cc.abs(string(commonBytes))
 	return filepath.Join(common, "hooks", "commit-msg"), nil
 }
 
