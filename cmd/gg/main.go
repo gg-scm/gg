@@ -54,18 +54,20 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  clone         " + cloneSynopsis + "\n" +
 		"  commit        " + commitSynopsis + "\n" +
 		"  diff          " + diffSynopsis + "\n" +
-		"  histedit      " + histeditSynopsis + "\n" +
 		"  init          " + initSynopsis + "\n" +
 		"  log           " + logSynopsis + "\n" +
-		"  mail          " + mailSynopsis + "\n" +
 		"  merge         " + mergeSynopsis + "\n" +
 		"  pull          " + pullSynopsis + "\n" +
 		"  push          " + pushSynopsis + "\n" +
-		"  rebase        " + rebaseSynopsis + "\n" +
 		"  remove        " + removeSynopsis + "\n" +
 		"  revert        " + revertSynopsis + "\n" +
 		"  status        " + statusSynopsis + "\n" +
-		"  update        " + updateSynopsis
+		"  update        " + updateSynopsis + "\n" +
+		"\nadvanced commands:\n" +
+		"  gerrithook    " + gerrithookSynopsis + "\n" +
+		"  histedit      " + histeditSynopsis + "\n" +
+		"  mail          " + mailSynopsis + "\n" +
+		"  rebase        " + rebaseSynopsis
 
 	globalFlags := flag.NewFlagSet(false, synopsis, description)
 	gitPath := globalFlags.String("git", "", "`path` to git executable")
@@ -144,6 +146,16 @@ func (cc *cmdContext) abs(path string) string {
 	return filepath.Join(cc.dir, path)
 }
 
+func (cc *cmdContext) withDir(path string) *cmdContext {
+	path = cc.abs(path)
+	return &cmdContext{
+		dir:    path,
+		git:    cc.git.WithDir(path),
+		stdout: cc.stdout,
+		stderr: cc.stderr,
+	}
+}
+
 func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, name string, args []string) error {
 	switch name {
 	case "add":
@@ -156,6 +168,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return commit(ctx, cc, args)
 	case "diff":
 		return diff(ctx, cc, args)
+	case "gerrithook":
+		return gerrithook(ctx, cc, args)
 	case "histedit":
 		return histedit(ctx, cc, args)
 	case "init":

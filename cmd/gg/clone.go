@@ -33,6 +33,8 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg clone [-b BRANCH] SOURCE [DEST]", cloneSynopsis)
 	branch := f.String("b", "HEAD", "`branch` to check out")
 	f.Alias("b", "branch")
+	gerrit := f.Bool("gerrit", false, "install Gerrit hook")
+	gerritHookURL := f.String("gerrit-hook-url", commitMsgHookDefaultURL, "URL of hook script to download")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -58,8 +60,8 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 			return err
 		}
 	}
-	git := cc.git.WithDir(cc.abs(dst))
-	refs, err := listRefs(ctx, git)
+	cc = cc.withDir(dst)
+	refs, err := listRefs(ctx, cc.git)
 	if err != nil {
 		return err
 	}
@@ -78,9 +80,14 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 			continue
 		}
 		if _, hasLocal := branches[string(name)]; !hasLocal {
-			if err := git.Run(ctx, "branch", "--track", "--", string(name), string(r.name)); err != nil {
+			if err := cc.git.Run(ctx, "branch", "--track", "--", string(name), string(r.name)); err != nil {
 				return fmt.Errorf("mirroring local branch %q: %v", name, err)
 			}
+		}
+	}
+	if *gerrit {
+		if err := installGerritHook(ctx, cc, *gerritHookURL); err != nil {
+			return err
 		}
 	}
 	return nil
