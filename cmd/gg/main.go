@@ -64,6 +64,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  status        " + statusSynopsis + "\n" +
 		"  update        " + updateSynopsis + "\n" +
 		"\nadvanced commands:\n" +
+		"  evolve        " + evolveSynopsis + "\n" +
 		"  gerrithook    " + gerrithookSynopsis + "\n" +
 		"  histedit      " + histeditSynopsis + "\n" +
 		"  mail          " + mailSynopsis + "\n" +
@@ -168,6 +169,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return commit(ctx, cc, args)
 	case "diff":
 		return diff(ctx, cc, args)
+	case "evolve":
+		return evolve(ctx, cc, args)
 	case "gerrithook":
 		return gerrithook(ctx, cc, args)
 	case "histedit":

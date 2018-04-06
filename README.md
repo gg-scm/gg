@@ -48,18 +48,22 @@ basic commands:
   clone         make a copy of an existing repository
   commit        commit the specified files or all outstanding changes
   diff          diff repository (or selected files)
-  histedit      interactively edit revision history
   init          create a new repository in the given directory
   log           show revision history of entire repository or files
-  mail          creates or updates a Gerrit change
   merge         merge another revision into working directory
   pull          pull changes from the specified source
   push          push changes to the specified destination
-  rebase        move revision (and descendants) to a different branch
   remove        remove the specified files on the next commit
   revert        restore files to their checkout state
   status        show changed files in the working directory
   update        update working directory (or switch revisions)
+
+advanced commands:
+  evolve        sync with Gerrit changes in upstream
+  gerrithook    install or uninstall Gerrit change ID hook
+  histedit      interactively edit revision history
+  mail          creates or updates a Gerrit change
+  rebase        move revision (and descendants) to a different branch
 
 options:
   -git path
