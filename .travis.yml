@@ -6,7 +6,7 @@ install:
   - "misc/build-git.bash ~/git \"$GIT_VERSION\""
   - "if [[ \"$VGO\" == 1 ]]; then go get -u golang.org/x/vgo; else go get -t ./...; fi"
 script:
-  - "PATH=\"$HOME/git:$PATH\"; if [[ \"$VGO\" == 1 ]]; then vgo test -v ./...; else go test -v ./...; fi"
+  - "PATH=\"$HOME/git/bin-wrappers:$PATH\"; if [[ \"$VGO\" == 1 ]]; then vgo test -v ./...; else go test -v ./...; fi"
 jobs:
   include:
     - os: linux
