@@ -98,11 +98,14 @@ func (env *testEnv) cleanup() {
 	}
 }
 
-func (env *testEnv) gg(ctx context.Context, dir string, args ...string) error {
+func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte, error) {
+	out := new(bytes.Buffer)
 	pctx := &processContext{
 		dir:    dir,
 		env:    []string{"GIT_CONFIG_NOSYSTEM=1", "HOME=" + env.root},
+		stdout: out,
 		stderr: env.stderr,
 	}
-	return run(ctx, pctx, append([]string{"-git=" + gitPath}, args...))
+	err := run(ctx, pctx, append([]string{"-git=" + gitPath}, args...))
+	return out.Bytes(), err
 }

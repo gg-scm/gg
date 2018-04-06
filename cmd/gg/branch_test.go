@@ -55,7 +55,7 @@ func TestBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, repoPath, "branch", "foo", "bar"); err != nil {
+	if _, err := env.gg(ctx, repoPath, "branch", "foo", "bar"); err != nil {
 		t.Fatal(err)
 	}
 	if r, err := gittool.ParseRev(ctx, git, "HEAD"); err != nil {
@@ -116,7 +116,7 @@ func TestBranch_Upstream(t *testing.T) {
 	}
 
 	repoPath2 := filepath.Join(env.root, "repo2")
-	if err := env.gg(ctx, repoPath2, "branch", "foo"); err != nil {
+	if _, err := env.gg(ctx, repoPath2, "branch", "foo"); err != nil {
 		t.Fatal(err)
 	}
 	git2 := env.git.WithDir(repoPath2)

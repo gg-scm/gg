@@ -66,7 +66,7 @@ func TestRevert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, repoPath, "revert", revertTestFileName1); err != nil {
+	if _, err := env.gg(ctx, repoPath, "revert", revertTestFileName1); err != nil {
 		t.Fatal(err)
 	}
 	data1, err := ioutil.ReadFile(filepath.Join(repoPath, revertTestFileName1))
@@ -82,7 +82,7 @@ func TestRevert(t *testing.T) {
 		t.Error("unrelated file was reverted")
 	}
 
-	if err := env.gg(ctx, repoPath, "revert", revertTestFileName2); err != nil {
+	if _, err := env.gg(ctx, repoPath, "revert", revertTestFileName2); err != nil {
 		t.Fatal(err)
 	}
 	data2, err = ioutil.ReadFile(filepath.Join(repoPath, revertTestFileName2))
@@ -141,7 +141,7 @@ func TestRevert_All(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, repoPath, "revert", "--all"); err != nil {
+	if _, err := env.gg(ctx, repoPath, "revert", "--all"); err != nil {
 		t.Fatal(err)
 	}
 	data1, err := ioutil.ReadFile(filepath.Join(repoPath, revertTestFileName1))
@@ -199,7 +199,7 @@ func TestRevert_Rev(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, repoPath, "revert", "-r", "HEAD^", revertTestFileName1); err != nil {
+	if _, err := env.gg(ctx, repoPath, "revert", "-r", "HEAD^", revertTestFileName1); err != nil {
 		t.Fatal(err)
 	}
 	data1, err := ioutil.ReadFile(filepath.Join(repoPath, revertTestFileName1))
@@ -254,7 +254,7 @@ func TestRevert_Missing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, repoPath, "revert", revertTestFileName1); err != nil {
+	if _, err := env.gg(ctx, repoPath, "revert", revertTestFileName1); err != nil {
 		t.Fatal(err)
 	}
 	data1, err := ioutil.ReadFile(filepath.Join(repoPath, revertTestFileName1))

@@ -38,7 +38,7 @@ func TestPush(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, pushEnv.repoA, "push"); err != nil {
+	if _, err := env.gg(ctx, pushEnv.repoA, "push"); err != nil {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(pushEnv.repoB)
@@ -68,7 +68,7 @@ func TestPush_Arg(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, pushEnv.repoA, "push", filepath.Join(env.root, "repoC")); err != nil {
+	if _, err := env.gg(ctx, pushEnv.repoA, "push", filepath.Join(env.root, "repoC")); err != nil {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(pushEnv.repoB)
@@ -105,7 +105,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, pushEnv.repoA, "push", "-d", "foo"); err == nil {
+	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-d", "foo"); err == nil {
 		t.Error("push of new ref did not return error")
 	} else if _, isUsage := err.(*usageError); isUsage {
 		t.Errorf("push of new ref returned usage error: %v", err)
@@ -146,7 +146,7 @@ func TestPush_CreateRef(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, pushEnv.repoA, "push", "-d", "foo", "--create"); err != nil {
+	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-d", "foo", "--create"); err != nil {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(pushEnv.repoB)
@@ -188,7 +188,7 @@ func TestPush_RewindFails(t *testing.T) {
 	}
 
 	// Push rewind
-	if err := env.gg(ctx, pushEnv.repoA, "push", "-d", "master", "-r", pushEnv.commit1); err == nil {
+	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-d", "master", "-r", pushEnv.commit1); err == nil {
 		t.Error("push of parent rev did not return error")
 	} else if _, isUsage := err.(*usageError); isUsage {
 		t.Errorf("push of parent rev returned usage error: %v", err)
@@ -223,7 +223,7 @@ func TestPush_RewindForce(t *testing.T) {
 	}
 
 	// Push rewind
-	if err := env.gg(ctx, pushEnv.repoA, "push", "-f", "-d", "master", "-r", pushEnv.commit1); err != nil {
+	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-f", "-d", "master", "-r", pushEnv.commit1); err != nil {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(pushEnv.repoB)

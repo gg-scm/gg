@@ -36,7 +36,7 @@ func TestPull(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.gg(ctx, pullEnv.repoB, "pull"); err != nil {
+	if _, err := env.gg(ctx, pullEnv.repoB, "pull"); err != nil {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(pullEnv.repoB)
@@ -81,7 +81,7 @@ func TestPullWithArgument(t *testing.T) {
 	if err := os.Rename(pullEnv.repoA, repoC); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.gg(ctx, pullEnv.repoB, "pull", repoC); err != nil {
+	if _, err := env.gg(ctx, pullEnv.repoB, "pull", repoC); err != nil {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(pullEnv.repoB)
@@ -118,7 +118,7 @@ func TestPullUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.gg(ctx, pullEnv.repoB, "pull", "-u"); err != nil {
+	if _, err := env.gg(ctx, pullEnv.repoB, "pull", "-u"); err != nil {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(pullEnv.repoB)

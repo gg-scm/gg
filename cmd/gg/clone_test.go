@@ -37,7 +37,7 @@ func TestClone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.gg(ctx, env.root, "clone", "repoA", "repoB"); err != nil {
+	if _, err := env.gg(ctx, env.root, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(filepath.Join(env.root, "repoB"))
@@ -86,7 +86,7 @@ func TestClone_Branch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.gg(ctx, env.root, "clone", "-b=foo", "repoA", "repoB"); err != nil {
+	if _, err := env.gg(ctx, env.root, "clone", "-b=foo", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(filepath.Join(env.root, "repoB"))

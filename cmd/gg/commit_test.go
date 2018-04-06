@@ -47,7 +47,7 @@ func TestCommit_NoArgs(t *testing.T) {
 		t.Fatal(err)
 	}
 	const wantMessage = "gg made this commit"
-	if err := env.gg(ctx, env.root, "commit", "-m", wantMessage); err != nil {
+	if _, err := env.gg(ctx, env.root, "commit", "-m", wantMessage); err != nil {
 		t.Fatal(err)
 	}
 	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
@@ -95,7 +95,7 @@ func TestCommit_Selective(t *testing.T) {
 		t.Fatal(err)
 	}
 	const wantMessage = "gg made this commit"
-	if err := env.gg(ctx, env.root, "commit", "-m", wantMessage, "modified.txt"); err != nil {
+	if _, err := env.gg(ctx, env.root, "commit", "-m", wantMessage, "modified.txt"); err != nil {
 		t.Fatal(err)
 	}
 	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
@@ -145,7 +145,7 @@ func TestCommit_Amend(t *testing.T) {
 		t.Fatal(err)
 	}
 	const wantMessage = "gg amended this commit"
-	if err := env.gg(ctx, env.root, "commit", "--amend", "-m", wantMessage); err != nil {
+	if _, err := env.gg(ctx, env.root, "commit", "--amend", "-m", wantMessage); err != nil {
 		t.Fatal(err)
 	}
 	if newParent, err := gittool.ParseRev(ctx, env.git, "HEAD~"); err != nil {
@@ -199,7 +199,7 @@ func TestCommit_NoChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.gg(ctx, env.root, "commit", "-m", "nothing to see here"); err == nil {
+	if _, err := env.gg(ctx, env.root, "commit", "-m", "nothing to see here"); err == nil {
 		t.Error("commit with no changes did not return error")
 	} else if _, isUsage := err.(*usageError); isUsage {
 		t.Errorf("commit with no changes returned usage error: %v", err)
@@ -235,7 +235,7 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 	const wantMessage = "gg amended this commit"
-	if err := env.gg(ctx, env.root, "commit", "--amend", "-m", wantMessage); err != nil {
+	if _, err := env.gg(ctx, env.root, "commit", "--amend", "-m", wantMessage); err != nil {
 		t.Fatal(err)
 	}
 	if newParent, err := gittool.ParseRev(ctx, env.git, "HEAD~"); err != nil {
@@ -291,7 +291,7 @@ func TestCommit_NoArgs_InSubdir(t *testing.T) {
 		t.Fatal(err)
 	}
 	const wantMessage = "gg made this commit"
-	if err := env.gg(ctx, subdir, "commit", "-m", wantMessage); err != nil {
+	if _, err := env.gg(ctx, subdir, "commit", "-m", wantMessage); err != nil {
 		t.Fatal(err)
 	}
 	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
@@ -345,7 +345,7 @@ func TestCommit_Named_InSubdir(t *testing.T) {
 		t.Fatal(err)
 	}
 	const wantMessage = "gg made this commit"
-	if err := env.gg(ctx, subdir, "commit", "-m", wantMessage, "../added.txt", "../deleted.txt", "../modified.txt"); err != nil {
+	if _, err := env.gg(ctx, subdir, "commit", "-m", wantMessage, "../added.txt", "../deleted.txt", "../modified.txt"); err != nil {
 		t.Fatal(err)
 	}
 	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")

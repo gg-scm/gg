@@ -41,7 +41,7 @@ func TestRemove(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, repoPath, "rm", removeTestFileName); err != nil {
+	if _, err := env.gg(ctx, repoPath, "rm", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
 	git := env.git.WithDir(repoPath)
@@ -98,7 +98,7 @@ func TestRemove_AddedFails(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = env.gg(ctx, repoPath, "rm", removeTestFileName); err == nil {
+	if _, err = env.gg(ctx, repoPath, "rm", removeTestFileName); err == nil {
 		t.Error("`gg rm` returned success on added file")
 	} else if _, isUsage := err.(*usageError); isUsage {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
@@ -156,7 +156,7 @@ func TestRemove_AddedForce(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, repoPath, "rm", "-f", removeTestFileName); err != nil {
+	if _, err := env.gg(ctx, repoPath, "rm", "-f", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
 	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
@@ -197,7 +197,7 @@ func TestRemove_ModifiedFails(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = env.gg(ctx, repoPath, "rm", removeTestFileName); err == nil {
+	if _, err = env.gg(ctx, repoPath, "rm", removeTestFileName); err == nil {
 		t.Error("`gg rm` returned success on modified file")
 	} else if _, isUsage := err.(*usageError); isUsage {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
@@ -252,7 +252,7 @@ func TestRemove_ModifiedForce(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, repoPath, "rm", "-f", removeTestFileName); err != nil {
+	if _, err := env.gg(ctx, repoPath, "rm", "-f", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
 	git := env.git.WithDir(repoPath)
@@ -301,7 +301,7 @@ func TestRemove_MissingFails(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = env.gg(ctx, repoPath, "rm", removeTestFileName); err == nil {
+	if _, err = env.gg(ctx, repoPath, "rm", removeTestFileName); err == nil {
 		t.Error("`gg rm` returned success on missing file")
 	} else if _, isUsage := err.(*usageError); isUsage {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
@@ -352,7 +352,7 @@ func TestRemove_MissingAfter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := env.gg(ctx, repoPath, "rm", "-after", removeTestFileName); err != nil {
+	if _, err := env.gg(ctx, repoPath, "rm", "-after", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
 	git := env.git.WithDir(repoPath)

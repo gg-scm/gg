@@ -30,7 +30,7 @@ func TestInit(t *testing.T) {
 	defer env.cleanup()
 
 	repoPath := filepath.Join(env.root, "repo")
-	if err := env.gg(ctx, env.root, "init", repoPath); err != nil {
+	if _, err := env.gg(ctx, env.root, "init", repoPath); err != nil {
 		t.Fatal(err)
 	}
 	gitDirPath := filepath.Join(repoPath, ".git")
