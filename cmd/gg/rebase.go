@@ -25,7 +25,7 @@ const rebaseSynopsis = "move revision (and descendants) to a different branch"
 func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg rebase [--src REV | --base REV] [--dst REV] [options]", rebaseSynopsis)
 	base := f.String("base", "", "rebase everything from branching point of specified `rev`ision")
-	dst := f.String("dst", "", "rebase onto the specified `rev`ision")
+	dst := f.String("dst", "@{upstream}", "rebase onto the specified `rev`ision")
 	src := f.String("src", "", "rebase the specified `rev`ision and descendants")
 	abort := f.Bool("abort", false, "abort an interrupted rebase")
 	continue_ := f.Bool("continue", false, "continue an interrupted rebase")
@@ -41,7 +41,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 	if *abort && *continue_ {
 		return usagef("can't specify both --abort and --continue")
 	}
-	if (*abort || *continue_) && (*base != "" || *dst != "" || *src != "") {
+	if (*abort || *continue_) && (*base != "" || *dst != "@{upstream}" || *src != "") {
 		return usagef("can't specify other options with --abort or --continue")
 	}
 	if *abort {
@@ -51,10 +51,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		return cc.git.RunInteractive(ctx, "rebase", "--continue")
 	}
 	var rebaseArgs []string
-	rebaseArgs = append(rebaseArgs, "rebase")
-	if *dst != "" {
-		rebaseArgs = append(rebaseArgs, "--onto="+*dst)
-	}
+	rebaseArgs = append(rebaseArgs, "rebase", "--onto="+*dst)
 	switch {
 	case *base != "" && *src != "":
 		return usagef("can't specify both -s and -b")

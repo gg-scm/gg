@@ -17,58 +17,10 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"testing"
 
 	"zombiezen.com/go/gg/internal/gittool"
 )
-
-func TestEvolve_NoOp(t *testing.T) {
-	ctx := context.Background()
-	env, err := newTestEnv(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
-		t.Fatal(err)
-	}
-	base, err := dummyEvolveRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
-	if err != nil {
-		t.Fatal(err)
-	}
-	c1, err := dummyEvolveRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
-	if err != nil {
-		t.Fatal(err)
-	}
-	c2, err := dummyEvolveRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if out, err := env.gg(ctx, env.root, "evolve", "-l"); err != nil {
-		t.Error(err)
-	} else if len(out) > 0 {
-		t.Errorf("gg evolve -l = %q; want empty", out)
-	}
-	if _, err := env.gg(ctx, env.root, "evolve"); err != nil {
-		t.Error(err)
-	}
-
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if curr.CommitHex() == base {
-		t.Errorf("HEAD = %s (base); want %s (change 2)", curr.CommitHex(), c2)
-	} else if curr.CommitHex() == c1 {
-		t.Errorf("HEAD = %s (change 1); want %s (change 2)", curr.CommitHex(), c2)
-	} else if curr.CommitHex() != c2 {
-		t.Errorf("HEAD = %s; want %s (change 2)", curr.CommitHex(), c2)
-	}
-}
 
 func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 	ctx := context.Background()
@@ -80,21 +32,27 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
-	base, err := dummyEvolveRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+	base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c1, err := dummyEvolveRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
+	c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c2, err := dummyEvolveRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
+	c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
 	if err != nil {
 		t.Fatal(err)
 	}
-	submit1, err := dummyEvolveRev(ctx, env, "master", "submitted.txt", "Submitted first feature change\n\nChange-Id: abcdef")
+	submit1, err := dummyRebaseRev(ctx, env, "master", "submitted.txt", "Submitted first feature change\n\nChange-Id: abcdef")
 	if err != nil {
 		t.Fatal(err)
+	}
+	names := map[string]string{
+		base:    "base",
+		c1:      "change 1",
+		c2:      "change 2",
+		submit1: "submitted change 1",
 	}
 
 	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
@@ -114,7 +72,7 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 		t.Fatal(err)
 	}
 	if curr.CommitHex() != c2 {
-		t.Fatalf("HEAD after evolve -l = %q; want %q (change 2, HEAD before evolve -l)", curr.CommitHex(), c2)
+		t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.CommitHex(), names), prettyCommit(c2, names))
 	}
 
 	if _, err := env.gg(ctx, env.root, "evolve"); err != nil {
@@ -124,14 +82,8 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if curr.CommitHex() == base {
-		t.Errorf("HEAD = %s (base); want new commit", base)
-	} else if curr.CommitHex() == c1 {
-		t.Errorf("HEAD = %s (change 1); want new commit", c1)
-	} else if curr.CommitHex() == c2 {
-		t.Errorf("HEAD = %s (change 2); want new commit", c2)
-	} else if curr.CommitHex() == submit1 {
-		t.Errorf("HEAD = %s (submitted change 1); want new commit", submit1)
+	if names[curr.CommitHex()] != "" {
+		t.Errorf("HEAD = %s; want new commit", prettyCommit(curr.CommitHex(), names))
 	}
 	if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
 		t.Error("baz.txt not in rebased change:", err)
@@ -140,14 +92,8 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parent.CommitHex() == base {
-		t.Errorf("HEAD^ = %s (base); want %s (submitted change 1)", base, submit1)
-	} else if parent.CommitHex() == c1 {
-		t.Errorf("HEAD^ = %s (change 1); want %s (submitted change 1)", c1, submit1)
-	} else if parent.CommitHex() == c2 {
-		t.Errorf("HEAD^ = %s (change 2); want %s (submitted change 1)", c2, submit1)
-	} else if parent.CommitHex() != submit1 {
-		t.Errorf("HEAD^ = %s; want %s (submitted change 1)", parent.CommitHex(), submit1)
+	if parent.CommitHex() != submit1 {
+		t.Errorf("HEAD^ = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(submit1, names))
 	}
 }
 
@@ -161,21 +107,27 @@ func TestEvolve_Unrelated(t *testing.T) {
 	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
-	base, err := dummyEvolveRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+	base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c1, err := dummyEvolveRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
+	c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c2, err := dummyEvolveRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
+	c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, err := dummyEvolveRev(ctx, env, "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
+	other, err := dummyRebaseRev(ctx, env, "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
 	if err != nil {
 		t.Fatal(err)
+	}
+	names := map[string]string{
+		base:  "base",
+		c1:    "change 1",
+		c2:    "change 2",
+		other: "upstream",
 	}
 
 	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
@@ -191,7 +143,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 		t.Fatal(err)
 	}
 	if curr.CommitHex() != c2 {
-		t.Fatalf("HEAD after evolve -l = %q; want %q (change 2, HEAD before evolve -l)", curr.CommitHex(), c2)
+		t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.CommitHex(), names), prettyCommit(c2, names))
 	}
 
 	if _, err := env.gg(ctx, env.root, "evolve"); err != nil {
@@ -201,14 +153,8 @@ func TestEvolve_Unrelated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if curr.CommitHex() == base {
-		t.Errorf("HEAD = %s (base); want %s (change 2)", base, c2)
-	} else if curr.CommitHex() == c1 {
-		t.Errorf("HEAD = %s (change 1); want %s (change 2)", c1, c2)
-	} else if curr.CommitHex() == other {
-		t.Errorf("HEAD = %s (upstream change); want %s (change 2)", other, c2)
-	} else if curr.CommitHex() != c2 {
-		t.Errorf("HEAD = %s; want %s (change 2)", curr.CommitHex(), c2)
+	if curr.CommitHex() != c2 {
+		t.Errorf("HEAD = %s; want %s", prettyCommit(curr.CommitHex(), names), prettyCommit(c2, names))
 	}
 	if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
 		t.Error("baz.txt not in rebased change:", err)
@@ -218,14 +164,8 @@ func TestEvolve_Unrelated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parent.CommitHex() == base {
-		t.Errorf("HEAD~1 = %s (base); want %s (change 1)", base, c1)
-	} else if parent.CommitHex() == c2 {
-		t.Errorf("HEAD~1 = %s (change 2); want %s (change 1)", c2, c1)
-	} else if parent.CommitHex() == other {
-		t.Errorf("HEAD~1 = %s (upstream change); want %s (change 1)", other, c1)
-	} else if parent.CommitHex() != c1 {
-		t.Errorf("HEAD~1 = %s; want %s (change 1)", parent.CommitHex(), c1)
+	if parent.CommitHex() != c1 {
+		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(c1, names))
 	}
 	if err := objectExists(ctx, env.git, parent.CommitHex()+":bar.txt"); err != nil {
 		t.Error("bar.txt not in rebased change:", err)
@@ -235,14 +175,8 @@ func TestEvolve_Unrelated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if grandparent.CommitHex() == c1 {
-		t.Errorf("HEAD~2 = %s (change 1); want %s (base)", c1, base)
-	} else if grandparent.CommitHex() == c2 {
-		t.Errorf("HEAD~2 = %s (change 2); want %s (base)", c2, base)
-	} else if grandparent.CommitHex() == other {
-		t.Errorf("HEAD~2 = %s (upstream change); want %s (base)", other, base)
-	} else if grandparent.CommitHex() != base {
-		t.Errorf("HEAD~2 = %s; want %s (base)", grandparent.CommitHex(), base)
+	if grandparent.CommitHex() != base {
+		t.Errorf("HEAD~2 = %s; want %s", prettyCommit(grandparent.CommitHex(), names), prettyCommit(base, names))
 	}
 }
 
@@ -256,25 +190,32 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
-	base, err := dummyEvolveRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+	base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c1, err := dummyEvolveRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
+	c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c2, err := dummyEvolveRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
+	c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
 	if err != nil {
 		t.Fatal(err)
 	}
-	submit1, err := dummyEvolveRev(ctx, env, "master", "bar-submitted.txt", "Submitted first feature\n\nChange-Id: abcdef")
+	submit1, err := dummyRebaseRev(ctx, env, "master", "bar-submitted.txt", "Submitted first feature\n\nChange-Id: abcdef")
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, err := dummyEvolveRev(ctx, env, "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
+	other, err := dummyRebaseRev(ctx, env, "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
 	if err != nil {
 		t.Fatal(err)
+	}
+	names := map[string]string{
+		base:    "base",
+		c1:      "change 1",
+		c2:      "change 2",
+		submit1: "submitted change 1",
+		other:   "upstream",
 	}
 
 	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
@@ -294,7 +235,7 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		t.Fatal(err)
 	}
 	if curr.CommitHex() != c2 {
-		t.Fatalf("HEAD after evolve -l = %q; want %q (change 2, HEAD before evolve -l)", curr.CommitHex(), c2)
+		t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.CommitHex(), names), prettyCommit(c2, names))
 	}
 
 	if _, err := env.gg(ctx, env.root, "evolve"); err != nil {
@@ -304,16 +245,8 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if curr.CommitHex() == base {
-		t.Errorf("HEAD = %s (base); want new commit", base)
-	} else if curr.CommitHex() == c1 {
-		t.Errorf("HEAD = %s (change 1); want new commit", c1)
-	} else if curr.CommitHex() == c2 {
-		t.Errorf("HEAD = %s (change 2); want new commit", c2)
-	} else if curr.CommitHex() == submit1 {
-		t.Errorf("HEAD = %s (submitted change 1); want new commit", submit1)
-	} else if curr.CommitHex() == other {
-		t.Errorf("HEAD = %s (upstream change); want new commit", other)
+	if names[curr.CommitHex()] != "" {
+		t.Errorf("HEAD = %s; want new commit", prettyCommit(base, names))
 	}
 	if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
 		t.Error("baz.txt not in rebased change:", err)
@@ -323,16 +256,8 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parent.CommitHex() == base {
-		t.Errorf("HEAD~1 = %s (base); want %s (submitted change 1)", base, submit1)
-	} else if parent.CommitHex() == c1 {
-		t.Errorf("HEAD~1 = %s (change 1); want %s (submitted change 1)", c1, submit1)
-	} else if parent.CommitHex() == c2 {
-		t.Errorf("HEAD~1 = %s (change 2); want %s (submitted change 1)", c2, submit1)
-	} else if parent.CommitHex() == other {
-		t.Errorf("HEAD~1 = %s (upstream change); want %s (submitted change 1)", other, submit1)
-	} else if parent.CommitHex() != submit1 {
-		t.Errorf("HEAD~1 = %s; want %s (submitted change 1)", parent.CommitHex(), submit1)
+	if parent.CommitHex() != submit1 {
+		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(submit1, names))
 	}
 }
 
@@ -346,21 +271,27 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
-	base, err := dummyEvolveRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+	base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c1, err := dummyEvolveRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
+	c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c2, err := dummyEvolveRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
+	c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
 	if err != nil {
 		t.Fatal(err)
 	}
-	submit2, err := dummyEvolveRev(ctx, env, "master", "submitted.txt", "Submitted second feature change\n\nChange-Id: ghijkl")
+	submit2, err := dummyRebaseRev(ctx, env, "master", "submitted.txt", "Submitted second feature change\n\nChange-Id: ghijkl")
 	if err != nil {
 		t.Fatal(err)
+	}
+	names := map[string]string{
+		base:    "base",
+		c1:      "change 1",
+		c2:      "change 2",
+		submit2: "submitted change 2",
 	}
 
 	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
@@ -380,7 +311,7 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		t.Fatal(err)
 	}
 	if curr.CommitHex() != c2 {
-		t.Fatalf("HEAD after evolve -l = %q; want %q (change 2, HEAD before evolve -l)", curr.CommitHex(), c2)
+		t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.CommitHex(), names), prettyCommit(c2, names))
 	}
 
 	if _, err := env.gg(ctx, env.root, "evolve"); err == nil {
@@ -392,53 +323,9 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if curr.CommitHex() == base {
-		t.Errorf("HEAD = %s (base); want %s (change 2)", base, c2)
-	} else if curr.CommitHex() == c1 {
-		t.Errorf("HEAD = %s (change 1); want %s (change 2)", c1, c2)
-	} else if curr.CommitHex() == submit2 {
-		t.Errorf("HEAD = %s (submitted change 2); want %s (change 2)", submit2, c2)
-	} else if curr.CommitHex() != c2 {
-		t.Errorf("HEAD = %s; want %s (change 2)", curr.CommitHex(), c2)
+	if curr.CommitHex() != c2 {
+		t.Errorf("HEAD = %s; want %s", prettyCommit(curr.CommitHex(), names), prettyCommit(c2, names))
 	}
-}
-
-func dummyEvolveRev(ctx context.Context, env *testEnv, branch string, file string, msg string) (string, error) {
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
-	if err != nil {
-		// First commit
-		if branch != "master" {
-			return "", fmt.Errorf("make evolve rev: %v", err)
-		}
-	} else if curr.Branch() != branch {
-		if _, err := gittool.ParseRev(ctx, env.git, "refs/heads/"+branch); err != nil {
-			// Branch doesn't exist, create it.
-			if err := env.git.Run(ctx, "branch", "--", branch); err != nil {
-				return "", fmt.Errorf("make evolve rev: %v", err)
-			}
-			if err := env.git.Run(ctx, "branch", "--set-upstream-to="+curr.RefName(), "--", branch); err != nil {
-				return "", fmt.Errorf("make evolve rev: %v", err)
-			}
-		}
-		if err := env.git.Run(ctx, "checkout", "--quiet", branch); err != nil {
-			return "", fmt.Errorf("make evolve rev: %v", err)
-		}
-	}
-	err = ioutil.WriteFile(filepath.Join(env.root, file), []byte("dummy content"), 0666)
-	if err != nil {
-		return "", fmt.Errorf("make evolve rev: %v", err)
-	}
-	if err := env.git.Run(ctx, "add", file); err != nil {
-		return "", fmt.Errorf("make evolve rev: %v", err)
-	}
-	if err := env.git.Run(ctx, "commit", "-m", msg); err != nil {
-		return "", fmt.Errorf("make evolve rev: %v", err)
-	}
-	curr, err = gittool.ParseRev(ctx, env.git, "HEAD")
-	if err != nil {
-		return "", fmt.Errorf("make evolve rev: %v", err)
-	}
-	return curr.CommitHex(), nil
 }
 
 func TestFindChangeID(t *testing.T) {
