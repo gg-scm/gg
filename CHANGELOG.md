@@ -1,5 +1,20 @@
 # Release Notes
 
+## 0.3.0
+
+### Features
+
+-   Add `evolve` command for syncing Gerrit changes.
+    ([#14](https://github.com/zombiezen/gg/issues/14))
+-   Add `gerrithook` command for installing or removing the
+    [Gerrit Change ID](https://gerrit-review.googlesource.com/hooks/commit-msg)
+    hook. ([#13](https://github.com/zombiezen/gg/issues/13))
+
+### Bug Fixes
+
+-   `rebase -dst` now always defaults to the upstream branch, whereas sometimes
+    it would take from the source flags.
+
 ## 0.2.1
 
 ### Bug Fixes
