@@ -131,7 +131,8 @@ type change struct {
 func readChanges(ctx context.Context, git *gittool.Tool, head, base string) ([]change, error) {
 	// TODO(soon): this should probably throw an error if there are merge commits.
 
-	p, err := git.Start(ctx, "log", "--date-order", "--pretty=format:%H%x00%(trailers)%x00", head, "^"+base)
+	// Can't use %(trailers) because it's not supported on 2.7.4.
+	p, err := git.Start(ctx, "log", "--date-order", "--pretty=format:%H%x00%B%x00", head, "^"+base)
 	if err != nil {
 		return nil, fmt.Errorf("read changes %s..%s: %v", base, head, err)
 	}
@@ -185,8 +186,13 @@ func readChanges(ctx context.Context, git *gittool.Tool, head, base string) ([]c
 	return changes, nil
 }
 
-func findChangeID(trailers []byte) string {
-	trailers = bytes.TrimSpace(trailers)
+func findChangeID(commitMsg []byte) string {
+	commitMsg = bytes.TrimSpace(commitMsg)
+	i := bytes.LastIndex(commitMsg, []byte("\n\n"))
+	if i == -1 {
+		return ""
+	}
+	trailers := bytes.TrimSpace(commitMsg[i+2:])
 	prefix := []byte("Change-Id:")
 	for len(trailers) > 0 {
 		var line []byte

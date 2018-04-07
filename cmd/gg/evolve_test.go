@@ -443,42 +443,62 @@ func dummyEvolveRev(ctx context.Context, env *testEnv, branch string, file strin
 
 func TestFindChangeID(t *testing.T) {
 	tests := []struct {
-		trailers string
-		want     string
+		commitMsg string
+		want      string
 	}{
 		{
-			trailers: "",
-			want:     "",
+			commitMsg: "",
+			want:      "",
 		},
 		{
-			trailers: "foo",
-			want:     "",
+			commitMsg: "foo",
+			want:      "",
 		},
 		{
-			trailers: "Change-Id: xyzzy",
-			want:     "xyzzy",
+			commitMsg: "Change-Id: foo",
+			want:      "",
 		},
 		{
-			trailers: "Change-Id: xyzzy\n",
-			want:     "xyzzy",
+			commitMsg: "Change-Id: foo\n",
+			want:      "",
 		},
 		{
-			trailers: "Change-Id: xyzzy\nSigned-off-by: A. U. Thor <author@example.com>\n",
-			want:     "xyzzy",
+			commitMsg: "\n\nChange-Id: foo",
+			want:      "",
 		},
 		{
-			trailers: "Change-Id: \n",
-			want:     "",
+			commitMsg: "\n\nChange-Id: foo\n",
+			want:      "",
 		},
 		{
-			trailers: "Change-Id: xyzzy\n\nChange-Id: plugh",
-			want:     "plugh",
+			commitMsg: "foo\n\nChange-Id: xyzzy",
+			want:      "xyzzy",
+		},
+		{
+			commitMsg: "foo\n\nChange-Id: xyzzy\n",
+			want:      "xyzzy",
+		},
+		{
+			commitMsg: "foo\n\nChange-Id: xyzzy\nSigned-off-by: A. U. Thor <author@example.com>\n",
+			want:      "xyzzy",
+		},
+		{
+			commitMsg: "foo\n\nChange-Id: xyzzy\n\nSigned-off-by: A. U. Thor <author@example.com>\n",
+			want:      "",
+		},
+		{
+			commitMsg: "foo\n\nChange-Id: \n",
+			want:      "",
+		},
+		{
+			commitMsg: "foo\n\nChange-Id: xyzzy\n\nChange-Id: plugh",
+			want:      "plugh",
 		},
 	}
 	for _, test := range tests {
-		got := findChangeID([]byte(test.trailers))
+		got := findChangeID([]byte(test.commitMsg))
 		if got != test.want {
-			t.Errorf("findChangeID(%q) = %q; want %q", test.trailers, got, test.want)
+			t.Errorf("findChangeID(%q) = %q; want %q", test.commitMsg, got, test.want)
 		}
 	}
 }
