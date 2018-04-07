@@ -3,11 +3,12 @@
 [![Build Status](https://travis-ci.org/zombiezen/gg.svg?branch=master)][travis]
 
 gg is a wrapper around [Git][] that behaves like [Mercurial][]. It works well enough for
-my everyday use.
+my everyday use. It can be thought of as an alternate [porcelain][] for Git.
 
 [Git]: https://git-scm.com/
 [Mercurial]: https://www.mercurial-scm.org/
 [travis]: https://travis-ci.org/zombiezen/gg
+[porcelain]: https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain
 
 ## Installing
 
@@ -77,3 +78,6 @@ options:
 ## License
 
 Apache 2.0. This is not an official Google product.
+
+gg depends on `golang.org/x/sys`, which is released under a
+[BSD license](https://go.googlesource.com/sys/+/master/LICENSE).
