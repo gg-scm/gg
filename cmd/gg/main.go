@@ -183,8 +183,6 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return mail(ctx, cc, args)
 	case "merge":
 		return merge(ctx, cc, args)
-	case "status", "st", "check":
-		return status(ctx, cc, args)
 	case "pull":
 		return pull(ctx, cc, args)
 	case "push":
@@ -195,6 +193,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return rebase(ctx, cc, args)
 	case "revert":
 		return revert(ctx, cc, args)
+	case "status", "st", "check":
+		return status(ctx, cc, args)
 	case "update", "up", "checkout", "co":
 		return update(ctx, cc, args)
 	case "version":
@@ -208,6 +208,16 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 			return usagef("help [command]")
 		}
 		return dispatch(ctx, cc, globalFlags, args[0], []string{"--help"})
+	case "ez":
+		f := flag.NewFlagSet(true, "gg ez [-re=0]", "")
+		re := f.Bool("re", true, "rematch")
+		f.Parse(args)
+		if *re {
+			fmt.Fprintln(cc.stdout, "lol")
+		} else {
+			fmt.Fprintln(cc.stdout, ":(")
+		}
+		return nil
 	default:
 		return usagef("unknown command %s", name)
 	}
