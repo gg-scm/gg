@@ -70,6 +70,7 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 	abort := f.Bool("abort", false, "abort an edit already in progress")
 	continue_ := f.Bool("continue", false, "continue an edit already in progress")
 	editPlan := f.Bool("edit-plan", false, "edit remaining actions list")
+	exec := f.MultiString("exec", "execute the shell `command` after each line creating a commit (can be specified multiple times)")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -84,7 +85,11 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		if ancestor := f.Arg(0); ancestor != "" {
 			return cc.git.RunInteractive(ctx, "rebase", "-i", "--", ancestor)
 		}
-		return cc.git.RunInteractive(ctx, "rebase", "-i")
+		rebaseArgs := []string{"rebase", "-i"}
+		for _, cmd := range *exec {
+			rebaseArgs = append(rebaseArgs, "--exec="+cmd)
+		}
+		return cc.git.RunInteractive(ctx, rebaseArgs...)
 	case *abort && !*continue_ && !*editPlan:
 		if f.NArg() != 0 {
 			return usagef("can't pass arguments with --abort")
