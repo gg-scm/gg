@@ -296,6 +296,23 @@ func TestGerritPushRef(t *testing.T) {
 				"no-publish-comments": nil,
 			},
 		},
+		{
+			branch: "master",
+			opts: &gerritOptions{
+				notify:    "NONE",
+				notifyTo:  []string{"a@a.com"},
+				notifyCC:  []string{"b@b.com"},
+				notifyBCC: []string{"c@c.com"},
+			},
+			wantRef: "refs/for/master",
+			wantOpts: map[string][]string{
+				"notify":              {"NONE"},
+				"notify-to":           {"a@a.com"},
+				"notify-cc":           {"b@b.com"},
+				"notify-bcc":          {"c@c.com"},
+				"no-publish-comments": nil,
+			},
+		},
 	}
 	for _, test := range tests {
 		out := gerritPushRef(test.branch, test.opts)

@@ -119,6 +119,10 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	f.Alias("R", "reviewer")
 	f.MultiStringVar(&gopts.cc, "CC", "`email`s to CC")
 	f.Alias("CC", "cc")
+	f.StringVar(&gopts.notify, "notify", "", `who to send email notifications to; one of "none", "owner", "owner_reviewers", or "all"`)
+	f.MultiStringVar(&gopts.notifyTo, "notify-to", "`email` to send notification")
+	f.MultiStringVar(&gopts.notifyCC, "notify-cc", "`email` to CC notification")
+	f.MultiStringVar(&gopts.notifyBCC, "notify-bcc", "`email` to BCC notification")
 	f.StringVar(&gopts.message, "m", "", "use text as comment `message`")
 	f.BoolVar(&gopts.publishComments, "p", false, "publish draft comments")
 	f.Alias("p", "publish-comments")
@@ -133,6 +137,10 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	if strings.HasPrefix(*dstBranch, "refs/") && !strings.HasPrefix(*dstBranch, "refs/for/") || strings.Contains(*dstBranch, "%") {
 		return usagef("-d argument must be a branch")
+	}
+	gopts.notify = strings.ToUpper(gopts.notify)
+	if gopts.notify != "" && gopts.notify != "NONE" && gopts.notify != "OWNER" && gopts.notify != "OWNER_REVIEWERS" && gopts.notify != "ALL" {
+		return usagef(`--notify must be one of "none", "owner", "owner_reviewers", or "all"`)
 	}
 	src, err := gittool.ParseRev(ctx, cc.git, *rev)
 	if err != nil {
@@ -182,6 +190,11 @@ type gerritOptions struct {
 	cc              []string // unflattened (may contain comma-separated elements)
 	publishComments bool
 	message         string
+
+	notify    string // one of "", "NONE", "OWNER", "OWNER_REVIEWERS", or "ALL"
+	notifyTo  []string
+	notifyCC  []string
+	notifyBCC []string
 }
 
 func gerritPushRef(branch string, opts *gerritOptions) string {
@@ -210,6 +223,22 @@ func gerritPushRef(branch string, opts *gerritOptions) string {
 		if opts.message != "" {
 			sb.WriteString(",m=")
 			escapeGerritMessage(sb, opts.message)
+		}
+		if opts.notify != "" {
+			sb.WriteString(",notify=")
+			sb.WriteString(opts.notify)
+		}
+		for _, to := range opts.notifyTo {
+			sb.WriteString(",notify-to=")
+			sb.WriteString(to)
+		}
+		for _, cc := range opts.notifyCC {
+			sb.WriteString(",notify-cc=")
+			sb.WriteString(cc)
+		}
+		for _, bcc := range opts.notifyBCC {
+			sb.WriteString(",notify-bcc=")
+			sb.WriteString(bcc)
 		}
 	}
 	return sb.String()
