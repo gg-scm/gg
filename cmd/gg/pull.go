@@ -39,6 +39,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	the same name if the branch has no remote tracking branch. Otherwise,
 	"HEAD" is used.`)
 	remoteRef := f.String("r", "", "remote `ref`erence intended to be pulled")
+	tags := f.Bool("tags", true, "pull all tags from remote")
 	update := f.Bool("u", false, "update to new head if new descendants were pulled")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
@@ -81,6 +82,9 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		gitArgs = append(gitArgs, "pull", "--ff-only")
 	} else {
 		gitArgs = append(gitArgs, "fetch")
+	}
+	if *tags {
+		gitArgs = append(gitArgs, "--tags")
 	}
 	gitArgs = append(gitArgs, "--", repo, *remoteRef+":")
 	return cc.git.Run(ctx, gitArgs...)

@@ -59,6 +59,15 @@ func TestPull(t *testing.T) {
 			t.Errorf("origin/master = %s; want %s", r.CommitHex(), pullEnv.commit2)
 		}
 	}
+	if r, err := gittool.ParseRev(ctx, gitB, "first"); err != nil {
+		t.Error(err)
+	} else {
+		if r.CommitHex() == pullEnv.commit2 {
+			t.Errorf("origin/master = %s (second commit); want %s", r.CommitHex(), pullEnv.commit1)
+		} else if r.CommitHex() != pullEnv.commit1 {
+			t.Errorf("origin/master = %s; want %s", r.CommitHex(), pullEnv.commit1)
+		}
+	}
 }
 
 func TestPullWithArgument(t *testing.T) {
@@ -102,6 +111,15 @@ func TestPullWithArgument(t *testing.T) {
 			t.Errorf("FETCH_HEAD = %s (first commit); want %s", r.CommitHex(), pullEnv.commit2)
 		} else if r.CommitHex() != pullEnv.commit2 {
 			t.Errorf("FETCH_HEAD = %s; want %s", r.CommitHex(), pullEnv.commit2)
+		}
+	}
+	if r, err := gittool.ParseRev(ctx, gitB, "first"); err != nil {
+		t.Error(err)
+	} else {
+		if r.CommitHex() == pullEnv.commit2 {
+			t.Errorf("origin/master = %s (second commit); want %s", r.CommitHex(), pullEnv.commit1)
+		} else if r.CommitHex() != pullEnv.commit1 {
+			t.Errorf("origin/master = %s; want %s", r.CommitHex(), pullEnv.commit1)
 		}
 	}
 }
@@ -229,6 +247,9 @@ func setupPullTest(ctx context.Context, env *testEnv) (*pullEnv, error) {
 		[]byte("Hello, World!\nI learned some things...\n"),
 		0666)
 	if err != nil {
+		return nil, err
+	}
+	if err := gitA.Run(ctx, "tag", "first"); err != nil {
 		return nil, err
 	}
 	if err := gitA.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {
