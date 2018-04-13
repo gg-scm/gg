@@ -26,111 +26,90 @@ import (
 )
 
 func TestConfigColor(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
-	tests := []string{
-		"",
-		"normal",
-		"black",
-		"red",
-		"green",
-		"yellow",
-		"blue",
-		"magenta",
-		"cyan",
-		"white",
-		"normal red",
-		"normal blue",
-		"normal normal",
-		"normal black",
-		"normal red",
-		"normal green",
-		"normal yellow",
-		"normal blue",
-		"normal magenta",
-		"normal cyan",
-		"normal white",
-		"0",
-		"7",
-		"8",
-		"15",
-		"16",
-		"128",
-		"231",
-		"232",
-		"255",
-		"\"#ff0ab3\"",
-		"bold",
-		"dim",
-		"ul",
-		"blink",
-		"reverse",
-		"italic",
-		"strike",
-		"nobold",
-		"nodim",
-		"noul",
-		"noblink",
-		"noreverse",
-		"noitalic",
-		"nostrike",
-		"no-bold",
-		"no-dim",
-		"no-ul",
-		"no-blink",
-		"no-reverse",
-		"no-italic",
-		"no-strike",
-		"red blue bold",
-		"red green blue",
-		"bold red blue",
-		"red bold blue",
-	}
-	if gitPathError != nil {
-		t.Skip("git not found:", gitPathError)
-	}
-	ctx := context.Background()
-	env, err := newTestEnv(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer env.cleanup()
+	tests := []struct {
+		color string
+		want  string
+		err   bool
+	}{
+		// Outputs checked against git 2.17.0
+		//
+		// We don't test directly against git config --get-color because
+		// older versions don't support all the attributes.
+		//
+		// To get golden output:
+		//    git -c foo.bar=INPUT config --get-color foo.bar
 
+		{color: "", want: ""},
+		{color: "normal", want: ""},
+		{color: "black", want: "\x1b[30m"},
+		{color: "red", want: "\x1b[31m"},
+		{color: "green", want: "\x1b[32m"},
+		{color: "yellow", want: "\x1b[33m"},
+		{color: "blue", want: "\x1b[34m"},
+		{color: "magenta", want: "\x1b[35m"},
+		{color: "cyan", want: "\x1b[36m"},
+		{color: "white", want: "\x1b[37m"},
+		{color: "normal red", want: "\x1b[41m"},
+		{color: "normal blue", want: "\x1b[44m"},
+		{color: "normal normal", want: ""},
+		{color: "normal black", want: "\x1b[40m"},
+		{color: "normal red", want: "\x1b[41m"},
+		{color: "normal green", want: "\x1b[42m"},
+		{color: "normal yellow", want: "\x1b[43m"},
+		{color: "normal blue", want: "\x1b[44m"},
+		{color: "normal magenta", want: "\x1b[45m"},
+		{color: "normal cyan", want: "\x1b[46m"},
+		{color: "normal white", want: "\x1b[47m"},
+		{color: "0", want: "\x1b[30m"},
+		{color: "7", want: "\x1b[37m"},
+		{color: "8", want: "\x1b[38;5;8m"},
+		{color: "15", want: "\x1b[38;5;15m"},
+		{color: "16", want: "\x1b[38;5;16m"},
+		{color: "128", want: "\x1b[38;5;128m"},
+		{color: "231", want: "\x1b[38;5;231m"},
+		{color: "232", want: "\x1b[38;5;232m"},
+		{color: "255", want: "\x1b[38;5;255m"},
+		{color: "#ff0ab3", want: "\x1b[38;2;255;10;179m"},
+		{color: "bold", want: "\x1b[1m"},
+		{color: "dim", want: "\x1b[2m"},
+		{color: "ul", want: "\x1b[4m"},
+		{color: "blink", want: "\x1b[5m"},
+		{color: "reverse", want: "\x1b[7m"},
+		{color: "italic", want: "\x1b[3m"},
+		{color: "strike", want: "\x1b[9m"},
+		{color: "nobold", want: "\x1b[22m"},
+		{color: "nodim", want: "\x1b[22m"},
+		{color: "noul", want: "\x1b[24m"},
+		{color: "noblink", want: "\x1b[25m"},
+		{color: "noreverse", want: "\x1b[27m"},
+		{color: "noitalic", want: "\x1b[23m"},
+		{color: "nostrike", want: "\x1b[29m"},
+		{color: "no-bold", want: "\x1b[22m"},
+		{color: "no-dim", want: "\x1b[22m"},
+		{color: "no-ul", want: "\x1b[24m"},
+		{color: "no-blink", want: "\x1b[25m"},
+		{color: "no-reverse", want: "\x1b[27m"},
+		{color: "no-italic", want: "\x1b[23m"},
+		{color: "no-strike", want: "\x1b[29m"},
+		{color: "red blue bold", want: "\x1b[1;31;44m"},
+		{color: "red green blue", err: true},
+		{color: "bold red blue", want: "\x1b[1;31;44m"},
+		{color: "red bold blue", want: "\x1b[1;31;44m"},
+	}
 	for _, test := range tests {
-		err := ioutil.WriteFile(
-			filepath.Join(env.root, ".gitconfig"),
-			[]byte("[color \"foo\"]\n\tbar = "+test+"\n"),
-			0666)
+		got, err := parseColorDesc(test.color)
 		if err != nil {
-			t.Error(err)
-			continue
-		}
-		cfg, err := ReadConfig(ctx, env.git)
-		if err != nil {
-			t.Errorf("For %q: %v", test, err)
-			continue
-		}
-		got, gotErr := cfg.Color("color.foo.bar", "")
-		p, err := env.git.Start(ctx, "config", "--get-color", "color.foo.bar")
-		if err != nil {
-			t.Errorf("For %q: %v", test, err)
-			continue
-		}
-		want, _ := ioutil.ReadAll(p)
-		waitErr := p.Wait()
-		if waitErr != nil {
-			if gotErr == nil {
-				t.Errorf("For %q, cfg.Color(...) = _, <nil>; want error", test)
+			if !test.err {
+				t.Errorf("parseColorDesc(%q): %v", test.color, err)
 			}
 			continue
 		}
-		if gotErr != nil {
-			t.Errorf("For %q, cfg.Color(...) error: %v; want %q", test, gotErr, want)
+		if test.err {
+			t.Errorf("parseColorDesc(%q) = %q, <nil>; want error", test.color, got)
 			continue
 		}
-		if !bytes.Equal(got, want) {
-			t.Errorf("For %q, cfg.Color(...) = %q; want %q", test, got, want)
+		if !bytes.Equal(got, []byte(test.want)) {
+			t.Errorf("parseColorDesc(%q) = %q; want %q", test.color, got, test.want)
 		}
 	}
 }
