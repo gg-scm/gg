@@ -68,7 +68,8 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  gerrithook    " + gerrithookSynopsis + "\n" +
 		"  histedit      " + histeditSynopsis + "\n" +
 		"  mail          " + mailSynopsis + "\n" +
-		"  rebase        " + rebaseSynopsis
+		"  rebase        " + rebaseSynopsis + "\n" +
+		"  upstream      " + upstreamSynopsis
 
 	globalFlags := flag.NewFlagSet(false, synopsis, description)
 	gitPath := globalFlags.String("git", "", "`path` to git executable")
@@ -197,6 +198,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return status(ctx, cc, args)
 	case "update", "up", "checkout", "co":
 		return update(ctx, cc, args)
+	case "upstream":
+		return upstream(ctx, cc, args)
 	case "version":
 		return showVersion(ctx, cc)
 	case "help":
