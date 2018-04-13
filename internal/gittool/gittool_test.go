@@ -60,39 +60,6 @@ func TestRun(t *testing.T) {
 	}
 }
 
-func TestConfig(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
-	if gitPathError != nil {
-		t.Skip("git not found:", gitPathError)
-	}
-	ctx := context.Background()
-	env, err := newTestEnv(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer env.cleanup()
-
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, ".gitconfig"),
-		[]byte("[user]\n\temail = foo@example.com\n"),
-		0666)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if email, err := Config(ctx, env.git, "user.email"); err != nil {
-		t.Error("for user.email:", err)
-	} else if want := "foo@example.com"; email != want {
-		t.Errorf("user.email = %q; want %q", email, want)
-	}
-	if notfound, err := Config(ctx, env.git, "foo.notfound"); err != nil {
-		t.Error("for foo.notfound:", err)
-	} else if notfound != "" {
-		t.Errorf("foo.notfound = %q; want empty", notfound)
-	}
-}
-
 type testEnv struct {
 	root string
 	git  *Tool
@@ -104,7 +71,11 @@ func newTestEnv(ctx context.Context) (*testEnv, error) {
 		return nil, err
 	}
 	git, err := New(gitPath, root, &Options{
-		Env: []string{"GIT_CONFIG_NOSYSTEM=1", "HOME=" + root},
+		Env: []string{
+			"GIT_CONFIG_NOSYSTEM=1",
+			"HOME=" + root,
+			"TERM=xterm-color", // stops git from assuming output is to a "dumb" terminal
+		},
 	})
 	if err != nil {
 		os.Remove(root)

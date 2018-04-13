@@ -92,11 +92,11 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		var upstream string
 		if b := r.Branch(); b != "" {
-			var err error
-			upstream, err = branchUpstream(ctx, cc.git, b)
+			cfg, err := gittool.ReadConfig(ctx, cc.git)
 			if err != nil {
 				return err
 			}
+			upstream = branchUpstream(cfg, b)
 		}
 		var branchArgs []string
 		branchArgs = append(branchArgs, "branch", "--quiet")
@@ -136,24 +136,18 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	return nil
 }
 
-func branchUpstream(ctx context.Context, git *gittool.Tool, name string) (string, error) {
-	remote, err := gittool.Config(ctx, git, "branch."+name+".remote")
-	if err != nil {
-		return "", fmt.Errorf("get branch %q upstream: %v", name, err)
-	}
+func branchUpstream(cfg *gittool.Config, name string) string {
+	remote := cfg.Value("branch." + name + ".remote")
 	if remote == "" {
-		return "", nil
+		return ""
 	}
-	merge, err := gittool.Config(ctx, git, "branch."+name+".merge")
-	if err != nil {
-		return "", fmt.Errorf("get branch %q upstream: %v", name, err)
-	}
+	merge := cfg.Value("branch." + name + ".merge")
 	if merge == "" {
-		return "", nil
+		return ""
 	}
 	const headsPrefix = "refs/heads/"
 	if !strings.HasPrefix(merge, headsPrefix) {
-		return "", nil
+		return ""
 	}
-	return remote + "/" + merge[len(headsPrefix):], nil
+	return remote + "/" + merge[len(headsPrefix):]
 }

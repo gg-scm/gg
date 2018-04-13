@@ -46,35 +46,39 @@ func status(ctx context.Context, cc *cmdContext, args []string) error {
 		untrackedColor []byte
 		unmergedColor  []byte
 	)
-	colorize, err := gittool.ColorBool(ctx, cc.git, "color.ggstatus", terminal.IsTerminal(cc.stdout))
+	cfg, err := gittool.ReadConfig(ctx, cc.git)
+	if err != nil {
+		return err
+	}
+	colorize, err := cfg.ColorBool("color.ggstatus", terminal.IsTerminal(cc.stdout))
 	if err != nil {
 		fmt.Fprintln(cc.stderr, "gg:", err)
 	} else if colorize {
-		addedColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.added", "green")
+		addedColor, err = cfg.Color("color.ggstatus.added", "green")
 		if err != nil {
 			fmt.Fprintln(cc.stderr, "gg:", err)
 		}
-		modifiedColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.modified", "blue")
+		modifiedColor, err = cfg.Color("color.ggstatus.modified", "blue")
 		if err != nil {
 			fmt.Fprintln(cc.stderr, "gg:", err)
 		}
-		removedColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.removed", "red")
+		removedColor, err = cfg.Color("color.ggstatus.removed", "red")
 		if err != nil {
 			fmt.Fprintln(cc.stderr, "gg:", err)
 		}
-		missingColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.deleted", "cyan")
+		missingColor, err = cfg.Color("color.ggstatus.deleted", "cyan")
 		if err != nil {
 			fmt.Fprintln(cc.stderr, "gg:", err)
 		}
-		untrackedColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.unknown", "magenta")
+		untrackedColor, err = cfg.Color("color.ggstatus.unknown", "magenta")
 		if err != nil {
 			fmt.Fprintln(cc.stderr, "gg:", err)
 		}
-		ignoredColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.ignored", "black")
+		ignoredColor, err = cfg.Color("color.ggstatus.ignored", "black")
 		if err != nil {
 			fmt.Fprintln(cc.stderr, "gg:", err)
 		}
-		unmergedColor, err = gittool.Color(ctx, cc.git, "color.ggstatus.unmerged", "blue")
+		unmergedColor, err = cfg.Color("color.ggstatus.unmerged", "blue")
 		if err != nil {
 			fmt.Fprintln(cc.stderr, "gg:", err)
 		}

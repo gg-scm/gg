@@ -130,16 +130,14 @@ func TestBranch_Upstream(t *testing.T) {
 			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.RefName())
 		}
 	}
-	remote, err := gittool.Config(ctx, git2, "branch.foo.remote")
+	cfg, err := gittool.ReadConfig(ctx, git2)
 	if err != nil {
-		t.Errorf("config --get branch.foo.remote: %v", err)
-	} else if remote != "origin" {
+		t.Fatal(err)
+	}
+	if remote := cfg.Value("branch.foo.remote"); remote != "origin" {
 		t.Errorf("branch.foo.remote = %q; want \"origin\"", remote)
 	}
-	mergeBranch, err := gittool.Config(ctx, git2, "branch.foo.merge")
-	if err != nil {
-		t.Errorf("config --get branch.foo.merge: %v", err)
-	} else if mergeBranch != "refs/heads/master" {
+	if mergeBranch := cfg.Value("branch.foo.merge"); mergeBranch != "refs/heads/master" {
 		t.Errorf("branch.foo.remote = %q; want \"refs/heads/master\"", mergeBranch)
 	}
 }

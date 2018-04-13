@@ -51,16 +51,18 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	repo := f.Arg(0)
 	var branch string
+	var cfg *gittool.Config
 	if repo == "" || *remoteRef == "" {
+		var err error
+		cfg, err = gittool.ReadConfig(ctx, cc.git)
+		if err != nil {
+			return err
+		}
 		branch = currentBranch(ctx, cc)
 	}
 	if repo == "" {
 		if branch != "" {
-			var err error
-			repo, err = gittool.Config(ctx, cc.git, "branch."+branch+".remote")
-			if err != nil {
-				return err
-			}
+			repo = cfg.Value("branch." + branch + ".remote")
 		}
 		if repo == "" {
 			remotes, _ := listRemotes(ctx, cc.git)
@@ -71,11 +73,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	if *remoteRef == "" {
-		var err error
-		*remoteRef, err = inferUpstream(ctx, cc.git, branch)
-		if err != nil {
-			return err
-		}
+		*remoteRef = inferUpstream(cfg, branch)
 	}
 
 	var gitArgs []string
@@ -98,18 +96,15 @@ func currentBranch(ctx context.Context, cc *cmdContext) string {
 
 // inferUpstream returns the default remote ref to pull from.
 // localBranch may be empty.
-func inferUpstream(ctx context.Context, git *gittool.Tool, localBranch string) (string, error) {
+func inferUpstream(cfg *gittool.Config, localBranch string) string {
 	if localBranch == "" {
-		return "HEAD", nil
+		return "HEAD"
 	}
-	merge, err := gittool.Config(ctx, git, "branch."+localBranch+".merge")
-	if err != nil {
-		return "", err
-	}
+	merge := cfg.Value("branch." + localBranch + ".merge")
 	if merge != "" {
-		return merge, nil
+		return merge
 	}
-	return "refs/heads/" + localBranch, nil
+	return "refs/heads/" + localBranch
 }
 
 func listRemotes(ctx context.Context, git *gittool.Tool) (map[string]struct{}, error) {

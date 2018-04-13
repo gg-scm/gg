@@ -209,20 +209,6 @@ func (t *Tool) Start(ctx context.Context, args ...string) (*Process, error) {
 	}, nil
 }
 
-// Config reads the string value of a git configuration variable.  It
-// will return an empty string if the config variable does not exist.
-func Config(ctx context.Context, git *Tool, name string) (string, error) {
-	line, err := git.RunOneLiner(ctx, 0, "config", "-z", "--get", "--", name)
-	if IsExitError(err) {
-		// TODO(someday): check that exit code == 1
-		return "", nil
-	}
-	if err != nil {
-		return "", err
-	}
-	return string(line), nil
-}
-
 // GitDir determines the absolute path of the ".git" directory given the
 // tool's configuration, resolving any symlinks.
 func GitDir(ctx context.Context, git *Tool) (string, error) {

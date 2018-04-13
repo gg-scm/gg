@@ -173,16 +173,18 @@ func TestInferUpstream(t *testing.T) {
 				continue
 			}
 		}
-		got, err := inferUpstream(ctx, env.git, test.localBranch)
+		cfg, err := gittool.ReadConfig(ctx, env.git)
 		if test.merge != "" {
+			// Cleanup
 			if err := env.git.Run(ctx, "config", "--local", "--unset", "branch."+test.localBranch+".merge"); err != nil {
 				t.Errorf("cleaning up localBranch = %q, merge = %q: %v", test.localBranch, test.merge, err)
 			}
 		}
 		if err != nil {
-			t.Errorf("inferUpstream(ctx, env.git, %q) (with branch.%s.merge = %q): %v", test.localBranch, test.localBranch, test.merge, err)
+			t.Errorf("for localBranch = %q, merge = %q: %v", test.localBranch, test.merge, err)
 			continue
 		}
+		got := inferUpstream(cfg, test.localBranch)
 		if got != test.want {
 			t.Errorf("inferUpstream(ctx, env.git, %q) (with branch.%s.merge = %q) = %q; want %q", test.localBranch, test.localBranch, test.merge, got, test.want)
 		}

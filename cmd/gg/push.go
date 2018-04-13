@@ -75,8 +75,11 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	dstRepo := f.Arg(0)
 	if dstRepo == "" {
-		var err error
-		dstRepo, err = inferPushRepo(ctx, cc.git, src.Branch())
+		cfg, err := gittool.ReadConfig(ctx, cc.git)
+		if err != nil {
+			return err
+		}
+		dstRepo, err = inferPushRepo(ctx, cc.git, cfg, src.Branch())
 		if err != nil {
 			return err
 		}
@@ -157,9 +160,17 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	dstRepo := f.Arg(0)
+	var cfg *gittool.Config
+	if dstRepo == "" || *dstBranch == "" {
+		var err error
+		cfg, err = gittool.ReadConfig(ctx, cc.git)
+		if err != nil {
+			return err
+		}
+	}
 	if dstRepo == "" {
 		var err error
-		dstRepo, err = inferPushRepo(ctx, cc.git, src.Branch())
+		dstRepo, err = inferPushRepo(ctx, cc.git, cfg, src.Branch())
 		if err != nil {
 			return err
 		}
@@ -169,10 +180,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 		if branch == "" {
 			return errors.New("cannot infer destination (source is not a branch). Use -d to specify destination branch.")
 		}
-		up, err := inferUpstream(ctx, cc.git, branch)
-		if err != nil {
-			return err
-		}
+		up := inferUpstream(cfg, branch)
 		const wantPrefix = "refs/heads/"
 		if !strings.HasPrefix(up, wantPrefix) {
 			return fmt.Errorf("cannot infer destination (upstream %s is not a branch). Use -d to specify destination branch.", up)
@@ -289,28 +297,19 @@ func verifyRemoteRef(ctx context.Context, git *gittool.Tool, remote string, ref 
 	return fmt.Errorf("remote %s does not have ref %s", remote, ref)
 }
 
-func inferPushRepo(ctx context.Context, git *gittool.Tool, branch string) (string, error) {
+func inferPushRepo(ctx context.Context, git *gittool.Tool, cfg *gittool.Config, branch string) (string, error) {
 	if branch != "" {
-		r, err := gittool.Config(ctx, git, "branch."+branch+".pushRemote")
-		if err != nil {
-			return "", err
-		}
+		r := cfg.Value("branch." + branch + ".pushRemote")
 		if r != "" {
 			return r, nil
 		}
 	}
-	r, err := gittool.Config(ctx, git, "remote.pushDefault")
-	if err != nil {
-		return "", err
-	}
+	r := cfg.Value("remote.pushDefault")
 	if r != "" {
 		return r, nil
 	}
 	if branch != "" {
-		r, err := gittool.Config(ctx, git, "branch."+branch+".remote")
-		if err != nil {
-			return "", err
-		}
+		r := cfg.Value("branch." + branch + ".remote")
 		if r != "" {
 			return r, nil
 		}
