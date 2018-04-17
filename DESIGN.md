@@ -15,8 +15,17 @@
     branches, since Git doesn't have an equivalent concept.  Simplicity is
     preferred over exact compatibility.
 
-Specific decisions:
+## Specific decisions
 
 -   Push and pull only operate on one ref at a time.  The Git CLI does not
     provide enough control over multi-ref pulls and pushes without additional
     configuration variables.
+
+## Testing
+
+-   Integration testing gives much more confidence than unit testing, as most of
+    gg is defined by its end effect on a Git repository.  Prefer integration
+    tests in this project, but if there are small spot checks that make more
+    sense as unit tests (testing a git output parser, for instance), these are
+    fine, as long as the flow it's used in is covered by an integration test.
+    This way, we can catch git version differences (of which there are many).
