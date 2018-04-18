@@ -42,56 +42,54 @@ func TestRevert(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := stageRevertTest(ctx, env.git, repoPath); err != nil {
+	if err := stageRevertTest(ctx, env.git, env.root); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, revertTestFileName1),
+		filepath.Join(env.root, revertTestFileName1),
 		[]byte("mumble mumble"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, revertTestFileName2),
+		filepath.Join(env.root, revertTestFileName2),
 		[]byte("mumble mumble"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Stage changes
-	git := env.git.WithDir(repoPath)
-	if err := git.Run(ctx, "add", revertTestFileName2); err != nil {
+	if err := env.git.Run(ctx, "add", revertTestFileName2); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, repoPath, "revert", revertTestFileName1); err != nil {
+	if _, err := env.gg(ctx, env.root, "revert", revertTestFileName1); err != nil {
 		t.Fatal(err)
 	}
-	data1, err := ioutil.ReadFile(filepath.Join(repoPath, revertTestFileName1))
+	data1, err := ioutil.ReadFile(filepath.Join(env.root, revertTestFileName1))
 	if err != nil {
 		t.Error(err)
 	} else if string(data1) != revertTestContent1 {
 		t.Errorf("unstaged modified file content = %q after revert; want %q", data1, revertTestContent1)
 	}
-	data2, err := ioutil.ReadFile(filepath.Join(repoPath, revertTestFileName2))
+	data2, err := ioutil.ReadFile(filepath.Join(env.root, revertTestFileName2))
 	if err != nil {
 		t.Error(err)
 	} else if string(data2) == revertTestContent2 {
 		t.Error("unrelated file was reverted")
 	}
 
-	if _, err := env.gg(ctx, repoPath, "revert", revertTestFileName2); err != nil {
+	if _, err := env.gg(ctx, env.root, "revert", revertTestFileName2); err != nil {
 		t.Fatal(err)
 	}
-	data2, err = ioutil.ReadFile(filepath.Join(repoPath, revertTestFileName2))
+	data2, err = ioutil.ReadFile(filepath.Join(env.root, revertTestFileName2))
 	if err != nil {
 		t.Error(err)
 	} else if string(data2) != revertTestContent2 {
 		t.Errorf("staged modified file content = %q after revert; want %q", data2, revertTestContent2)
 	}
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,47 +115,45 @@ func TestRevert_All(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := stageRevertTest(ctx, env.git, repoPath); err != nil {
+	if err := stageRevertTest(ctx, env.git, env.root); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, revertTestFileName1),
+		filepath.Join(env.root, revertTestFileName1),
 		[]byte("mumble mumble"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, revertTestFileName2),
+		filepath.Join(env.root, revertTestFileName2),
 		[]byte("mumble mumble"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Stage changes
-	git := env.git.WithDir(repoPath)
-	if err := git.Run(ctx, "add", revertTestFileName2); err != nil {
+	if err := env.git.Run(ctx, "add", revertTestFileName2); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, repoPath, "revert", "--all"); err != nil {
+	if _, err := env.gg(ctx, env.root, "revert", "--all"); err != nil {
 		t.Fatal(err)
 	}
-	data1, err := ioutil.ReadFile(filepath.Join(repoPath, revertTestFileName1))
+	data1, err := ioutil.ReadFile(filepath.Join(env.root, revertTestFileName1))
 	if err != nil {
 		t.Error(err)
 	} else if string(data1) != revertTestContent1 {
 		t.Errorf("unstaged modified file content = %q after revert; want %q", data1, revertTestContent1)
 	}
-	data2, err := ioutil.ReadFile(filepath.Join(repoPath, revertTestFileName2))
+	data2, err := ioutil.ReadFile(filepath.Join(env.root, revertTestFileName2))
 	if err != nil {
 		t.Error(err)
 	} else if string(data2) != revertTestContent2 {
 		t.Errorf("staged modified file content = %q after revert; want %q", data2, revertTestContent2)
 	}
 
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,33 +179,31 @@ func TestRevert_Rev(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := stageRevertTest(ctx, env.git, repoPath); err != nil {
+	if err := stageRevertTest(ctx, env.git, env.root); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, revertTestFileName1),
+		filepath.Join(env.root, revertTestFileName1),
 		[]byte("mumble mumble"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	git := env.git.WithDir(repoPath)
-	if err := git.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {
+	if err := env.git.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, repoPath, "revert", "-r", "HEAD^", revertTestFileName1); err != nil {
+	if _, err := env.gg(ctx, env.root, "revert", "-r", "HEAD^", revertTestFileName1); err != nil {
 		t.Fatal(err)
 	}
-	data1, err := ioutil.ReadFile(filepath.Join(repoPath, revertTestFileName1))
+	data1, err := ioutil.ReadFile(filepath.Join(env.root, revertTestFileName1))
 	if err != nil {
 		t.Error(err)
 	} else if string(data1) != revertTestContent1 {
 		t.Errorf("file content = %q after revert; want %q", data1, revertTestContent1)
 	}
 
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,26 +240,24 @@ func TestRevert_Missing(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := stageRevertTest(ctx, env.git, repoPath); err != nil {
+	if err := stageRevertTest(ctx, env.git, env.root); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Remove(filepath.Join(repoPath, revertTestFileName1)); err != nil {
+	if err := os.Remove(filepath.Join(env.root, revertTestFileName1)); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, repoPath, "revert", revertTestFileName1); err != nil {
+	if _, err := env.gg(ctx, env.root, "revert", revertTestFileName1); err != nil {
 		t.Fatal(err)
 	}
-	data1, err := ioutil.ReadFile(filepath.Join(repoPath, revertTestFileName1))
+	data1, err := ioutil.ReadFile(filepath.Join(env.root, revertTestFileName1))
 	if err != nil {
 		t.Error(err)
 	} else if string(data1) != revertTestContent1 {
 		t.Errorf("file content = %q after revert; want %q", data1, revertTestContent1)
 	}
 
-	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}

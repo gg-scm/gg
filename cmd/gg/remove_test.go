@@ -36,16 +36,14 @@ func TestRemove(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := stageRemoveTest(ctx, env.git, repoPath); err != nil {
+	if err := stageRemoveTest(ctx, env.git, env.root); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, repoPath, "rm", removeTestFileName); err != nil {
+	if _, err := env.gg(ctx, env.root, "rm", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,28 +80,26 @@ func TestRemove_AddedFails(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := env.git.Run(ctx, "init", repoPath); err != nil {
+	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, removeTestFileName),
+		filepath.Join(env.root, removeTestFileName),
 		[]byte("Hello, World!\n"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	git := env.git.WithDir(repoPath)
-	if err := git.Run(ctx, "add", removeTestFileName); err != nil {
+	if err := env.git.Run(ctx, "add", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err = env.gg(ctx, repoPath, "rm", removeTestFileName); err == nil {
+	if _, err = env.gg(ctx, env.root, "rm", removeTestFileName); err == nil {
 		t.Error("`gg rm` returned success on added file")
 	} else if _, isUsage := err.(*usageError); isUsage {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,26 +136,24 @@ func TestRemove_AddedForce(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := env.git.Run(ctx, "init", repoPath); err != nil {
+	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, removeTestFileName),
+		filepath.Join(env.root, removeTestFileName),
 		[]byte("Hello, World!\n"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	git := env.git.WithDir(repoPath)
-	if err := git.Run(ctx, "add", removeTestFileName); err != nil {
+	if err := env.git.Run(ctx, "add", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, repoPath, "rm", "-f", removeTestFileName); err != nil {
+	if _, err := env.gg(ctx, env.root, "rm", "-f", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,25 +179,23 @@ func TestRemove_ModifiedFails(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := stageRemoveTest(ctx, env.git, repoPath); err != nil {
+	if err := stageRemoveTest(ctx, env.git, env.root); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, removeTestFileName),
+		filepath.Join(env.root, removeTestFileName),
 		[]byte("The world has changed...\n"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err = env.gg(ctx, repoPath, "rm", removeTestFileName); err == nil {
+	if _, err = env.gg(ctx, env.root, "rm", removeTestFileName); err == nil {
 		t.Error("`gg rm` returned success on modified file")
 	} else if _, isUsage := err.(*usageError); isUsage {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
-	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,23 +232,21 @@ func TestRemove_ModifiedForce(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := stageRemoveTest(ctx, env.git, repoPath); err != nil {
+	if err := stageRemoveTest(ctx, env.git, env.root); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, removeTestFileName),
+		filepath.Join(env.root, removeTestFileName),
 		[]byte("The world has changed...\n"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, repoPath, "rm", "-f", removeTestFileName); err != nil {
+	if _, err := env.gg(ctx, env.root, "rm", "-f", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,21 +283,19 @@ func TestRemove_MissingFails(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := stageRemoveTest(ctx, env.git, repoPath); err != nil {
+	if err := stageRemoveTest(ctx, env.git, env.root); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Remove(filepath.Join(repoPath, removeTestFileName)); err != nil {
+	if err := os.Remove(filepath.Join(env.root, removeTestFileName)); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err = env.gg(ctx, repoPath, "rm", removeTestFileName); err == nil {
+	if _, err = env.gg(ctx, env.root, "rm", removeTestFileName); err == nil {
 		t.Error("`gg rm` returned success on missing file")
 	} else if _, isUsage := err.(*usageError); isUsage {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
-	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -344,19 +332,17 @@ func TestRemove_MissingAfter(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := stageRemoveTest(ctx, env.git, repoPath); err != nil {
+	if err := stageRemoveTest(ctx, env.git, env.root); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Remove(filepath.Join(repoPath, removeTestFileName)); err != nil {
+	if err := os.Remove(filepath.Join(env.root, removeTestFileName)); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, repoPath, "rm", "-after", removeTestFileName); err != nil {
+	if _, err := env.gg(ctx, env.root, "rm", "-after", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}

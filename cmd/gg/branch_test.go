@@ -31,34 +31,32 @@ func TestBranch(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := env.git.Run(ctx, "init", repoPath); err != nil {
+	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
-	git := env.git.WithDir(repoPath)
 	const fileName = "foo.txt"
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, fileName),
+		filepath.Join(env.root, fileName),
 		[]byte("Hello, World!\n"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "add", fileName); err != nil {
+	if err := env.git.Run(ctx, "add", fileName); err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "commit", "-m", "initial commit"); err != nil {
+	if err := env.git.Run(ctx, "commit", "-m", "initial commit"); err != nil {
 		t.Fatal(err)
 	}
-	first, err := gittool.ParseRev(ctx, git, "HEAD")
+	first, err := gittool.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, repoPath, "branch", "foo", "bar"); err != nil {
+	if _, err := env.gg(ctx, env.root, "branch", "foo", "bar"); err != nil {
 		t.Fatal(err)
 	}
-	if r, err := gittool.ParseRev(ctx, git, "HEAD"); err != nil {
+	if r, err := gittool.ParseRev(ctx, env.git, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
 		if r.CommitHex() != first.CommitHex() {
@@ -68,7 +66,7 @@ func TestBranch(t *testing.T) {
 			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.RefName())
 		}
 	}
-	if r, err := gittool.ParseRev(ctx, git, "bar"); err != nil {
+	if r, err := gittool.ParseRev(ctx, env.git, "bar"); err != nil {
 		t.Error(err)
 	} else {
 		if r.CommitHex() != first.CommitHex() {

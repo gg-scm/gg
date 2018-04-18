@@ -30,23 +30,21 @@ func TestAdd(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	repoPath := filepath.Join(env.root, "repo")
-	if err := env.git.Run(ctx, "init", repoPath); err != nil {
+	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, "foo.txt"),
+		filepath.Join(env.root, "foo.txt"),
 		[]byte("Hello, World!\n"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, repoPath, "add", "foo.txt"); err != nil {
+	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	git := env.git.WithDir(repoPath)
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,36 +80,34 @@ func TestAdd_DoesNotStageModified(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	repoPath := filepath.Join(env.root, "repo")
-	if err := env.git.Run(ctx, "init", repoPath); err != nil {
+	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, "foo.txt"),
+		filepath.Join(env.root, "foo.txt"),
 		[]byte("Hello, World!\n"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	git := env.git.WithDir(repoPath)
-	if err := git.Run(ctx, "add", "foo.txt"); err != nil {
+	if err := env.git.Run(ctx, "add", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "commit", "-m", "commit"); err != nil {
+	if err := env.git.Run(ctx, "commit", "-m", "commit"); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, "foo.txt"),
+		filepath.Join(env.root, "foo.txt"),
 		[]byte("Something different\n"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, repoPath, "add", "foo.txt"); err != nil {
+	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,62 +143,60 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	repoPath := filepath.Join(env.root, "repo")
-	if err := env.git.Run(ctx, "init", repoPath); err != nil {
+	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, "foo.txt"),
+		filepath.Join(env.root, "foo.txt"),
 		[]byte("Hello, World!\n"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	git := env.git.WithDir(repoPath)
-	if err := git.Run(ctx, "add", "foo.txt"); err != nil {
+	if err := env.git.Run(ctx, "add", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "commit", "-m", "commit"); err != nil {
+	if err := env.git.Run(ctx, "commit", "-m", "commit"); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, "foo.txt"),
+		filepath.Join(env.root, "foo.txt"),
 		[]byte("Change A\n"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "commit", "-a", "-m", "branch A"); err != nil {
+	if err := env.git.Run(ctx, "commit", "-a", "-m", "branch A"); err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "checkout", "-b", "feature", "HEAD~"); err != nil {
+	if err := env.git.Run(ctx, "checkout", "-b", "feature", "HEAD~"); err != nil {
 		t.Fatal(err)
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, "foo.txt"),
+		filepath.Join(env.root, "foo.txt"),
 		[]byte("Change B\n"),
 		0666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "commit", "-a", "-m", "branch B"); err != nil {
+	if err := env.git.Run(ctx, "commit", "-a", "-m", "branch B"); err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "checkout", "master"); err != nil {
+	if err := env.git.Run(ctx, "checkout", "master"); err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "merge", "--no-ff", "feature"); err == nil {
+	if err := env.git.Run(ctx, "merge", "--no-ff", "feature"); err == nil {
 		t.Fatal("merge did not exit; want conflict")
 	}
 	err = ioutil.WriteFile(
-		filepath.Join(repoPath, "foo.txt"),
+		filepath.Join(env.root, "foo.txt"),
 		[]byte("I resolved it!\n"),
 		0666)
 
-	if _, err := env.gg(ctx, repoPath, "add", "foo.txt"); err != nil {
+	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}

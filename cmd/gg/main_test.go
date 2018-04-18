@@ -17,6 +17,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -37,6 +38,7 @@ func TestMain(m *testing.M) {
 }
 
 type testEnv struct {
+	topDir string
 	root   string
 	git    *gittool.Tool
 	stderr *bytes.Buffer
@@ -50,38 +52,55 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	if gitPathError != nil {
 		tb.Skipf("could not find git, skipping (error: %v)", gitPathError)
 	}
-	root, err := ioutil.TempDir("", "gg_integration_test")
+	topDir, err := ioutil.TempDir("", "gg_integration_test")
 	if err != nil {
 		return nil, err
+	}
+	root := filepath.Join(topDir, "scratch")
+	if err := os.Mkdir(root, 0777); err != nil {
+		os.RemoveAll(topDir)
 	}
 	stderr := new(bytes.Buffer)
 	git, err := gittool.New(gitPath, root, &gittool.Options{
-		Env:    append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "HOME="+root),
+		Env:    append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "HOME="+topDir),
 		Stderr: stderr,
 	})
 	if err != nil {
-		os.RemoveAll(root)
+		os.RemoveAll(topDir)
 		return nil, err
 	}
-	gitConfigPath := filepath.Join(root, ".gitconfig")
-	gitConfig := []byte("[user]\nname = User\nemail = foo@example.com\n")
-	if err := ioutil.WriteFile(gitConfigPath, gitConfig, 0666); err != nil {
-		os.RemoveAll(root)
-		return nil, err
-	}
-	return &testEnv{
+	env := &testEnv{
+		topDir: topDir,
 		root:   root,
 		git:    git,
 		stderr: stderr,
 		tb:     tb,
-	}, nil
+	}
+	if err := env.writeConfig(nil); err != nil {
+		os.RemoveAll(topDir)
+		return nil, err
+	}
+	return env, nil
+}
+
+// writeConfig writes a new configuration file with the given content.
+// The test harness may write some baseline settings as well, but any
+// settings in the argument take precedence.
+func (env *testEnv) writeConfig(config []byte) error {
+	path := filepath.Join(env.topDir, ".gitconfig")
+	fullConfig := []byte("[user]\nname = User\nemail = foo@example.com\n")
+	fullConfig = append(fullConfig, config...)
+	if err := ioutil.WriteFile(path, fullConfig, 0666); err != nil {
+		return fmt.Errorf("write git config: %v", err)
+	}
+	return nil
 }
 
 func (env *testEnv) cleanup() {
 	if env.tb.Failed() && env.stderr.Len() > 0 {
 		env.tb.Log("stderr:", env.stderr)
 	}
-	if err := os.RemoveAll(env.root); err != nil {
+	if err := os.RemoveAll(env.topDir); err != nil {
 		env.tb.Error("cleanup:", err)
 	}
 }
