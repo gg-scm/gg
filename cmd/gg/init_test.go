@@ -21,6 +21,27 @@ import (
 	"testing"
 )
 
+func TestInit(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	if _, err := env.gg(ctx, env.root, "init"); err != nil {
+		t.Fatal(err)
+	}
+	gitDirPath := filepath.Join(env.root, ".git")
+	info, err := os.Stat(gitDirPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.IsDir() {
+		t.Errorf("%s is not a directory", gitDirPath)
+	}
+}
+
 func TestInit_Arg(t *testing.T) {
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
