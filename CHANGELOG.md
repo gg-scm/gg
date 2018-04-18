@@ -1,5 +1,14 @@
 # Release Notes
 
+## 0.4.1
+
+### Bug Fixes
+
+-   Instead of rebasing onto the upstream, `histedit` will keep the current
+    branch at its fork point. This was always the intended behavior, but I
+    didn't have a test, so I forgot to implement it.
+    ([#20](https://github.com/zombiezen/gg/issues/20))
+
 ## 0.4.0
 
 ### Features
