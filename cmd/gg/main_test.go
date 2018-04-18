@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -28,19 +27,11 @@ import (
 )
 
 var (
-	exePath      string
-	exePathError error
-
 	gitPath      string
 	gitPathError error
 )
 
 func TestMain(m *testing.M) {
-	if os.Getenv("GUT_TEST_SUBPROCESS") == "1" {
-		main()
-		return
-	}
-	exePath, exePathError = os.Executable()
 	gitPath, gitPathError = exec.LookPath("git")
 	os.Exit(m.Run())
 }
@@ -58,9 +49,6 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	}
 	if gitPathError != nil {
 		tb.Skipf("could not find git, skipping (error: %v)", gitPathError)
-	}
-	if exePathError != nil {
-		return nil, fmt.Errorf("could not determine executable path: %v", exePathError)
 	}
 	root, err := ioutil.TempDir("", "gg_integration_test")
 	if err != nil {
