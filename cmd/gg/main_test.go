@@ -22,27 +22,33 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
 var (
+	cpPath      string
+	cpPathError error
+
 	gitPath      string
 	gitPathError error
 )
 
 func TestMain(m *testing.M) {
+	cpPath, cpPathError = exec.LookPath("cp")
 	gitPath, gitPathError = exec.LookPath("git")
 	os.Exit(m.Run())
 }
 
 type testEnv struct {
-	topDir string
-	root   string
-	git    *gittool.Tool
-	stderr *bytes.Buffer
-	tb     testing.TB
+	topDir   string
+	root     string
+	git      *gittool.Tool
+	stderr   *bytes.Buffer
+	tb       testing.TB
+	editFile int
 }
 
 func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
@@ -96,6 +102,21 @@ func (env *testEnv) writeConfig(config []byte) error {
 	return nil
 }
 
+// editorCmd returns a shell command that will write the given bytes to
+// an edited file, suitable for the content of the core.editor
+// configuration setting.
+func (env *testEnv) editorCmd(content []byte) (string, error) {
+	if cpPathError != nil {
+		return "", fmt.Errorf("editor command: cp not found: %v", cpPathError)
+	}
+	dst := filepath.Join(env.topDir, fmt.Sprintf("msg%02d", env.editFile))
+	env.editFile++
+	if err := ioutil.WriteFile(dst, content, 0666); err != nil {
+		return "", fmt.Errorf("editor command: %v", err)
+	}
+	return fmt.Sprintf("%s %s", cpPath, shellEscape(dst)), nil
+}
+
 func (env *testEnv) cleanup() {
 	if env.tb.Failed() && env.stderr.Len() > 0 {
 		env.tb.Log("stderr:", env.stderr)
@@ -109,10 +130,85 @@ func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte,
 	out := new(bytes.Buffer)
 	pctx := &processContext{
 		dir:    dir,
-		env:    []string{"GIT_CONFIG_NOSYSTEM=1", "HOME=" + env.root},
+		env:    []string{"GIT_CONFIG_NOSYSTEM=1", "HOME=" + env.topDir},
 		stdout: out,
 		stderr: env.stderr,
 	}
 	err := run(ctx, pctx, append([]string{"-git=" + gitPath}, args...))
 	return out.Bytes(), err
+}
+
+// configEscape quotes s such that it can be used as a git configuration value.
+func configEscape(s string) string {
+	sb := new(strings.Builder)
+	sb.Grow(len(s) + 2)
+	sb.WriteByte('"')
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '\n':
+			sb.WriteString(`\n`)
+		case '\\':
+			sb.WriteString(`\\`)
+		case '"':
+			sb.WriteString(`\"`)
+		default:
+			sb.WriteByte(s[i])
+		}
+	}
+	sb.WriteByte('"')
+	return sb.String()
+}
+
+// shellEscape quotes s such that it can be used as a literal argument
+// to a shell command.
+func shellEscape(s string) string {
+	if s == "" {
+		return "''"
+	}
+	safe := true
+	for i := 0; i < len(s); i++ {
+		if !isShellSafe(s[i]) {
+			safe = false
+			break
+		}
+	}
+	if safe {
+		return s
+	}
+	sb := new(strings.Builder)
+	sb.Grow(len(s) + 2)
+	sb.WriteByte('\'')
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\'' {
+			sb.WriteString(`'\''`)
+		} else {
+			sb.WriteByte(s[i])
+		}
+	}
+	sb.WriteByte('\'')
+	return sb.String()
+}
+
+func isShellSafe(b byte) bool {
+	return b >= 'A' && b <= 'Z' || b >= 'a' && b <= 'z' || b >= '0' && b <= '9' || b == '-' || b == '_' || b == '/' || b == '.'
+}
+
+func TestShellEscape(t *testing.T) {
+	tests := []struct {
+		in, out string
+	}{
+		{``, `''`},
+		{`abc`, `abc`},
+		{`abc def`, `'abc def'`},
+		{`abc/def`, `abc/def`},
+		{`abc.def`, `abc.def`},
+		{`"abc"`, `'"abc"'`},
+		{`'abc'`, `''\''abc'\'''`},
+		{`abc\`, `'abc\'`},
+	}
+	for _, test := range tests {
+		if out := shellEscape(test.in); out != test.out {
+			t.Errorf("shellQuote(%q) = %s; want %s", test.in, out, test.out)
+		}
+	}
 }

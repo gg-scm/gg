@@ -16,6 +16,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
 )
@@ -66,7 +68,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 const histeditSynopsis = "interactively edit revision history"
 
 func histedit(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg histedit [options] [ANCESTOR]", histeditSynopsis)
+	f := flag.NewFlagSet(true, "gg histedit [options] [UPSTREAM]", histeditSynopsis)
 	abort := f.Bool("abort", false, "abort an edit already in progress")
 	continue_ := f.Bool("continue", false, "continue an edit already in progress")
 	editPlan := f.Bool("edit-plan", false, "edit remaining actions list")
@@ -82,13 +84,23 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		if f.NArg() > 1 {
 			return usagef("no more than one ancestor should be given")
 		}
-		if ancestor := f.Arg(0); ancestor != "" {
-			return cc.git.RunInteractive(ctx, "rebase", "-i", "--", ancestor)
+		upstream := f.Arg(0)
+		if strings.HasPrefix(upstream, "-") {
+			return errors.New("upstream ref cannot start with a dash")
 		}
-		rebaseArgs := []string{"rebase", "-i"}
+		if upstream == "" {
+			upstream = "@{upstream}"
+		}
+		forkPointBytes, err := cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", upstream, "HEAD")
+		if err != nil {
+			return err
+		}
+		forkPoint := string(forkPointBytes)
+		rebaseArgs := []string{"rebase", "-i", "--onto=" + forkPoint, "--no-fork-point"}
 		for _, cmd := range *exec {
 			rebaseArgs = append(rebaseArgs, "--exec="+cmd)
 		}
+		rebaseArgs = append(rebaseArgs, "--", forkPoint)
 		return cc.git.RunInteractive(ctx, rebaseArgs...)
 	case *abort && !*continue_ && !*editPlan:
 		if f.NArg() != 0 {

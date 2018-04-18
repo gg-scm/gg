@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"zombiezen.com/go/gg/internal/gittool"
@@ -231,6 +232,83 @@ func TestRebase_Base(t *testing.T) {
 	}
 	if parent.CommitHex() != head {
 		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(head, names))
+	}
+}
+
+func TestHistedit(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.git.Run(ctx, "init"); err != nil {
+		t.Fatal(err)
+	}
+	base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := dummyRebaseRev(ctx, env, "foo", "bar.txt", "Divergence")
+	if err != nil {
+		t.Fatal(err)
+	}
+	head, err := dummyRebaseRev(ctx, env, "master", "baz.txt", "Upstream")
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := map[string]string{
+		base: "initial import",
+		c:    "branch change",
+		head: "mainline change",
+	}
+
+	if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
+		t.Fatal(err)
+	}
+	rebaseEditor, err := env.editorCmd([]byte("reword " + c + "\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const wantMessage = "New commit message for bar.txt"
+	msgEditor, err := env.editorCmd([]byte(wantMessage + "\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := fmt.Sprintf("[sequence]\neditor = %s\n[core]\neditor = %s\n",
+		configEscape(rebaseEditor), configEscape(msgEditor))
+	if err := env.writeConfig([]byte(config)); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := env.gg(ctx, env.root, "histedit"); err != nil {
+		t.Fatalf("failed: %v; output:\n%s", err, out)
+	}
+
+	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := curr.CommitHex(); got == c || got == head || got == base {
+		t.Fatalf("after histedit, commit = %s; want new commit", prettyCommit(got, names))
+	}
+	if err := objectExists(ctx, env.git, curr.CommitHex()+":bar.txt"); err != nil {
+		t.Error("bar.txt not in rebased change:", err)
+	}
+	if want := "refs/heads/foo"; curr.RefName() != want {
+		t.Errorf("rebase changed ref to %s; want %s", curr.RefName(), want)
+	}
+	if msg, err := readCommitMessage(ctx, env.git, curr.CommitHex()); err != nil {
+		t.Error(err)
+	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
+		t.Errorf("commit message = %q; want %q", got, wantMessage)
+	}
+
+	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parent.CommitHex() != base {
+		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(base, names))
 	}
 }
 
