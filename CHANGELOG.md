@@ -1,5 +1,21 @@
 # Release Notes
 
+## 0.4.0
+
+### Features
+
+-   Add `upstream` command for querying and setting upstream branches.
+    ([#15](https://github.com/zombiezen/gg/issues/15))
+-   `add` can now be used to mark unmerged files as resolved.
+    ([#12](https://github.com/zombiezen/gg/issues/12))
+-   gg commands that read configuration settings from git now do so in a single
+    batch instead of invoking Git multiple times. This potentially improves
+    performance of certain commands like status.
+-   `histedit` now has an `-exec` flag, mirroring `git rebase --exec`.
+-   `mail` now has flags to control sending of notifications.
+-   `pull` now fetches all tags from a remote by default. Use `-tags=0` to
+    disable this behavior. ([#17](https://github.com/zombiezen/gg/issues/17))
+
 ## 0.3.0
 
 ### Features
