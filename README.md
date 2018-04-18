@@ -65,6 +65,7 @@ advanced commands:
   histedit      interactively edit revision history
   mail          creates or updates a Gerrit change
   rebase        move revision (and descendants) to a different branch
+  upstream      query or set upstream branch
 
 options:
   -git path
