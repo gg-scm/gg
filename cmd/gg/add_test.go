@@ -139,3 +139,94 @@ func TestAdd_DoesNotStageModified(t *testing.T) {
 		t.Errorf("file foo.txt not in git status")
 	}
 }
+
+func TestAdd_ResolveUnmerged(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	repoPath := filepath.Join(env.root, "repo")
+	if err := env.git.Run(ctx, "init", repoPath); err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(repoPath, "foo.txt"),
+		[]byte("Hello, World!\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	git := env.git.WithDir(repoPath)
+	if err := git.Run(ctx, "add", "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := git.Run(ctx, "commit", "-m", "commit"); err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(repoPath, "foo.txt"),
+		[]byte("Change A\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := git.Run(ctx, "commit", "-a", "-m", "branch A"); err != nil {
+		t.Fatal(err)
+	}
+	if err := git.Run(ctx, "checkout", "-b", "feature", "HEAD~"); err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(repoPath, "foo.txt"),
+		[]byte("Change B\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := git.Run(ctx, "commit", "-a", "-m", "branch B"); err != nil {
+		t.Fatal(err)
+	}
+	if err := git.Run(ctx, "checkout", "master"); err != nil {
+		t.Fatal(err)
+	}
+	if err := git.Run(ctx, "merge", "--no-ff", "feature"); err == nil {
+		t.Fatal("merge did not exit; want conflict")
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(repoPath, "foo.txt"),
+		[]byte("I resolved it!\n"),
+		0666)
+
+	if _, err := env.gg(ctx, repoPath, "add", "foo.txt"); err != nil {
+		t.Error("gg:", err)
+	}
+	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Wait()
+	r := bufio.NewReader(p)
+	found := false
+	for {
+		ent, err := readStatusEntry(r)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal("read status entry:", err)
+		}
+		if ent.name != "foo.txt" {
+			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+			continue
+		}
+		found = true
+		if ent.code[0] != 'M' && ent.code[1] != ' ' {
+			t.Errorf("status = '%c%c'; want 'M '", ent.code[0], ent.code[1])
+		}
+	}
+	if !found {
+		t.Errorf("file foo.txt not in git status")
+	}
+}
