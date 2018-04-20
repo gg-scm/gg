@@ -76,6 +76,12 @@ options:
     	display version information
 ```
 
+## Testimonials
+
+-   "I'm not sure if this is amazing or terrifying.  But it's definitely nifty!" -[@rspier][]
+
+[@rspier]: https://github.com/rspier
+
 ## License
 
 Apache 2.0. This is not an official Google product.
