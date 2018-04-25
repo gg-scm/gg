@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gittool"
 )
 
 const rebaseSynopsis = "move revision (and descendants) to a different branch"
@@ -91,16 +92,26 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		if upstream == "" {
 			upstream = "@{upstream}"
 		}
-		forkPointBytes, err := cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", upstream, "HEAD")
+		upstreamRev, err := gittool.ParseRev(ctx, cc.git, upstream)
 		if err != nil {
 			return err
 		}
-		forkPoint := string(forkPointBytes)
-		rebaseArgs := []string{"rebase", "-i", "--onto=" + forkPoint, "--no-fork-point"}
+		var mergeBaseBytes []byte
+		if upstreamRev.RefName() != "" {
+			// --fork-point only works on refs.
+			mergeBaseBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", upstreamRev.RefName(), "HEAD")
+		} else {
+			mergeBaseBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", upstreamRev.CommitHex(), "HEAD")
+		}
+		if err != nil {
+			return err
+		}
+		mergeBase := string(mergeBaseBytes)
+		rebaseArgs := []string{"rebase", "-i", "--onto=" + mergeBase, "--no-fork-point"}
 		for _, cmd := range *exec {
 			rebaseArgs = append(rebaseArgs, "--exec="+cmd)
 		}
-		rebaseArgs = append(rebaseArgs, "--", forkPoint)
+		rebaseArgs = append(rebaseArgs, "--", mergeBase)
 		return cc.git.RunInteractive(ctx, rebaseArgs...)
 	case *abort && !*continue_ && !*editPlan:
 		if f.NArg() != 0 {
