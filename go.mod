@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module "zombiezen.com/go/gg"
+module zombiezen.com/go/gg
 
-require "golang.org/x/sys" v0.0.0-20180329131831-378d26f46672
+require golang.org/x/sys v0.0.0-20180329131831-378d26f46672
