@@ -1,5 +1,14 @@
 # Release Notes
 
+## 0.4.2
+
+### Bug Fixes
+
+-   `histedit` now works when passing a non-ref argument.
+    ([#25](https://github.com/zombiezen/gg/issues/25))
+-   `rebase -src` now behaves as documented when given a revision that is
+    unrelated to HEAD. ([#27](https://github.com/zombiezen/gg/issues/27))
+
 ## 0.4.1
 
 ### Bug Fixes
