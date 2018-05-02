@@ -90,7 +90,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 			return fmt.Errorf("%s is in multiple branches", *src)
 		}
 		editorCmd := fmt.Sprintf(
-			"%s log --reverse --first-parent --pretty='tformat:pick %%H' %s~..refs/heads/%s >",
+			"%s log --reverse --first-parent --pretty='tformat:pick %%H' %s~..%s >",
 			shellEscape(cc.git.Path()), shellEscape(*src), shellEscape(descend[0]))
 		return cc.git.RunInteractive(ctx, "-c", "sequence.editor="+editorCmd, "rebase", "-i", "--onto="+*dst, "--no-fork-point", "HEAD")
 	default:
@@ -165,46 +165,46 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 }
 
-// findDescendants returns the set of distinct branch heads that contain the
-// given commit object.
+// findDescendants returns the set of distinct heads under refs/heads/
+// that contain the given commit object.
 func findDescendants(ctx context.Context, git *gittool.Tool, object string) ([]string, error) {
-	branches, err := branchesContaining(ctx, git, object)
+	refs, err := branchesContaining(ctx, git, object)
 	if err != nil {
 		return nil, fmt.Errorf("find descendants of %s: %v", object, err)
 	}
 	n := 0
-	for i := range branches {
-		others, err := branchesContaining(ctx, git, "refs/heads/"+branches[i])
+	for i := range refs {
+		others, err := branchesContaining(ctx, git, refs[i])
 		if err != nil {
 			return nil, fmt.Errorf("find descendants of %s: %v", object, err)
 		}
 		if len(others) == 0 {
-			return nil, fmt.Errorf("find descendants of %s: inconsistent git output for refs/heads/%s", object, branches[i])
+			return nil, fmt.Errorf("find descendants of %s: inconsistent git output for %s", object, refs[i])
 		}
 		if len(others) > 1 {
 			continue
 		}
-		if others[0] != branches[i] {
-			return nil, fmt.Errorf("find descendants of %s: inconsistent git output for refs/heads/%s", object, branches[i])
+		if others[0] != refs[i] {
+			return nil, fmt.Errorf("find descendants of %s: inconsistent git output for %s", object, refs[i])
 		}
-		branches[n] = branches[i]
+		refs[n] = refs[i]
 		n++
 	}
-	return branches[:n], nil
+	return refs[:n], nil
 }
 
-// branchesContaining returns the set of branches that contain the given
-// commit object. The order is undefined.
+// branchesContaining returns the set of refs under refs/heads/ that
+// contain the given commit object. The order is undefined.
 func branchesContaining(ctx context.Context, git *gittool.Tool, object string) ([]string, error) {
-	p, err := git.Start(ctx, "for-each-ref", "--contains="+object, "--format=%(refname:lstrip=2)", "--", "refs/heads/*")
+	p, err := git.Start(ctx, "for-each-ref", "--contains="+object, "--format=%(refname)", "--", "refs/heads/*")
 	if err != nil {
 		return nil, fmt.Errorf("list branches: %v", err)
 	}
 	defer p.Wait()
 	s := bufio.NewScanner(p)
-	var branches []string
+	var refs []string
 	for s.Scan() {
-		branches = append(branches, s.Text())
+		refs = append(refs, s.Text())
 	}
 	if err := p.Wait(); err != nil {
 		return nil, fmt.Errorf("list branches: %v", err)
@@ -212,7 +212,7 @@ func branchesContaining(ctx context.Context, git *gittool.Tool, object string) (
 	if err := s.Err(); err != nil {
 		return nil, fmt.Errorf("list branches: %v", err)
 	}
-	return branches, nil
+	return refs, nil
 }
 
 func isAncestor(ctx context.Context, git *gittool.Tool, ancestor, descendant string) bool {
