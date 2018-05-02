@@ -64,7 +64,7 @@ func TestRebase(t *testing.T) {
 		}
 		ggArgs := []string{"rebase"}
 		if arg := argFunc(head); arg != "" {
-			ggArgs = append(ggArgs, "-src="+arg, "-dst="+arg)
+			ggArgs = append(ggArgs, "-base="+arg, "-dst="+arg)
 		}
 		_, err = env.gg(ctx, env.root, ggArgs...)
 		if err != nil {
@@ -166,6 +166,64 @@ func TestRebase_Src(t *testing.T) {
 	}
 	if parent.CommitHex() != head {
 		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(head, names))
+	}
+}
+
+func TestRebase_SrcUnrelated(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.git.Run(ctx, "init"); err != nil {
+		t.Fatal(err)
+	}
+	base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change")
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := map[string]string{
+		base: "initial import",
+		c1:   "change 1",
+		c2:   "change 2",
+	}
+
+	if err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.gg(ctx, env.root, "rebase", "-src="+c2, "-dst=HEAD"); err != nil {
+		t.Error(err)
+	}
+
+	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if curr.CommitHex() == base || curr.CommitHex() == c1 || curr.CommitHex() == c2 {
+		t.Fatalf("HEAD = %s; want new commit", prettyCommit(curr.CommitHex(), names))
+	}
+	if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
+		t.Error("baz.txt not in rebased change:", err)
+	}
+	if want := "refs/heads/master"; curr.RefName() != want {
+		t.Errorf("rebase changed ref to %s; want %s", curr.RefName(), want)
+	}
+
+	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parent.CommitHex() != base {
+		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(base, names))
 	}
 }
 
@@ -320,6 +378,26 @@ func TestHistedit(t *testing.T) {
 			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(base, names))
 		}
 	})
+}
+
+func TestShellEscape(t *testing.T) {
+	tests := []struct {
+		in, out string
+	}{
+		{``, `''`},
+		{`abc`, `abc`},
+		{`abc def`, `'abc def'`},
+		{`abc/def`, `abc/def`},
+		{`abc.def`, `abc.def`},
+		{`"abc"`, `'"abc"'`},
+		{`'abc'`, `''\''abc'\'''`},
+		{`abc\`, `'abc\'`},
+	}
+	for _, test := range tests {
+		if out := shellEscape(test.in); out != test.out {
+			t.Errorf("shellEscape(%q) = %s; want %s", test.in, out, test.out)
+		}
+	}
 }
 
 type rebaseArgFunc = func(masterCommit string) string
