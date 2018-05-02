@@ -4,9 +4,11 @@ go: "1.10.x"
 install:
   - "if [[ \"$TRAVIS_OS_NAME\" = \"osx\" ]]; then brew install xz; fi"
   - "misc/build-git.bash ~/git \"$GIT_VERSION\""
+  - "go get github.com/mattn/goveralls"
   - "if [[ \"$VGO\" == 1 ]]; then go get -u golang.org/x/vgo; else go get -t ./...; fi"
 script:
-  - "PATH=\"$HOME/git/bin-wrappers:$PATH\"; if [[ \"$VGO\" == 1 ]]; then vgo test -v ./...; else go test -v ./...; fi"
+  - "PATH=\"$HOME/git/bin-wrappers:$PATH\"; if [[ \"$VGO\" == 1 ]]; then vgo test -v -covermode=count -coverprofile=coverage.out ./...; else go test -v -covermode=count -coverprofile=coverage.out ./...; fi"
+  - "goveralls -coverprofile=coverage.out -service=travis-ci"
 jobs:
   include:
     - os: linux
