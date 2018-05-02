@@ -108,6 +108,11 @@ func (t *Tool) cmd(ctx context.Context, args []string) *exec.Cmd {
 	return c
 }
 
+// Path returns the absolute path to the Git executable.
+func (t *Tool) Path() string {
+	return t.exe
+}
+
 // WithDir returns a new tool that is changed to use dir as its working directory.
 func (t *Tool) WithDir(dir string) *Tool {
 	t2 := new(Tool)
@@ -274,8 +279,8 @@ func (ee *exitError) Error() string {
 }
 
 func errorSubject(args []string) string {
-	for _, a := range args {
-		if !strings.HasPrefix(a, "-") {
+	for i, a := range args {
+		if !strings.HasPrefix(a, "-") && (i == 0 || args[i-1] != "-c") {
 			return "git " + a
 		}
 	}
