@@ -30,7 +30,9 @@ import (
 const commitSynopsis = "commit the specified files or all outstanding changes"
 
 func commit(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg commit [--amend] [-m MSG] [FILE [...]]", commitSynopsis)
+	f := flag.NewFlagSet(true, "gg commit [--amend] [-m MSG] [FILE [...]]", commitSynopsis+`
+
+aliases: ci`)
 	amend := f.Bool("amend", false, "amend the parent of the working directory")
 	msg := f.String("m", "", "use text as commit `message`")
 	if err := f.Parse(args); flag.IsHelp(err) {

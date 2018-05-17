@@ -30,7 +30,9 @@ import (
 const statusSynopsis = "show changed files in the working directory"
 
 func status(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg status [FILE [...]]", statusSynopsis)
+	f := flag.NewFlagSet(true, "gg status [FILE [...]]", statusSynopsis+`
+
+aliases: st, check`)
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil

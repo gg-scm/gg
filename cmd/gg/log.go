@@ -24,7 +24,9 @@ import (
 const logSynopsis = "show revision history of entire repository or files"
 
 func log(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg log [OPTION [...]] [FILE]", logSynopsis)
+	f := flag.NewFlagSet(true, "gg log [OPTION [...]] [FILE]", logSynopsis+`
+
+aliases: history`)
 	follow := f.Bool("follow", false, "follow file history across copies and renames")
 	graph := f.Bool("graph", false, "show the revision DAG")
 	f.Alias("graph", "G")
