@@ -123,7 +123,8 @@ func (t *Tool) WithDir(dir string) *Tool {
 
 // Run starts the specified git subcommand and waits for it to finish.
 //
-// stderr will be sent to the current process's stderr.
+// stderr will be sent to the writer specified in the tool's options.
+// stdin and stdout will be connected to the null device.
 func (t *Tool) Run(ctx context.Context, args ...string) error {
 	if t.log != nil {
 		t.log(ctx, args)
@@ -136,7 +137,7 @@ func (t *Tool) Run(ctx context.Context, args ...string) error {
 
 // RunInteractive starts the specified git subcommand and waits for it
 // to finish.  All standard streams will be attached to the
-// corresponding streams of the current process.
+// corresponding streams specified in the tool's options.
 func (t *Tool) RunInteractive(ctx context.Context, args ...string) error {
 	c := t.cmd(ctx, args)
 	c.Stdin = t.stdin
@@ -157,6 +158,9 @@ func (t *Tool) RunInteractive(ctx context.Context, args ...string) error {
 // RunOneLiner will return (nil, nil) iff the output is entirely empty.
 // Any data after the first occurrence of the delimiter byte will be
 // considered an error.
+//
+// stderr will be sent to the writer specified in the tool's options.
+// stdin will be connected to the null device.
 func (t *Tool) RunOneLiner(ctx context.Context, delim byte, args ...string) ([]byte, error) {
 	const max = 4096
 	p, err := t.Start(ctx, args...)
@@ -194,7 +198,8 @@ func (t *Tool) RunOneLiner(ctx context.Context, delim byte, args ...string) ([]b
 
 // Start starts the specified git subcommand and pipes its stdout.
 //
-// stderr will be sent to the current process's stderr.
+// stderr will be sent to the writer specified in the tool's options.
+// stdin will be connected to the null device.
 func (t *Tool) Start(ctx context.Context, args ...string) (*Process, error) {
 	c := t.cmd(ctx, args)
 	rc, err := c.StdoutPipe()
