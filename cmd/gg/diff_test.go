@@ -96,3 +96,54 @@ func TestDiff_NoChange(t *testing.T) {
 		t.Errorf("diff is not empty. Output:\n%s", out)
 	}
 }
+
+func TestDiff_AfterInit(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.git.Run(ctx, "init"); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := env.gg(ctx, env.root, "diff")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(out) != 0 {
+		t.Errorf("diff is not empty. Output:\n%s", out)
+	}
+}
+
+func TestDiff_BeforeFirstCommit(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.git.Run(ctx, "init"); err != nil {
+		t.Fatal(err)
+	}
+	const line = "Hello, World!"
+	err = ioutil.WriteFile(
+		filepath.Join(env.root, "foo.txt"),
+		[]byte(line+"\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "add", "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := env.gg(ctx, env.root, "diff")
+	if err != nil {
+		t.Error(err)
+	}
+	if !bytes.Contains(out, []byte(line)) {
+		t.Errorf("diff does not contain %q. Output:\n%s", line, out)
+	}
+}

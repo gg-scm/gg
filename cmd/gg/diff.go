@@ -19,6 +19,7 @@ import (
 	"errors"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gittool"
 )
 
 const diffSynopsis = "diff repository (or selected files)"
@@ -51,7 +52,19 @@ func diff(ctx context.Context, cc *cmdContext, args []string) error {
 	case rev.r1 != "" && *change != "":
 		return usagef("can't pass both -r and -c")
 	default:
-		diffArgs = append(diffArgs, "HEAD")
+		if rev, err := gittool.ParseRev(ctx, cc.git, "HEAD"); err == nil {
+			diffArgs = append(diffArgs, rev.CommitHex())
+		} else {
+			// HEAD not found; repository has not been initialized.
+			// Compare to the null tree.
+
+			// RunOneLiner connects stdin to /dev/null.
+			zeroHash, err := cc.git.RunOneLiner(ctx, '\n', "hash-object", "-t", "tree", "--stdin")
+			if err != nil {
+				return err
+			}
+			diffArgs = append(diffArgs, string(zeroHash))
+		}
 	}
 	diffArgs = append(diffArgs, "--")
 	diffArgs = append(diffArgs, f.Args()...)
