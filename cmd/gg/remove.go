@@ -29,11 +29,13 @@ import (
 const removeSynopsis = "remove the specified files on the next commit"
 
 func remove(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg remove [-f] [-after] FILE [...]", removeSynopsis+"\n\n"+
+	f := flag.NewFlagSet(true, "gg remove [-f] [-r] [-after] FILE [...]", removeSynopsis+"\n\n"+
 		"aliases: rm")
 	after := f.Bool("after", false, "record delete for missing files")
 	force := f.Bool("f", false, "forget added files, delete modified files")
 	f.Alias("f", "force")
+	recursive := f.Bool("r", false, "remove files under any directory specified")
+	_ = recursive
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -65,6 +67,9 @@ func remove(ctx context.Context, cc *cmdContext, args []string) error {
 		if err := verifyPresent(ctx, cc.git, repoPaths); err != nil {
 			return err
 		}
+	}
+	if *recursive {
+		rmArgs = append(rmArgs, "-r")
 	}
 	rmArgs = append(rmArgs, "--")
 	rmArgs = append(rmArgs, f.Args()...)

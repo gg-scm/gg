@@ -371,6 +371,197 @@ func TestRemove_MissingAfter(t *testing.T) {
 	}
 }
 
+func TestRemove_Recursive(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	if err := os.Mkdir(filepath.Join(env.root, "foo"), 0777); err != nil {
+		t.Fatal(err)
+	}
+	relpath := filepath.Join("foo", "bar.txt")
+	err = ioutil.WriteFile(
+		filepath.Join(env.root, relpath),
+		[]byte("Hello, World!\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "init", env.root); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "add", relpath); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "commit", "-m", "committed"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := env.gg(ctx, env.root, "rm", "-r", "foo"); err != nil {
+		t.Error(err)
+	}
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Wait()
+	r := bufio.NewReader(p)
+	found := false
+	for {
+		ent, err := readStatusEntry(r)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal("read status entry:", err)
+		}
+		if ent.name != relpath {
+			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+			continue
+		}
+		found = true
+		if ent.code[0] != 'D' || ent.code[1] != ' ' {
+			t.Errorf("status = '%c%c'; want 'D '", ent.code[0], ent.code[1])
+		}
+	}
+	if !found {
+		t.Errorf("file %s unmodified", relpath)
+	}
+}
+
+func TestRemove_RecursiveMissingFails(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	if err := os.Mkdir(filepath.Join(env.root, "foo"), 0777); err != nil {
+		t.Fatal(err)
+	}
+	relpath := filepath.Join("foo", "bar.txt")
+	err = ioutil.WriteFile(
+		filepath.Join(env.root, relpath),
+		[]byte("Hello, World!\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "init", env.root); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "add", relpath); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "commit", "-m", "committed"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(filepath.Join(env.root, "foo")); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := env.gg(ctx, env.root, "rm", "-r", "foo"); err == nil {
+		t.Error("`gg rm -r` returned success on missing directory")
+	} else if _, isUsage := err.(*usageError); isUsage {
+		t.Errorf("`gg rm -r` error: %v; want failure, not usage", err)
+	}
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Wait()
+	r := bufio.NewReader(p)
+	found := false
+	for {
+		ent, err := readStatusEntry(r)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal("read status entry:", err)
+		}
+		if ent.name != relpath {
+			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+			continue
+		}
+		found = true
+		if ent.code[0] != ' ' || ent.code[1] != 'D' {
+			t.Errorf("status = '%c%c'; want ' D'", ent.code[0], ent.code[1])
+		}
+	}
+	if !found {
+		t.Errorf("file %s unmodified", relpath)
+	}
+}
+
+func TestRemove_RecursiveMissingAfter(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	if err := os.Mkdir(filepath.Join(env.root, "foo"), 0777); err != nil {
+		t.Fatal(err)
+	}
+	relpath := filepath.Join("foo", "bar.txt")
+	err = ioutil.WriteFile(
+		filepath.Join(env.root, relpath),
+		[]byte("Hello, World!\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "init", env.root); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "add", relpath); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "commit", "-m", "committed"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(filepath.Join(env.root, "foo")); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := env.gg(ctx, env.root, "rm", "-r", "-after", "foo"); err != nil {
+		t.Error(err)
+	}
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Wait()
+	r := bufio.NewReader(p)
+	found := false
+	for {
+		ent, err := readStatusEntry(r)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal("read status entry:", err)
+		}
+		if ent.name != relpath {
+			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+			continue
+		}
+		found = true
+		if ent.code[0] != 'D' || ent.code[1] != ' ' {
+			t.Errorf("status = '%c%c'; want 'D '", ent.code[0], ent.code[1])
+		}
+	}
+	if !found {
+		t.Errorf("file %s unmodified", relpath)
+	}
+}
+
 func stageRemoveTest(ctx context.Context, git *gittool.Tool, repo string) error {
 	if err := git.Run(ctx, "init", repo); err != nil {
 		return err
