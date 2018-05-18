@@ -43,9 +43,19 @@ func TestMain(m *testing.M) {
 }
 
 type testEnv struct {
-	topDir   string
-	root     string
-	git      *gittool.Tool
+	// root is the path to a directory guaranteed to be empty at the
+	// beginning of the test.
+	root string
+
+	// git is a Git tool configured to operate in root.
+	git *gittool.Tool
+
+	// The following are fields managed by testEnv, and should not be
+	// referred to in tests.
+
+	// topDir is the path to the temporary directory created by newTestEnv.
+	topDir string
+
 	stderr   *bytes.Buffer
 	tb       testing.TB
 	editFile int
