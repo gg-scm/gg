@@ -31,6 +31,8 @@ aliases: history`)
 	graph := f.Bool("graph", false, "show the revision DAG")
 	f.Alias("graph", "G")
 	rev := f.MultiString("r", "show the specified `rev`ision or range")
+	reverse := f.Bool("reverse", false, "reverse order of commits")
+	stat := f.Bool("stat", false, "include diffstat-style summary of each commit")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -47,6 +49,12 @@ aliases: history`)
 	}
 	if *graph {
 		logArgs = append(logArgs, "--graph")
+	}
+	if *reverse {
+		logArgs = append(logArgs, "--reverse")
+	}
+	if *stat {
+		logArgs = append(logArgs, "--stat")
 	}
 	for _, r := range *rev {
 		if strings.HasPrefix(r, "-") {
