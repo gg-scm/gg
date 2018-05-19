@@ -33,19 +33,19 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 		if err := env.git.Run(ctx, "init"); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
+		c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
+		c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
 		if err != nil {
 			t.Fatal(err)
 		}
-		submit1, err := dummyRebaseRev(ctx, env, "master", "submitted.txt", "Submitted first feature change\n\nChange-Id: abcdef")
+		submit1, err := dummyRev(ctx, env.git, env.root, "master", "submitted.txt", "Submitted first feature change\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -112,19 +112,19 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if err := env.git.Run(ctx, "init"); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
+		c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
+		c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
 		if err != nil {
 			t.Fatal(err)
 		}
-		other, err := dummyRebaseRev(ctx, env, "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
+		other, err := dummyRev(ctx, env.git, env.root, "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -199,23 +199,23 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if err := env.git.Run(ctx, "init"); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
+		c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
+		c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
 		if err != nil {
 			t.Fatal(err)
 		}
-		submit1, err := dummyRebaseRev(ctx, env, "master", "bar-submitted.txt", "Submitted first feature\n\nChange-Id: abcdef")
+		submit1, err := dummyRev(ctx, env.git, env.root, "master", "bar-submitted.txt", "Submitted first feature\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
-		other, err := dummyRebaseRev(ctx, env, "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
+		other, err := dummyRev(ctx, env.git, env.root, "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -284,19 +284,19 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		if err := env.git.Run(ctx, "init"); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
+		c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
+		c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
 		if err != nil {
 			t.Fatal(err)
 		}
-		submit2, err := dummyRebaseRev(ctx, env, "master", "submitted.txt", "Submitted second feature change\n\nChange-Id: ghijkl")
+		submit2, err := dummyRev(ctx, env.git, env.root, "master", "submitted.txt", "Submitted second feature change\n\nChange-Id: ghijkl")
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -17,8 +17,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -36,19 +34,19 @@ func TestRebase(t *testing.T) {
 		if err := env.git.Run(ctx, "init"); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import")
+		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change")
+		c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change")
+		c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change")
 		if err != nil {
 			t.Fatal(err)
 		}
-		head, err := dummyRebaseRev(ctx, env, "master", "quux.txt", "Mainline change")
+		head, err := dummyRev(ctx, env.git, env.root, "master", "quux.txt", "Mainline change")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -116,19 +114,19 @@ func TestRebase_Src(t *testing.T) {
 	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
-	base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import")
+	base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change")
+	c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change")
+	c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change")
 	if err != nil {
 		t.Fatal(err)
 	}
-	head, err := dummyRebaseRev(ctx, env, "master", "quux.txt", "Mainline change")
+	head, err := dummyRev(ctx, env.git, env.root, "master", "quux.txt", "Mainline change")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,15 +177,15 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
-	base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import")
+	base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change")
+	c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change")
+	c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,27 +235,27 @@ func TestRebase_Base(t *testing.T) {
 	if err := env.git.Run(ctx, "init"); err != nil {
 		t.Fatal(err)
 	}
-	base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import")
+	base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c1, err := dummyRebaseRev(ctx, env, "topic", "bar.txt", "First feature change")
+	c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c2, err := dummyRebaseRev(ctx, env, "topic", "baz.txt", "Second feature change")
+	c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change")
 	if err != nil {
 		t.Fatal(err)
 	}
-	magic, err := dummyRebaseRev(ctx, env, "magic", "shazam.txt", "Something different")
+	magic, err := dummyRev(ctx, env.git, env.root, "magic", "shazam.txt", "Something different")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c3, err := dummyRebaseRev(ctx, env, "topic", "xyzzy.txt", "Third feature change")
+	c3, err := dummyRev(ctx, env.git, env.root, "topic", "xyzzy.txt", "Third feature change")
 	if err != nil {
 		t.Fatal(err)
 	}
-	head, err := dummyRebaseRev(ctx, env, "master", "quux.txt", "Mainline change")
+	head, err := dummyRev(ctx, env.git, env.root, "master", "quux.txt", "Mainline change")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -311,15 +309,15 @@ func TestHistedit(t *testing.T) {
 		if err := env.git.Run(ctx, "init"); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRebaseRev(ctx, env, "master", "foo.txt", "Initial import")
+		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c, err := dummyRebaseRev(ctx, env, "foo", "bar.txt", "Divergence")
+		c, err := dummyRev(ctx, env.git, env.root, "foo", "bar.txt", "Divergence")
 		if err != nil {
 			t.Fatal(err)
 		}
-		head, err := dummyRebaseRev(ctx, env, "master", "baz.txt", "Upstream")
+		head, err := dummyRev(ctx, env.git, env.root, "master", "baz.txt", "Upstream")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -426,44 +424,6 @@ func prettyCommit(hex string, names map[string]string) string {
 		return hex
 	}
 	return hex + " (" + n + ")"
-}
-
-func dummyRebaseRev(ctx context.Context, env *testEnv, branch string, file string, msg string) (string, error) {
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
-	if err != nil {
-		// First commit
-		if branch != "master" {
-			return "", fmt.Errorf("make evolve rev: %v", err)
-		}
-	} else if curr.Branch() != branch {
-		if _, err := gittool.ParseRev(ctx, env.git, "refs/heads/"+branch); err != nil {
-			// Branch doesn't exist, create it.
-			if err := env.git.Run(ctx, "branch", "--", branch); err != nil {
-				return "", fmt.Errorf("make evolve rev: %v", err)
-			}
-			if err := env.git.Run(ctx, "branch", "--set-upstream-to="+curr.RefName(), "--", branch); err != nil {
-				return "", fmt.Errorf("make evolve rev: %v", err)
-			}
-		}
-		if err := env.git.Run(ctx, "checkout", "--quiet", branch); err != nil {
-			return "", fmt.Errorf("make evolve rev: %v", err)
-		}
-	}
-	err = ioutil.WriteFile(filepath.Join(env.root, file), []byte("dummy content"), 0666)
-	if err != nil {
-		return "", fmt.Errorf("make evolve rev: %v", err)
-	}
-	if err := env.git.Run(ctx, "add", file); err != nil {
-		return "", fmt.Errorf("make evolve rev: %v", err)
-	}
-	if err := env.git.Run(ctx, "commit", "-m", msg); err != nil {
-		return "", fmt.Errorf("make evolve rev: %v", err)
-	}
-	curr, err = gittool.ParseRev(ctx, env.git, "HEAD")
-	if err != nil {
-		return "", fmt.Errorf("make evolve rev: %v", err)
-	}
-	return curr.CommitHex(), nil
 }
 
 func appendNonEmpty(args []string, s string) []string {
