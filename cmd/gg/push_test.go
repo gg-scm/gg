@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -463,21 +462,7 @@ func stagePushTest(ctx context.Context, env *testEnv) (*pushEnv, error) {
 	}
 
 	gitA := env.git.WithDir(repoA)
-	const fileName = "foo.txt"
-	err := ioutil.WriteFile(
-		filepath.Join(repoA, fileName),
-		[]byte("Hello, World!\n"),
-		0666)
-	if err != nil {
-		return nil, err
-	}
-	if err := gitA.Run(ctx, "add", fileName); err != nil {
-		return nil, err
-	}
-	if err := gitA.Run(ctx, "commit", "-m", "initial commit"); err != nil {
-		return nil, err
-	}
-	commit1, err := gittool.ParseRev(ctx, gitA, "HEAD")
+	commit1, err := dummyRev(ctx, gitA, repoA, "master", "foo.txt", "initial commit")
 	if err != nil {
 		return nil, err
 	}
@@ -490,34 +475,24 @@ func stagePushTest(ctx context.Context, env *testEnv) (*pushEnv, error) {
 	}
 	if r, err := gittool.ParseRev(ctx, gitA, "refs/remotes/origin/master"); err != nil {
 		return nil, err
-	} else if r.CommitHex() != commit1.CommitHex() {
-		return nil, fmt.Errorf("source repository origin/master = %v; want %v", r.CommitHex(), commit1.CommitHex())
+	} else if r.CommitHex() != commit1 {
+		return nil, fmt.Errorf("source repository origin/master = %v; want %v", r.CommitHex(), commit1)
 	}
 	gitB := env.git.WithDir(repoB)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		return nil, err
-	} else if r.CommitHex() != commit1.CommitHex() {
-		return nil, fmt.Errorf("destination repository master = %v; want %v", r.CommitHex(), commit1.CommitHex())
+	} else if r.CommitHex() != commit1 {
+		return nil, fmt.Errorf("destination repository master = %v; want %v", r.CommitHex(), commit1)
 	}
 
-	err = ioutil.WriteFile(
-		filepath.Join(repoA, fileName),
-		[]byte("Hello, World!\nI've learned some things...\n"),
-		0666)
-	if err != nil {
-		return nil, err
-	}
-	if err := gitA.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {
-		return nil, err
-	}
-	commit2, err := gittool.ParseRev(ctx, gitA, "HEAD")
+	commit2, err := dummyRev(ctx, gitA, repoA, "master", "bar.txt", "second commit")
 	if err != nil {
 		return nil, err
 	}
 	return &pushEnv{
 		repoA:   repoA,
 		repoB:   repoB,
-		commit1: commit1.CommitHex(),
-		commit2: commit2.CommitHex(),
+		commit1: commit1,
+		commit2: commit2,
 	}, nil
 }
