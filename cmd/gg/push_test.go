@@ -237,6 +237,40 @@ func TestPush_RewindForce(t *testing.T) {
 	}
 }
 
+func TestPush_AncestorInferDst(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	pushEnv, err := stagePushTest(ctx, env)
+	if err != nil {
+		t.Fatal(err)
+	}
+	commit3, err := dummyRev(ctx, env.git, pushEnv.repoA, "master", "baz.txt", "third commit")
+	if err != nil {
+		t.Fatal(err)
+	}
+	changes := map[string]string{
+		pushEnv.commit1: "first commit",
+		pushEnv.commit2: "second commit",
+		commit3:         "third commit",
+	}
+
+	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-r", pushEnv.commit2); err != nil {
+		t.Error(err)
+	}
+	gitB := env.git.WithDir(pushEnv.repoB)
+	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+		t.Error(err)
+	} else if r.CommitHex() != pushEnv.commit2 {
+		t.Errorf("remote refs/heads/master = %s; want %s",
+			prettyCommit(r.CommitHex(), changes),
+			prettyCommit(pushEnv.commit2, changes))
+	}
+}
+
 func TestGerritPushRef(t *testing.T) {
 	tests := []struct {
 		branch string

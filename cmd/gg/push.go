@@ -35,20 +35,21 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	When no destination repository is given, push uses the first non-
 	empty configuration value of:
 
-	1.  branch.*.pushRemote, if the source is a branch
-	2.  remote.pushDefault
-	3.  branch.*.remote, if the source is a branch
+	1.  branch.*.pushRemote, if the source is a branch or is part of only
+	    one branch.
+	2.  remote.pushDefault.
+	3.  branch.*.remote, if the source is a branch or is part of only one
+	    branch.
 	4.  Otherwise, the remote called "origin" is used.
-
-	(This is the same repository selection logic that git uses.)
 
 	If -d is given and begins with "refs/", then it specifies the remote
 	ref to update. If the argument passed to -d does not begin with
 	"refs/", it is assumed to be a branch name ("refs/heads/<arg>").
-	If -d is not given and the source is a ref, then the same ref name is
-	used. Otherwise, push exits with a failure exit code. This differs
-	from git, which will consult remote.*.push and push.default. You can
-	imagine this being the most similar to push.default=current.
+	If -d is not given and the source is a ref or part of only one local
+	branch, then the same ref name is used. Otherwise, push exits with a
+	failure exit code. This differs from git, which will consult
+	remote.*.push and push.default. You can imagine this being the most
+	similar to push.default=current.
 
 	By default, gg push will fail instead of creating a new ref on the
 	remote. If this is desired (e.g. you are creating a new branch), then
@@ -73,22 +74,33 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	if err != nil {
 		return err
 	}
+	srcRef := src.RefName()
+	if srcRef == "" {
+		possible, err := branchesContaining(ctx, cc.git, src.CommitHex())
+		if err == nil && len(possible) == 1 {
+			srcRef = possible[0]
+		}
+	}
 	dstRepo := f.Arg(0)
 	if dstRepo == "" {
 		cfg, err := gittool.ReadConfig(ctx, cc.git)
 		if err != nil {
 			return err
 		}
-		dstRepo, err = inferPushRepo(ctx, cc.git, cfg, src.Branch())
+		srcBranch := ""
+		if strings.HasPrefix(srcRef, "refs/heads/") {
+			srcBranch = srcRef[len("refs/heads/"):]
+		}
+		dstRepo, err = inferPushRepo(ctx, cc.git, cfg, srcBranch)
 		if err != nil {
 			return err
 		}
 	}
 	if *dstRef == "" {
-		if src.RefName() == "" {
+		if srcRef == "" {
 			return errors.New("cannot infer destination (source is not a ref). Use -d to specify destination ref.")
 		}
-		*dstRef = src.RefName()
+		*dstRef = srcRef
 	} else if !strings.HasPrefix(*dstRef, "refs/") {
 		*dstRef = "refs/heads/" + *dstRef
 	}
@@ -149,6 +161,13 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	if err != nil {
 		return err
 	}
+	srcBranch := src.Branch()
+	if srcBranch == "" {
+		possible, err := branchesContaining(ctx, cc.git, src.CommitHex())
+		if err == nil && len(possible) == 1 {
+			srcBranch = strings.TrimPrefix(possible[0], "refs/heads/")
+		}
+	}
 	if !*allowDirty {
 		clean, err := isClean(ctx, cc.git)
 		if err != nil {
@@ -170,13 +189,13 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	if dstRepo == "" {
 		var err error
-		dstRepo, err = inferPushRepo(ctx, cc.git, cfg, src.Branch())
+		dstRepo, err = inferPushRepo(ctx, cc.git, cfg, srcBranch)
 		if err != nil {
 			return err
 		}
 	}
 	if *dstBranch == "" {
-		branch := src.Branch()
+		branch := srcBranch
 		if branch == "" {
 			return errors.New("cannot infer destination (source is not a branch). Use -d to specify destination branch.")
 		}
