@@ -93,7 +93,9 @@ func toPathspecs(wd, top string, files []string) error {
 		if !filepath.IsAbs(files[i]) {
 			files[i] = filepath.Join(wd, files[i])
 		}
-		if strings.HasPrefix(files[i], top+string(filepath.Separator)) {
+		if files[i] == top {
+			files[i] = ":(top,literal)"
+		} else if strings.HasPrefix(files[i], top+string(filepath.Separator)) {
 			// Prepend pathspec options to interpret relative to top of
 			// repository and ignore globs. See gitglossary(7) for more details.
 			files[i] = ":(top,literal)" + files[i][len(top)+len(string(filepath.Separator)):]

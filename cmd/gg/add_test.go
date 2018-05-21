@@ -136,6 +136,56 @@ func TestAdd_DoesNotStageModified(t *testing.T) {
 	}
 }
 
+func TestAdd_WholeRepo(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.git.Run(ctx, "init"); err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(env.root, "foo.txt"),
+		[]byte("Hello, World!\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := env.gg(ctx, env.root, "add", "."); err != nil {
+		t.Error(err)
+	}
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Wait()
+	r := bufio.NewReader(p)
+	found := false
+	for {
+		ent, err := readStatusEntry(r)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal("read status entry:", err)
+		}
+		if ent.name != "foo.txt" {
+			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+			continue
+		}
+		found = true
+		if ent.code[0] != 'A' && ent.code[1] != 'A' {
+			t.Errorf("status = '%c%c'; want to contain 'A'", ent.code[0], ent.code[1])
+		}
+	}
+	if !found {
+		t.Errorf("file foo.txt not in git status")
+	}
+}
+
 func TestAdd_ResolveUnmerged(t *testing.T) {
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
