@@ -106,7 +106,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 		dstRef = gitobj.BranchRef(*dstRefArg)
 	}
 	if !*create {
-		if err := verifyRemoteRef(ctx, cc.git, dstRepo, dstRef); err != nil {
+		if err := verifyPushRemoteRef(ctx, cc.git, dstRepo, dstRef); err != nil {
 			return err
 		}
 	}
@@ -288,7 +288,15 @@ func escapeGerritMessage(sb *strings.Builder, msg string) {
 	}
 }
 
-func verifyRemoteRef(ctx context.Context, git *gittool.Tool, remote string, ref gitobj.Ref) error {
+// verifyPushRemoteRef returns nil if the given ref exists in the
+// remote. remote may either be a URL or the name of a remote, in
+// which case the remote's push URL will be queried.
+func verifyPushRemoteRef(ctx context.Context, git *gittool.Tool, remote string, ref gitobj.Ref) error {
+	pushURL, err := git.RunOneLiner(ctx, '\n', "remote", "get-url", "--push", "--", remote)
+	if err == nil {
+		// Errors typically mean that the argument is already a URL.
+		remote = string(pushURL)
+	}
 	p, err := git.Start(ctx, "ls-remote", "--quiet", remote, ref.String())
 	if err != nil {
 		return fmt.Errorf("verify remote ref %s: %v", ref, err)

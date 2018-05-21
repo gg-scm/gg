@@ -260,6 +260,99 @@ func TestPush_AncestorInferDst(t *testing.T) {
 	}
 }
 
+func TestPush_DistinctPushURL(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	pushEnv, err := stagePushTest(ctx, env)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repoC := filepath.Join(env.root, "repoC")
+	if err := env.git.Run(ctx, "clone", "--bare", pushEnv.repoB, repoC); err != nil {
+		t.Fatal(err)
+	}
+	gitA := env.git.WithDir(pushEnv.repoA)
+	if err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoC); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := env.gg(ctx, pushEnv.repoA, "push"); err != nil {
+		t.Error(err)
+	}
+	gitB := env.git.WithDir(pushEnv.repoB)
+	if r, err := gittool.ParseRev(ctx, gitB, "master"); err != nil {
+		t.Error("In fetch repo:", err)
+	} else if r.Commit() != pushEnv.commit1 {
+		names := pushEnv.commitNames()
+		t.Errorf("master in fetch repo = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pushEnv.commit1, names))
+	}
+	gitC := env.git.WithDir(repoC)
+	if r, err := gittool.ParseRev(ctx, gitC, "master"); err != nil {
+		t.Error("In push repo:", err)
+	} else if r.Commit() != pushEnv.commit2 {
+		names := pushEnv.commitNames()
+		t.Errorf("master in push repo = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pushEnv.commit2, names))
+	}
+}
+
+func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
+	// Ensure that -create=0 succeeds if the branch is missing from the
+	// fetch URL but is present in the push URL. See
+	// https://github.com/zombiezen/gg/issues/28 for background.
+
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	pushEnv, err := stagePushTest(ctx, env)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repoC := filepath.Join(env.root, "repoC")
+	if err := env.git.Run(ctx, "clone", "--bare", pushEnv.repoB, repoC); err != nil {
+		t.Fatal(err)
+	}
+	gitC := env.git.WithDir(repoC)
+	if err := gitC.Run(ctx, "branch", "newbranch", "master"); err != nil {
+		t.Fatal(err)
+	}
+	gitA := env.git.WithDir(pushEnv.repoA)
+	if err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoC); err != nil {
+		t.Fatal(err)
+	}
+	if err := gitA.Run(ctx, "checkout", "-b", "newbranch"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := env.gg(ctx, pushEnv.repoA, "push"); err != nil {
+		t.Error(err)
+	}
+	gitB := env.git.WithDir(pushEnv.repoB)
+	if r, err := gittool.ParseRev(ctx, gitB, "newbranch"); err == nil {
+		names := pushEnv.commitNames()
+		t.Errorf("newbranch in fetch repo = %s; want to not exist",
+			prettyCommit(r.Commit(), names))
+	}
+	if r, err := gittool.ParseRev(ctx, gitC, "newbranch"); err != nil {
+		t.Error("In push repo:", err)
+	} else if r.Commit() != pushEnv.commit2 {
+		names := pushEnv.commitNames()
+		t.Errorf("newbranch in push repo = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pushEnv.commit2, names))
+	}
+}
+
 func TestGerritPushRef(t *testing.T) {
 	tests := []struct {
 		branch string
