@@ -59,7 +59,7 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(cc.stdout, rev.RefName())
+		fmt.Fprintln(cc.stdout, rev.Ref())
 		return nil
 	}
 	return cc.git.RunInteractive(ctx, "branch", "--set-upstream-to="+f.Arg(0), "--", *branch)

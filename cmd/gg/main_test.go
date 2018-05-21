@@ -165,7 +165,7 @@ func dummyRev(ctx context.Context, git *gittool.Tool, dir string, branch string,
 			if err := git.Run(ctx, "branch", "--", branch); err != nil {
 				return "", fmt.Errorf("make evolve rev: %v", err)
 			}
-			if err := git.Run(ctx, "branch", "--set-upstream-to="+curr.RefName(), "--", branch); err != nil {
+			if err := git.Run(ctx, "branch", "--set-upstream-to="+curr.Ref().String(), "--", branch); err != nil {
 				return "", fmt.Errorf("make evolve rev: %v", err)
 			}
 		}

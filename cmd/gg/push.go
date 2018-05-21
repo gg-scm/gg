@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -55,7 +56,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	remote. If this is desired (e.g. you are creating a new branch), then
 	you can pass -create to override this check.`)
 	create := f.Bool("create", false, "allow pushing a new ref")
-	dstRef := f.String("d", "", "destination `ref`")
+	dstRefArg := f.String("d", "", "destination `ref`")
 	f.Alias("d", "dest")
 	force := f.Bool("f", false, "allow overwriting ref if it is not an ancestor, as long as it matches the remote-tracking branch")
 	dryRun := f.Bool("n", false, "do everything except send the changes")
@@ -74,7 +75,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	if err != nil {
 		return err
 	}
-	srcRef := src.RefName()
+	srcRef := src.Ref()
 	if srcRef == "" {
 		possible, err := branchesContaining(ctx, cc.git, src.CommitHex())
 		if err == nil && len(possible) == 1 {
@@ -87,25 +88,25 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 		if err != nil {
 			return err
 		}
-		srcBranch := ""
-		if strings.HasPrefix(srcRef, "refs/heads/") {
-			srcBranch = srcRef[len("refs/heads/"):]
-		}
-		dstRepo, err = inferPushRepo(ctx, cc.git, cfg, srcBranch)
+		dstRepo, err = inferPushRepo(ctx, cc.git, cfg, srcRef.Branch())
 		if err != nil {
 			return err
 		}
 	}
-	if *dstRef == "" {
-		if srcRef == "" {
+	var dstRef gitobj.Ref
+	switch {
+	case *dstRefArg == "":
+		if !srcRef.IsValid() {
 			return errors.New("cannot infer destination (source is not a ref). Use -d to specify destination ref.")
 		}
-		*dstRef = srcRef
-	} else if !strings.HasPrefix(*dstRef, "refs/") {
-		*dstRef = "refs/heads/" + *dstRef
+		dstRef = srcRef
+	case strings.HasPrefix(*dstRefArg, "refs/"):
+		dstRef = gitobj.Ref(*dstRefArg)
+	default:
+		dstRef = gitobj.BranchRef(*dstRefArg)
 	}
 	if !*create {
-		if err := verifyRemoteRef(ctx, cc.git, dstRepo, *dstRef); err != nil {
+		if err := verifyRemoteRef(ctx, cc.git, dstRepo, dstRef); err != nil {
 			return err
 		}
 	}
@@ -117,7 +118,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	if *dryRun {
 		pushArgs = append(pushArgs, "--dry-run")
 	}
-	pushArgs = append(pushArgs, "--", dstRepo, src.CommitHex()+":"+*dstRef)
+	pushArgs = append(pushArgs, "--", dstRepo, src.CommitHex()+":"+dstRef.String())
 	return cc.git.RunInteractive(ctx, pushArgs...)
 }
 
@@ -165,7 +166,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	if srcBranch == "" {
 		possible, err := branchesContaining(ctx, cc.git, src.CommitHex())
 		if err == nil && len(possible) == 1 {
-			srcBranch = strings.TrimPrefix(possible[0], "refs/heads/")
+			srcBranch = possible[0].Branch()
 		}
 	}
 	if !*allowDirty {
@@ -209,7 +210,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 		*dstBranch = strings.TrimPrefix(*dstBranch, "refs/for/")
 	}
 	ref := gerritPushRef(*dstBranch, gopts)
-	return cc.git.RunInteractive(ctx, "push", "--", dstRepo, src.CommitHex()+":"+ref)
+	return cc.git.RunInteractive(ctx, "push", "--", dstRepo, src.CommitHex()+":"+ref.String())
 }
 
 type gerritOptions struct {
@@ -224,7 +225,7 @@ type gerritOptions struct {
 	notifyBCC []string
 }
 
-func gerritPushRef(branch string, opts *gerritOptions) string {
+func gerritPushRef(branch string, opts *gerritOptions) gitobj.Ref {
 	sb := new(strings.Builder)
 	sb.WriteString("refs/for/")
 	sb.WriteString(branch)
@@ -268,7 +269,7 @@ func gerritPushRef(branch string, opts *gerritOptions) string {
 			sb.WriteString(bcc)
 		}
 	}
-	return sb.String()
+	return gitobj.Ref(sb.String())
 }
 
 func escapeGerritMessage(sb *strings.Builder, msg string) {
@@ -288,8 +289,8 @@ func escapeGerritMessage(sb *strings.Builder, msg string) {
 	}
 }
 
-func verifyRemoteRef(ctx context.Context, git *gittool.Tool, remote string, ref string) error {
-	p, err := git.Start(ctx, "ls-remote", "--quiet", remote, ref)
+func verifyRemoteRef(ctx context.Context, git *gittool.Tool, remote string, ref gitobj.Ref) error {
+	p, err := git.Start(ctx, "ls-remote", "--quiet", remote, ref.String())
 	if err != nil {
 		return fmt.Errorf("verify remote ref %s: %v", ref, err)
 	}

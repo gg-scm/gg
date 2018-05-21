@@ -57,7 +57,7 @@ func TestCommit_NoArgs(t *testing.T) {
 	if r1.CommitHex() == r2.CommitHex() {
 		t.Fatal("commit did not create a new commit in the working copy")
 	}
-	if ref := r2.RefName(); ref != "refs/heads/master" {
+	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "added.txt"); err != nil {
@@ -105,7 +105,7 @@ func TestCommit_Selective(t *testing.T) {
 	if r1.CommitHex() == r2.CommitHex() {
 		t.Fatal("commit did not create a new commit in the working copy")
 	}
-	if ref := r2.RefName(); ref != "refs/heads/master" {
+	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "modified.txt"); err != nil {
@@ -162,7 +162,7 @@ func TestCommit_Amend(t *testing.T) {
 	if r1.CommitHex() == r2.CommitHex() {
 		t.Fatal("commit --amend did not create a new commit in the working copy")
 	}
-	if ref := r2.RefName(); ref != "refs/heads/master" {
+	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "added.txt"); err != nil {
@@ -211,7 +211,7 @@ func TestCommit_NoChanges(t *testing.T) {
 	if r1.CommitHex() != r2.CommitHex() {
 		t.Errorf("commit created new commit %s; wanted to stay on %s", r2.CommitHex(), r1.CommitHex())
 	}
-	if ref := r2.RefName(); ref != "refs/heads/master" {
+	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 }
@@ -252,7 +252,7 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 	if r1.CommitHex() == r2.CommitHex() {
 		t.Fatal("commit --amend did not create a new commit in the working copy")
 	}
-	if ref := r2.RefName(); ref != "refs/heads/master" {
+	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if msg, err := readCommitMessage(ctx, env.git, r2.CommitHex()); err != nil {
@@ -301,7 +301,7 @@ func TestCommit_NoArgs_InSubdir(t *testing.T) {
 	if r1.CommitHex() == r2.CommitHex() {
 		t.Fatal("commit did not create a new commit in the working copy")
 	}
-	if ref := r2.RefName(); ref != "refs/heads/master" {
+	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "added.txt"); err != nil {
@@ -355,7 +355,7 @@ func TestCommit_Named_InSubdir(t *testing.T) {
 	if r1.CommitHex() == r2.CommitHex() {
 		t.Fatal("commit did not create a new commit in the working copy")
 	}
-	if ref := r2.RefName(); ref != "refs/heads/master" {
+	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if data, err := catBlob(ctx, env.git, r2.CommitHex(), "added.txt"); err != nil {

@@ -22,7 +22,7 @@ import (
 	"zombiezen.com/go/gg/internal/gitobj"
 )
 
-// Rev is a reference to a commit.
+// Rev is a parsed reference to a single commit.
 type Rev struct {
 	commit  gitobj.Hash
 	refname gitobj.Ref
@@ -58,9 +58,9 @@ func (r *Rev) CommitHex() string {
 	return r.commit.String()
 }
 
-// RefName returns the full refname or empty if r is not a symbolic revision.
-func (r *Rev) RefName() string {
-	return r.refname.String()
+// Ref returns the full refname or empty if r is not a symbolic revision.
+func (r *Rev) Ref() gitobj.Ref {
+	return r.refname
 }
 
 // Branch parses the branch name from r or empty if r does not reference

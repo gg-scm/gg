@@ -19,6 +19,8 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"testing"
+
+	"zombiezen.com/go/gg/internal/gitobj"
 )
 
 func TestParseRev(t *testing.T) {
@@ -90,7 +92,7 @@ func TestParseRev(t *testing.T) {
 	tests := []struct {
 		refspec   string
 		commitHex string
-		refname   string
+		ref       gitobj.Ref
 		branch    string
 		err       bool
 	}{
@@ -109,18 +111,18 @@ func TestParseRev(t *testing.T) {
 		{
 			refspec:   "HEAD",
 			commitHex: string(commit2),
-			refname:   "refs/heads/master",
+			ref:       "refs/heads/master",
 			branch:    "master",
 		},
 		{
 			refspec:   "FETCH_HEAD",
 			commitHex: string(commit2),
-			refname:   "FETCH_HEAD",
+			ref:       "FETCH_HEAD",
 		},
 		{
 			refspec:   "master",
 			commitHex: string(commit2),
-			refname:   "refs/heads/master",
+			ref:       "refs/heads/master",
 			branch:    "master",
 		},
 		{
@@ -134,7 +136,7 @@ func TestParseRev(t *testing.T) {
 		{
 			refspec:   "initial",
 			commitHex: string(commit1),
-			refname:   "refs/tags/initial",
+			ref:       "refs/tags/initial",
 		},
 	}
 	for _, test := range tests {
@@ -152,8 +154,8 @@ func TestParseRev(t *testing.T) {
 		if got := rev.CommitHex(); got != test.commitHex {
 			t.Errorf("ParseRev(ctx, git, %q).CommitHex() = %q; want %q", test.refspec, got, test.commitHex)
 		}
-		if got := rev.RefName(); got != test.refname {
-			t.Errorf("ParseRev(ctx, git, %q).RefName() = %q; want %q", test.refspec, got, test.refname)
+		if got := rev.Ref(); got != test.ref {
+			t.Errorf("ParseRev(ctx, git, %q).RefName() = %q; want %q", test.refspec, got, test.ref)
 		}
 		if got := rev.Branch(); got != test.branch {
 			t.Errorf("ParseRev(ctx, git, %q).Branch() = %q; want %q", test.refspec, got, test.branch)

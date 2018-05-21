@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -120,7 +121,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 		}
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "foo"); err == nil {
-		if ref := r.RefName(); ref != "" {
+		if ref := r.Ref(); ref != "" {
 			t.Errorf("foo resolved to %s", ref)
 		}
 		if r.CommitHex() == pushEnv.commit1 {
@@ -276,7 +277,7 @@ func TestGerritPushRef(t *testing.T) {
 		branch string
 		opts   *gerritOptions
 
-		wantRef  string
+		wantRef  gitobj.Ref
 		wantOpts map[string][]string
 	}{
 		{
@@ -362,8 +363,8 @@ func TestGerritPushRef(t *testing.T) {
 
 func TestParseGerritRef(t *testing.T) {
 	tests := []struct {
-		ref  string
-		base string
+		ref  gitobj.Ref
+		base gitobj.Ref
 		opts map[string][]string
 	}{
 		{
@@ -423,13 +424,13 @@ func TestParseGerritRef(t *testing.T) {
 	}
 }
 
-func parseGerritRef(ref string) (string, map[string][]string, error) {
-	start := strings.IndexByte(ref, '%')
+func parseGerritRef(ref gitobj.Ref) (gitobj.Ref, map[string][]string, error) {
+	start := strings.IndexByte(string(ref), '%')
 	if start == -1 {
 		return ref, nil, nil
 	}
 	opts := make(map[string][]string)
-	q := ref[start+1:]
+	q := string(ref[start+1:])
 	for len(q) > 0 {
 		sep := strings.IndexByte(q, ',')
 		if sep == -1 {

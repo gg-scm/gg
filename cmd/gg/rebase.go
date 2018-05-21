@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -91,7 +92,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		editorCmd := fmt.Sprintf(
 			"%s log --reverse --first-parent --pretty='tformat:pick %%H' %s~..%s >",
-			shellEscape(cc.git.Path()), shellEscape(*src), shellEscape(descend[0]))
+			shellEscape(cc.git.Path()), shellEscape(*src), shellEscape(descend[0].String()))
 		return cc.git.RunInteractive(ctx, "-c", "sequence.editor="+editorCmd, "rebase", "-i", "--onto="+*dst, "--no-fork-point", "HEAD")
 	default:
 		return cc.git.RunInteractive(ctx, "rebase", "--onto="+*dst)
@@ -129,9 +130,9 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 			return err
 		}
 		var mergeBaseBytes []byte
-		if upstreamRev.RefName() != "" {
+		if upstreamRev.Ref() != "" {
 			// --fork-point only works on refs.
-			mergeBaseBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", upstreamRev.RefName(), "HEAD")
+			mergeBaseBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", upstreamRev.Ref().String(), "HEAD")
 		} else {
 			mergeBaseBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", upstreamRev.CommitHex(), "HEAD")
 		}
@@ -167,14 +168,14 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 
 // findDescendants returns the set of distinct heads under refs/heads/
 // that contain the given commit object.
-func findDescendants(ctx context.Context, git *gittool.Tool, object string) ([]string, error) {
+func findDescendants(ctx context.Context, git *gittool.Tool, object string) ([]gitobj.Ref, error) {
 	refs, err := branchesContaining(ctx, git, object)
 	if err != nil {
 		return nil, fmt.Errorf("find descendants of %s: %v", object, err)
 	}
 	n := 0
 	for i := range refs {
-		others, err := branchesContaining(ctx, git, refs[i])
+		others, err := branchesContaining(ctx, git, refs[i].String())
 		if err != nil {
 			return nil, fmt.Errorf("find descendants of %s: %v", object, err)
 		}
@@ -195,16 +196,16 @@ func findDescendants(ctx context.Context, git *gittool.Tool, object string) ([]s
 
 // branchesContaining returns the set of refs under refs/heads/ that
 // contain the given commit object. The order is undefined.
-func branchesContaining(ctx context.Context, git *gittool.Tool, object string) ([]string, error) {
+func branchesContaining(ctx context.Context, git *gittool.Tool, object string) ([]gitobj.Ref, error) {
 	p, err := git.Start(ctx, "for-each-ref", "--contains="+object, "--format=%(refname)", "--", "refs/heads/*")
 	if err != nil {
 		return nil, fmt.Errorf("list branches: %v", err)
 	}
 	defer p.Wait()
 	s := bufio.NewScanner(p)
-	var refs []string
+	var refs []gitobj.Ref
 	for s.Scan() {
-		refs = append(refs, s.Text())
+		refs = append(refs, gitobj.Ref(s.Text()))
 	}
 	if err := p.Wait(); err != nil {
 		return nil, fmt.Errorf("list branches: %v", err)

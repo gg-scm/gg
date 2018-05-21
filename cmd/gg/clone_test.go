@@ -47,8 +47,8 @@ func TestClone(t *testing.T) {
 		if r.CommitHex() != head {
 			t.Errorf("HEAD = %s; want %s", r.CommitHex(), head)
 		}
-		if r.RefName() != "refs/heads/master" {
-			t.Errorf("HEAD refname = %q; want refs/heads/master", r.RefName())
+		if r.Ref() != "refs/heads/master" {
+			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
 		}
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/foo"); err != nil {
@@ -96,8 +96,8 @@ func TestClone_Branch(t *testing.T) {
 		if r.CommitHex() != head {
 			t.Errorf("HEAD = %s; want %s", r.CommitHex(), head)
 		}
-		if r.RefName() != "refs/heads/foo" {
-			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.RefName())
+		if r.Ref() != "refs/heads/foo" {
+			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref())
 		}
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {

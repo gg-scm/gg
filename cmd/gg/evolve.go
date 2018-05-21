@@ -61,9 +61,9 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	var forkPointBytes []byte
-	if dstRef := dstRev.RefName(); dstRef != "" {
+	if dstRef := dstRev.Ref(); dstRef != "" {
 		var err error
-		forkPointBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", dstRef, "HEAD")
+		forkPointBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", dstRef.String(), "HEAD")
 		if err != nil {
 			return err
 		}

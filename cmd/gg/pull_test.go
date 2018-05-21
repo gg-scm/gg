@@ -46,8 +46,8 @@ func TestPull(t *testing.T) {
 		if r.CommitHex() != pullEnv.commit1 {
 			t.Errorf("HEAD = %s; want %s", r.CommitHex(), pullEnv.commit1)
 		}
-		if r.RefName() != "refs/heads/master" {
-			t.Errorf("HEAD refname = %q; want refs/heads/master", r.RefName())
+		if r.Ref() != "refs/heads/master" {
+			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
 		}
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "origin/master"); err != nil {
@@ -100,8 +100,8 @@ func TestPullWithArgument(t *testing.T) {
 		if r.CommitHex() != pullEnv.commit1 {
 			t.Errorf("HEAD = %s; want %s", r.CommitHex(), pullEnv.commit1)
 		}
-		if r.RefName() != "refs/heads/master" {
-			t.Errorf("HEAD refname = %q; want refs/heads/master", r.RefName())
+		if r.Ref() != "refs/heads/master" {
+			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
 		}
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "FETCH_HEAD"); err != nil {
@@ -148,8 +148,8 @@ func TestPullUpdate(t *testing.T) {
 		} else if r.CommitHex() != pullEnv.commit2 {
 			t.Errorf("HEAD = %s; want %s", r.CommitHex(), pullEnv.commit1)
 		}
-		if r.RefName() != "refs/heads/master" {
-			t.Errorf("HEAD refname = %q; want refs/heads/master", r.RefName())
+		if r.Ref() != "refs/heads/master" {
+			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
 		}
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "origin/master"); err != nil {

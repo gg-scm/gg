@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -79,8 +80,8 @@ func TestRebase(t *testing.T) {
 		if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
 			t.Error("baz.txt not in rebased change:", err)
 		}
-		if want := "refs/heads/topic"; curr.RefName() != want {
-			t.Errorf("rebase changed ref to %s; want %s", curr.RefName(), want)
+		if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
+			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 		}
 
 		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
@@ -154,8 +155,8 @@ func TestRebase_Src(t *testing.T) {
 	if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
 		t.Error("baz.txt not in rebased change:", err)
 	}
-	if want := "refs/heads/topic"; curr.RefName() != want {
-		t.Errorf("rebase changed ref to %s; want %s", curr.RefName(), want)
+	if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
+		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 	}
 
 	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
@@ -212,8 +213,8 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
 		t.Error("baz.txt not in rebased change:", err)
 	}
-	if want := "refs/heads/master"; curr.RefName() != want {
-		t.Errorf("rebase changed ref to %s; want %s", curr.RefName(), want)
+	if want := gitobj.Ref("refs/heads/master"); curr.Ref() != want {
+		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 	}
 
 	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
@@ -285,8 +286,8 @@ func TestRebase_Base(t *testing.T) {
 	if err := objectExists(ctx, env.git, curr.CommitHex()+":xyzzy.txt"); err != nil {
 		t.Error("xyzzy.txt not in rebased change:", err)
 	}
-	if want := "refs/heads/topic"; curr.RefName() != want {
-		t.Errorf("rebase changed ref to %s; want %s", curr.RefName(), want)
+	if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
+		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 	}
 
 	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
@@ -359,8 +360,8 @@ func TestHistedit(t *testing.T) {
 		if err := objectExists(ctx, env.git, curr.CommitHex()+":bar.txt"); err != nil {
 			t.Error("bar.txt not in rebased change:", err)
 		}
-		if want := "refs/heads/foo"; curr.RefName() != want {
-			t.Errorf("rebase changed ref to %s; want %s", curr.RefName(), want)
+		if want := gitobj.Ref("refs/heads/foo"); curr.Ref() != want {
+			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 		}
 		if msg, err := readCommitMessage(ctx, env.git, curr.CommitHex()); err != nil {
 			t.Error(err)
