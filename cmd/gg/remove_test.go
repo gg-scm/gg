@@ -96,7 +96,7 @@ func TestRemove_AddedFails(t *testing.T) {
 
 	if _, err = env.gg(ctx, env.root, "rm", removeTestFileName); err == nil {
 		t.Error("`gg rm` returned success on added file")
-	} else if _, isUsage := err.(*usageError); isUsage {
+	} else if isUsage(err) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
 	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
@@ -192,7 +192,7 @@ func TestRemove_ModifiedFails(t *testing.T) {
 
 	if _, err = env.gg(ctx, env.root, "rm", removeTestFileName); err == nil {
 		t.Error("`gg rm` returned success on modified file")
-	} else if _, isUsage := err.(*usageError); isUsage {
+	} else if isUsage(err) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
 	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
@@ -292,7 +292,7 @@ func TestRemove_MissingFails(t *testing.T) {
 
 	if _, err = env.gg(ctx, env.root, "rm", removeTestFileName); err == nil {
 		t.Error("`gg rm` returned success on missing file")
-	} else if _, isUsage := err.(*usageError); isUsage {
+	} else if isUsage(err) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
 	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
@@ -466,7 +466,7 @@ func TestRemove_RecursiveMissingFails(t *testing.T) {
 
 	if _, err := env.gg(ctx, env.root, "rm", "-r", "foo"); err == nil {
 		t.Error("`gg rm -r` returned success on missing directory")
-	} else if _, isUsage := err.(*usageError); isUsage {
+	} else if isUsage(err) {
 		t.Errorf("`gg rm -r` error: %v; want failure, not usage", err)
 	}
 	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")

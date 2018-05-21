@@ -332,7 +332,7 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		_, err = env.gg(ctx, env.root, appendNonEmpty([]string{"evolve"}, argFunc(submit2))...)
 		if err == nil {
 			t.Error("gg evolve did not return error")
-		} else if _, isUsage := err.(*usageError); isUsage {
+		} else if isUsage(err) {
 			t.Error("gg evolve returned usage error:", err)
 		}
 		curr, err = gittool.ParseRev(ctx, env.git, "HEAD")

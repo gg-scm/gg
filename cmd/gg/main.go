@@ -37,8 +37,8 @@ func main() {
 	}
 	err = run(context.Background(), pctx, os.Args[1:])
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "gg:", err)
-		if _, ok := err.(*usageError); ok {
+		fmt.Fprintln(os.Stderr, err)
+		if isUsage(err) {
 			os.Exit(64)
 		}
 		os.Exit(1)
@@ -89,7 +89,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		var err error
 		*gitPath, err = pctx.lookPath("git")
 		if err != nil {
-			return err
+			return fmt.Errorf("gg: %v", err)
 		}
 	}
 	opts := gittool.Options{
@@ -118,7 +118,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 	}
 	git, err := gittool.New(*gitPath, pctx.dir, &opts)
 	if err != nil {
-		return err
+		return fmt.Errorf("gg: %v", err)
 	}
 	cc := &cmdContext{
 		dir:    pctx.dir,
@@ -127,9 +127,20 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		stderr: pctx.stderr,
 	}
 	if *versionFlag {
-		return showVersion(ctx, cc)
+		if err := showVersion(ctx, cc); isUsage(err) {
+			return err
+		} else if err != nil {
+			return fmt.Errorf("gg: %v", err)
+		}
 	}
-	return dispatch(ctx, cc, globalFlags, globalFlags.Arg(0), globalFlags.Args()[1:])
+	err = dispatch(ctx, cc, globalFlags, globalFlags.Arg(0), globalFlags.Args()[1:])
+	if isUsage(err) {
+		return err
+	}
+	if err != nil {
+		return fmt.Errorf("gg: %v", err)
+	}
+	return nil
 }
 
 type cmdContext struct {
@@ -307,5 +318,10 @@ func usagef(format string, args ...interface{}) error {
 }
 
 func (ue *usageError) Error() string {
-	return "usage: " + string(*ue)
+	return "gg: usage: " + string(*ue)
+}
+
+func isUsage(e error) bool {
+	_, ok := e.(*usageError)
+	return ok
 }

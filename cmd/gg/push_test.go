@@ -104,7 +104,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 
 	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-d", "foo"); err == nil {
 		t.Error("push of new ref did not return error")
-	} else if _, isUsage := err.(*usageError); isUsage {
+	} else if isUsage(err) {
 		t.Errorf("push of new ref returned usage error: %v", err)
 	}
 	gitB := env.git.WithDir(pushEnv.repoB)
@@ -180,7 +180,7 @@ func TestPush_RewindFails(t *testing.T) {
 	// Push rewind
 	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-d", "master", "-r", pushEnv.commit1.String()); err == nil {
 		t.Error("push of parent rev did not return error")
-	} else if _, isUsage := err.(*usageError); isUsage {
+	} else if isUsage(err) {
 		t.Errorf("push of parent rev returned usage error: %v", err)
 	}
 	gitB := env.git.WithDir(pushEnv.repoB)

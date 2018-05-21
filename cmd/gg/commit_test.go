@@ -206,7 +206,7 @@ func TestCommit_NoChanges(t *testing.T) {
 	}
 	if _, err := env.gg(ctx, env.root, "commit", "-m", "nothing to see here"); err == nil {
 		t.Error("commit with no changes did not return error")
-	} else if _, isUsage := err.(*usageError); isUsage {
+	} else if isUsage(err) {
 		t.Errorf("commit with no changes returned usage error: %v", err)
 	}
 	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
