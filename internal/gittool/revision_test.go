@@ -56,12 +56,13 @@ func TestParseRev(t *testing.T) {
 	if err := git.Run(ctx, "commit", "-m", "first commit"); err != nil {
 		t.Fatal(err)
 	}
-	commit1, err := git.RunOneLiner(ctx, '\n', "rev-parse", "HEAD")
+	commit1Hex, err := git.RunOneLiner(ctx, '\n', "rev-parse", "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(commit1) != 40 {
-		t.Fatalf("rev-parse returned %q; need 40-digit hash", commit1)
+	commit1, err := gitobj.ParseHash(string(commit1Hex))
+	if err != nil {
+		t.Fatal(err)
 	}
 	if err := git.Run(ctx, "tag", "initial"); err != nil {
 		t.Fatal(err)
@@ -75,12 +76,13 @@ func TestParseRev(t *testing.T) {
 	if err := git.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {
 		t.Fatal(err)
 	}
-	commit2, err := git.RunOneLiner(ctx, '\n', "rev-parse", "HEAD")
+	commit2Hex, err := git.RunOneLiner(ctx, '\n', "rev-parse", "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(commit2) != 40 {
-		t.Fatalf("rev-parse returned %q; need 40-digit hash", commit2)
+	commit2, err := gitobj.ParseHash(string(commit2Hex))
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// Run fetch (to write FETCH_HEAD)
@@ -90,11 +92,11 @@ func TestParseRev(t *testing.T) {
 
 	// Now verify:
 	tests := []struct {
-		refspec   string
-		commitHex string
-		ref       gitobj.Ref
-		branch    string
-		err       bool
+		refspec string
+		commit  gitobj.Hash
+		ref     gitobj.Ref
+		branch  string
+		err     bool
 	}{
 		{
 			refspec: "",
@@ -109,34 +111,34 @@ func TestParseRev(t *testing.T) {
 			err:     true,
 		},
 		{
-			refspec:   "HEAD",
-			commitHex: string(commit2),
-			ref:       "refs/heads/master",
-			branch:    "master",
+			refspec: "HEAD",
+			commit:  commit2,
+			ref:     "refs/heads/master",
+			branch:  "master",
 		},
 		{
-			refspec:   "FETCH_HEAD",
-			commitHex: string(commit2),
-			ref:       "FETCH_HEAD",
+			refspec: "FETCH_HEAD",
+			commit:  commit2,
+			ref:     "FETCH_HEAD",
 		},
 		{
-			refspec:   "master",
-			commitHex: string(commit2),
-			ref:       "refs/heads/master",
-			branch:    "master",
+			refspec: "master",
+			commit:  commit2,
+			ref:     "refs/heads/master",
+			branch:  "master",
 		},
 		{
-			refspec:   string(commit1),
-			commitHex: string(commit1),
+			refspec: commit1.String(),
+			commit:  commit1,
 		},
 		{
-			refspec:   string(commit2),
-			commitHex: string(commit2),
+			refspec: commit2.String(),
+			commit:  commit2,
 		},
 		{
-			refspec:   "initial",
-			commitHex: string(commit1),
-			ref:       "refs/tags/initial",
+			refspec: "initial",
+			commit:  commit1,
+			ref:     "refs/tags/initial",
 		},
 	}
 	for _, test := range tests {
@@ -151,8 +153,8 @@ func TestParseRev(t *testing.T) {
 			t.Errorf("ParseRev(ctx, git, %q) = %v; want error", test.refspec, rev)
 			continue
 		}
-		if got := rev.CommitHex(); got != test.commitHex {
-			t.Errorf("ParseRev(ctx, git, %q).CommitHex() = %q; want %q", test.refspec, got, test.commitHex)
+		if got := rev.Commit(); got != test.commit {
+			t.Errorf("ParseRev(ctx, git, %q).Commit() = %v; want %v", test.refspec, got, test.commit)
 		}
 		if got := rev.Ref(); got != test.ref {
 			t.Errorf("ParseRev(ctx, git, %q).RefName() = %q; want %q", test.refspec, got, test.ref)

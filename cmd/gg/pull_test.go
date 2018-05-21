@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -43,8 +44,11 @@ func TestPull(t *testing.T) {
 	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
-		if r.CommitHex() != pullEnv.commit1 {
-			t.Errorf("HEAD = %s; want %s", r.CommitHex(), pullEnv.commit1)
+		if r.Commit() != pullEnv.commit1 {
+			names := pullEnv.commitNames()
+			t.Errorf("HEAD = %s; want %s",
+				prettyCommit(r.Commit(), names),
+				prettyCommit(pullEnv.commit1, names))
 		}
 		if r.Ref() != "refs/heads/master" {
 			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
@@ -52,21 +56,19 @@ func TestPull(t *testing.T) {
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "origin/master"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pullEnv.commit1 {
-			t.Errorf("origin/master = %s (first commit); want %s", r.CommitHex(), pullEnv.commit2)
-		} else if r.CommitHex() != pullEnv.commit2 {
-			t.Errorf("origin/master = %s; want %s", r.CommitHex(), pullEnv.commit2)
-		}
+	} else if r.Commit() != pullEnv.commit2 {
+		names := pullEnv.commitNames()
+		t.Errorf("origin/master = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pullEnv.commit2, names))
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "first"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pullEnv.commit2 {
-			t.Errorf("origin/master = %s (second commit); want %s", r.CommitHex(), pullEnv.commit1)
-		} else if r.CommitHex() != pullEnv.commit1 {
-			t.Errorf("origin/master = %s; want %s", r.CommitHex(), pullEnv.commit1)
-		}
+	} else if r.Commit() != pullEnv.commit1 {
+		names := pullEnv.commitNames()
+		t.Errorf("origin/master = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pullEnv.commit1, names))
 	}
 }
 
@@ -97,8 +99,11 @@ func TestPullWithArgument(t *testing.T) {
 	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
-		if r.CommitHex() != pullEnv.commit1 {
-			t.Errorf("HEAD = %s; want %s", r.CommitHex(), pullEnv.commit1)
+		if r.Commit() != pullEnv.commit1 {
+			names := pullEnv.commitNames()
+			t.Errorf("HEAD = %s; want %s",
+				prettyCommit(r.Commit(), names),
+				prettyCommit(pullEnv.commit1, names))
 		}
 		if r.Ref() != "refs/heads/master" {
 			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
@@ -106,21 +111,19 @@ func TestPullWithArgument(t *testing.T) {
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "FETCH_HEAD"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pullEnv.commit1 {
-			t.Errorf("FETCH_HEAD = %s (first commit); want %s", r.CommitHex(), pullEnv.commit2)
-		} else if r.CommitHex() != pullEnv.commit2 {
-			t.Errorf("FETCH_HEAD = %s; want %s", r.CommitHex(), pullEnv.commit2)
-		}
+	} else if r.Commit() != pullEnv.commit2 {
+		names := pullEnv.commitNames()
+		t.Errorf("FETCH_HEAD = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pullEnv.commit2, names))
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "first"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pullEnv.commit2 {
-			t.Errorf("origin/master = %s (second commit); want %s", r.CommitHex(), pullEnv.commit1)
-		} else if r.CommitHex() != pullEnv.commit1 {
-			t.Errorf("origin/master = %s; want %s", r.CommitHex(), pullEnv.commit1)
-		}
+	} else if r.Commit() != pullEnv.commit1 {
+		names := pullEnv.commitNames()
+		t.Errorf("origin/master = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pullEnv.commit1, names))
 	}
 }
 
@@ -143,10 +146,11 @@ func TestPullUpdate(t *testing.T) {
 	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
-		if r.CommitHex() == pullEnv.commit1 {
-			t.Errorf("HEAD = %s (first commit); want %s", r.CommitHex(), pullEnv.commit1)
-		} else if r.CommitHex() != pullEnv.commit2 {
-			t.Errorf("HEAD = %s; want %s", r.CommitHex(), pullEnv.commit1)
+		if r.Commit() != pullEnv.commit2 {
+			names := pullEnv.commitNames()
+			t.Errorf("HEAD = %s; want %s",
+				prettyCommit(r.Commit(), names),
+				prettyCommit(pullEnv.commit1, names))
 		}
 		if r.Ref() != "refs/heads/master" {
 			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
@@ -154,20 +158,19 @@ func TestPullUpdate(t *testing.T) {
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "origin/master"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pullEnv.commit1 {
-			t.Errorf("origin/master = %s (first commit); want %s", r.CommitHex(), pullEnv.commit2)
-		} else if r.CommitHex() != pullEnv.commit2 {
-			t.Errorf("origin/master = %s; want %s", r.CommitHex(), pullEnv.commit2)
-		}
+	} else if r.Commit() != pullEnv.commit2 {
+		names := pullEnv.commitNames()
+		t.Errorf("origin/master = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pullEnv.commit2, names))
 	}
 }
 
 func TestInferUpstream(t *testing.T) {
 	tests := []struct {
 		localBranch string
-		merge       string
-		want        string
+		merge       gitobj.Ref
+		want        gitobj.Ref
 	}{
 		{localBranch: "", want: "HEAD"},
 		{localBranch: "master", want: "refs/heads/master"},
@@ -186,7 +189,7 @@ func TestInferUpstream(t *testing.T) {
 	}
 	for _, test := range tests {
 		if test.merge != "" {
-			if err := env.git.Run(ctx, "config", "--local", "branch."+test.localBranch+".merge", test.merge); err != nil {
+			if err := env.git.Run(ctx, "config", "--local", "branch."+test.localBranch+".merge", test.merge.String()); err != nil {
 				t.Errorf("for localBranch = %q, merge = %q: %v", test.localBranch, test.merge, err)
 				continue
 			}
@@ -211,7 +214,7 @@ func TestInferUpstream(t *testing.T) {
 
 type pullEnv struct {
 	repoA, repoB     string
-	commit1, commit2 string
+	commit1, commit2 gitobj.Hash
 }
 
 func setupPullTest(ctx context.Context, env *testEnv) (*pullEnv, error) {
@@ -262,7 +265,14 @@ func setupPullTest(ctx context.Context, env *testEnv) (*pullEnv, error) {
 	return &pullEnv{
 		repoA:   repoA,
 		repoB:   repoB,
-		commit1: commit1.CommitHex(),
-		commit2: commit2.CommitHex(),
+		commit1: commit1.Commit(),
+		commit2: commit2.Commit(),
 	}, nil
+}
+
+func (env *pullEnv) commitNames() map[gitobj.Hash]string {
+	return map[gitobj.Hash]string{
+		env.commit1: "shared commit",
+		env.commit2: "remote commit",
+	}
 }

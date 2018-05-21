@@ -132,19 +132,22 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		var mergeBaseBytes []byte
 		if upstreamRev.Ref() != "" {
 			// --fork-point only works on refs.
-			mergeBaseBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", upstreamRev.Ref().String(), "HEAD")
+			mergeBaseBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", upstreamRev.Ref().String(), gitobj.Head.String())
 		} else {
-			mergeBaseBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", upstreamRev.CommitHex(), "HEAD")
+			mergeBaseBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", upstreamRev.Commit().String(), gitobj.Head.String())
 		}
 		if err != nil {
 			return err
 		}
-		mergeBase := string(mergeBaseBytes)
-		rebaseArgs := []string{"rebase", "-i", "--onto=" + mergeBase, "--no-fork-point"}
+		mergeBase, err := gitobj.ParseHash(string(mergeBaseBytes))
+		if err != nil {
+			return fmt.Errorf("parse merge base: %v", err)
+		}
+		rebaseArgs := []string{"rebase", "-i", "--onto=" + mergeBase.String(), "--no-fork-point"}
 		for _, cmd := range *exec {
 			rebaseArgs = append(rebaseArgs, "--exec="+cmd)
 		}
-		rebaseArgs = append(rebaseArgs, "--", mergeBase)
+		rebaseArgs = append(rebaseArgs, "--", mergeBase.String())
 		return cc.git.RunInteractive(ctx, rebaseArgs...)
 	case *abort && !*continue_ && !*editPlan:
 		if f.NArg() != 0 {

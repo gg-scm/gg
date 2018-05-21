@@ -59,8 +59,8 @@ func TestBranch(t *testing.T) {
 	if r, err := gittool.ParseRev(ctx, env.git, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
-		if r.CommitHex() != first.CommitHex() {
-			t.Errorf("HEAD = %s; want %s", r.CommitHex(), first.CommitHex())
+		if r.Commit() != first.Commit() {
+			t.Errorf("HEAD = %s; want %s", r.Commit(), first.Commit())
 		}
 		if r.Ref() != "refs/heads/foo" {
 			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref())
@@ -69,8 +69,8 @@ func TestBranch(t *testing.T) {
 	if r, err := gittool.ParseRev(ctx, env.git, "bar"); err != nil {
 		t.Error(err)
 	} else {
-		if r.CommitHex() != first.CommitHex() {
-			t.Errorf("bar = %s; want %s", r.CommitHex(), first.CommitHex())
+		if r.Commit() != first.Commit() {
+			t.Errorf("bar = %s; want %s", r.Commit(), first.Commit())
 		}
 		if r.Ref() != "refs/heads/bar" {
 			t.Errorf("bar refname = %q; want refs/heads/bar", r.Ref())
@@ -121,8 +121,8 @@ func TestBranch_Upstream(t *testing.T) {
 	if r, err := gittool.ParseRev(ctx, git2, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
-		if r.CommitHex() != first.CommitHex() {
-			t.Errorf("HEAD = %s; want %s", r.CommitHex(), first.CommitHex())
+		if r.Commit() != first.Commit() {
+			t.Errorf("HEAD = %s; want %s", r.Commit(), first.Commit())
 		}
 		if r.Ref() != "refs/heads/foo" {
 			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref())

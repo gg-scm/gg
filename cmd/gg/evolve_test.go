@@ -19,6 +19,7 @@ import (
 	"context"
 	"testing"
 
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -49,7 +50,7 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		names := map[string]string{
+		names := map[gitobj.Hash]string{
 			base:    "base",
 			c1:      "change 1",
 			c2:      "change 2",
@@ -63,8 +64,8 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		} else {
-			want1 := "< " + c1 + "\n"
-			want2 := "> " + submit1 + "\n"
+			want1 := "< " + c1.String() + "\n"
+			want2 := "> " + submit1.String() + "\n"
 			if !bytes.Contains(out, []byte(want1)) || !bytes.Contains(out, []byte(want2)) {
 				t.Errorf("gg evolve -l = %q; want to contain %q and %q", out, want1, want2)
 			}
@@ -73,8 +74,8 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if curr.CommitHex() != c2 {
-			t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.CommitHex(), names), prettyCommit(c2, names))
+		if curr.Commit() != c2 {
+			t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.Commit(), names), prettyCommit(c2, names))
 		}
 
 		_, err = env.gg(ctx, env.root, appendNonEmpty([]string{"evolve"}, argFunc(submit1))...)
@@ -85,18 +86,18 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if names[curr.CommitHex()] != "" {
-			t.Errorf("HEAD = %s; want new commit", prettyCommit(curr.CommitHex(), names))
+		if names[curr.Commit()] != "" {
+			t.Errorf("HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 		}
-		if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
 			t.Error("baz.txt not in rebased change:", err)
 		}
 		parent, err := gittool.ParseRev(ctx, env.git, "HEAD^")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.CommitHex() != submit1 {
-			t.Errorf("HEAD^ = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(submit1, names))
+		if parent.Commit() != submit1 {
+			t.Errorf("HEAD^ = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(submit1, names))
 		}
 	})
 }
@@ -128,7 +129,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		names := map[string]string{
+		names := map[gitobj.Hash]string{
 			base:  "base",
 			c1:    "change 1",
 			c2:    "change 2",
@@ -148,8 +149,8 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if curr.CommitHex() != c2 {
-			t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.CommitHex(), names), prettyCommit(c2, names))
+		if curr.Commit() != c2 {
+			t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.Commit(), names), prettyCommit(c2, names))
 		}
 
 		_, err = env.gg(ctx, env.root, appendNonEmpty([]string{"evolve"}, argFunc(other))...)
@@ -160,10 +161,10 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if curr.CommitHex() != c2 {
-			t.Errorf("HEAD = %s; want %s", prettyCommit(curr.CommitHex(), names), prettyCommit(c2, names))
+		if curr.Commit() != c2 {
+			t.Errorf("HEAD = %s; want %s", prettyCommit(curr.Commit(), names), prettyCommit(c2, names))
 		}
-		if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
 			t.Error("baz.txt not in rebased change:", err)
 		}
 
@@ -171,10 +172,10 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.CommitHex() != c1 {
-			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(c1, names))
+		if parent.Commit() != c1 {
+			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(c1, names))
 		}
-		if err := objectExists(ctx, env.git, parent.CommitHex()+":bar.txt"); err != nil {
+		if err := objectExists(ctx, env.git, parent.Commit().String()+":bar.txt"); err != nil {
 			t.Error("bar.txt not in rebased change:", err)
 		}
 
@@ -182,8 +183,8 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if grandparent.CommitHex() != base {
-			t.Errorf("HEAD~2 = %s; want %s", prettyCommit(grandparent.CommitHex(), names), prettyCommit(base, names))
+		if grandparent.Commit() != base {
+			t.Errorf("HEAD~2 = %s; want %s", prettyCommit(grandparent.Commit(), names), prettyCommit(base, names))
 		}
 	})
 }
@@ -219,7 +220,7 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		names := map[string]string{
+		names := map[gitobj.Hash]string{
 			base:    "base",
 			c1:      "change 1",
 			c2:      "change 2",
@@ -234,8 +235,8 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		} else {
-			want1 := "< " + c1 + "\n"
-			want2 := "> " + submit1 + "\n"
+			want1 := "< " + c1.String() + "\n"
+			want2 := "> " + submit1.String() + "\n"
 			if !bytes.Contains(out, []byte(want1)) || !bytes.Contains(out, []byte(want2)) {
 				t.Errorf("gg evolve -l = %q; want to contain %q and %q", out, want1, want2)
 			}
@@ -244,8 +245,8 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if curr.CommitHex() != c2 {
-			t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.CommitHex(), names), prettyCommit(c2, names))
+		if curr.Commit() != c2 {
+			t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.Commit(), names), prettyCommit(c2, names))
 		}
 
 		_, err = env.gg(ctx, env.root, appendNonEmpty([]string{"evolve"}, argFunc(other))...)
@@ -256,10 +257,10 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if names[curr.CommitHex()] != "" {
+		if names[curr.Commit()] != "" {
 			t.Errorf("HEAD = %s; want new commit", prettyCommit(base, names))
 		}
-		if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
 			t.Error("baz.txt not in rebased change:", err)
 		}
 
@@ -267,8 +268,8 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.CommitHex() != submit1 {
-			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(submit1, names))
+		if parent.Commit() != submit1 {
+			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(submit1, names))
 		}
 	})
 }
@@ -300,7 +301,7 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		names := map[string]string{
+		names := map[gitobj.Hash]string{
 			base:    "base",
 			c1:      "change 1",
 			c2:      "change 2",
@@ -314,8 +315,8 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		} else {
-			want1 := "< " + c2 + "\n"
-			want2 := "> " + submit2 + "\n"
+			want1 := "< " + c2.String() + "\n"
+			want2 := "> " + submit2.String() + "\n"
 			if !bytes.Contains(out, []byte(want1)) || !bytes.Contains(out, []byte(want2)) {
 				t.Errorf("gg evolve -l = %q; want to contain %q and %q", out, want1, want2)
 			}
@@ -324,8 +325,8 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if curr.CommitHex() != c2 {
-			t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.CommitHex(), names), prettyCommit(c2, names))
+		if curr.Commit() != c2 {
+			t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.Commit(), names), prettyCommit(c2, names))
 		}
 
 		_, err = env.gg(ctx, env.root, appendNonEmpty([]string{"evolve"}, argFunc(submit2))...)
@@ -338,8 +339,8 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if curr.CommitHex() != c2 {
-			t.Errorf("HEAD = %s; want %s", prettyCommit(curr.CommitHex(), names), prettyCommit(c2, names))
+		if curr.Commit() != c2 {
+			t.Errorf("HEAD = %s; want %s", prettyCommit(curr.Commit(), names), prettyCommit(c2, names))
 		}
 	})
 }

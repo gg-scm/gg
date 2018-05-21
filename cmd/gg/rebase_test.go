@@ -51,7 +51,7 @@ func TestRebase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		names := map[string]string{
+		names := map[gitobj.Hash]string{
 			base: "initial import",
 			c1:   "change 1",
 			c2:   "change 2",
@@ -74,10 +74,10 @@ func TestRebase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if curr.CommitHex() == c2 {
+		if curr.Commit() == c2 {
 			t.Fatal("rebase did not change commit; want new commit")
 		}
-		if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
 			t.Error("baz.txt not in rebased change:", err)
 		}
 		if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
@@ -88,10 +88,10 @@ func TestRebase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.CommitHex() == c1 {
+		if parent.Commit() == c1 {
 			t.Fatal("rebase did not change parent commit; want new commit")
 		}
-		if err := objectExists(ctx, env.git, parent.CommitHex()+":bar.txt"); err != nil {
+		if err := objectExists(ctx, env.git, parent.Commit().String()+":bar.txt"); err != nil {
 			t.Error("bar.txt not in rebased change:", err)
 		}
 
@@ -99,8 +99,8 @@ func TestRebase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if grandparent.CommitHex() != head {
-			t.Errorf("HEAD~2 = %s; want %s", prettyCommit(grandparent.CommitHex(), names), prettyCommit(head, names))
+		if grandparent.Commit() != head {
+			t.Errorf("HEAD~2 = %s; want %s", prettyCommit(grandparent.Commit(), names), prettyCommit(head, names))
 		}
 	})
 }
@@ -131,7 +131,7 @@ func TestRebase_Src(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := map[string]string{
+	names := map[gitobj.Hash]string{
 		base: "initial import",
 		c1:   "change 1",
 		c2:   "change 2",
@@ -141,7 +141,7 @@ func TestRebase_Src(t *testing.T) {
 	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.gg(ctx, env.root, "rebase", "-src="+c2); err != nil {
+	if _, err := env.gg(ctx, env.root, "rebase", "-src="+c2.String()); err != nil {
 		t.Error(err)
 	}
 
@@ -149,10 +149,10 @@ func TestRebase_Src(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if curr.CommitHex() == c2 {
+	if curr.Commit() == c2 {
 		t.Fatal("rebase did not change commit; want new commit", c2)
 	}
-	if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
 		t.Error("baz.txt not in rebased change:", err)
 	}
 	if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
@@ -163,8 +163,8 @@ func TestRebase_Src(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parent.CommitHex() != head {
-		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(head, names))
+	if parent.Commit() != head {
+		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(head, names))
 	}
 }
 
@@ -190,7 +190,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := map[string]string{
+	names := map[gitobj.Hash]string{
 		base: "initial import",
 		c1:   "change 1",
 		c2:   "change 2",
@@ -199,7 +199,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.gg(ctx, env.root, "rebase", "-src="+c2, "-dst=HEAD"); err != nil {
+	if _, err := env.gg(ctx, env.root, "rebase", "-src="+c2.String(), "-dst=HEAD"); err != nil {
 		t.Error(err)
 	}
 
@@ -207,10 +207,10 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if curr.CommitHex() == base || curr.CommitHex() == c1 || curr.CommitHex() == c2 {
-		t.Fatalf("HEAD = %s; want new commit", prettyCommit(curr.CommitHex(), names))
+	if curr.Commit() == base || curr.Commit() == c1 || curr.Commit() == c2 {
+		t.Fatalf("HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 	}
-	if err := objectExists(ctx, env.git, curr.CommitHex()+":baz.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
 		t.Error("baz.txt not in rebased change:", err)
 	}
 	if want := gitobj.Ref("refs/heads/master"); curr.Ref() != want {
@@ -221,8 +221,8 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parent.CommitHex() != base {
-		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(base, names))
+	if parent.Commit() != base {
+		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(base, names))
 	}
 }
 
@@ -260,7 +260,7 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := map[string]string{
+	names := map[gitobj.Hash]string{
 		base:  "initial import",
 		c1:    "change 1",
 		c2:    "change 2",
@@ -272,7 +272,7 @@ func TestRebase_Base(t *testing.T) {
 	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.gg(ctx, env.root, "rebase", "-base="+magic); err != nil {
+	if _, err := env.gg(ctx, env.root, "rebase", "-base="+magic.String()); err != nil {
 		t.Error(err)
 	}
 
@@ -280,10 +280,10 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if curr.CommitHex() == c3 {
+	if curr.Commit() == c3 {
 		t.Fatal("rebase did not change commit; want new commit", c3)
 	}
-	if err := objectExists(ctx, env.git, curr.CommitHex()+":xyzzy.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":xyzzy.txt"); err != nil {
 		t.Error("xyzzy.txt not in rebased change:", err)
 	}
 	if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
@@ -294,8 +294,8 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parent.CommitHex() != head {
-		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(head, names))
+	if parent.Commit() != head {
+		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(head, names))
 	}
 }
 
@@ -322,7 +322,7 @@ func TestHistedit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		names := map[string]string{
+		names := map[gitobj.Hash]string{
 			base: "initial import",
 			c:    "branch change",
 			head: "mainline change",
@@ -331,7 +331,7 @@ func TestHistedit(t *testing.T) {
 		if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
 			t.Fatal(err)
 		}
-		rebaseEditor, err := env.editorCmd([]byte("reword " + c + "\n"))
+		rebaseEditor, err := env.editorCmd([]byte("reword " + c.String() + "\n"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -354,16 +354,16 @@ func TestHistedit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got := curr.CommitHex(); got == c || got == head || got == base {
+		if got := curr.Commit(); got == c || got == head || got == base {
 			t.Fatalf("after histedit, commit = %s; want new commit", prettyCommit(got, names))
 		}
-		if err := objectExists(ctx, env.git, curr.CommitHex()+":bar.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err != nil {
 			t.Error("bar.txt not in rebased change:", err)
 		}
 		if want := gitobj.Ref("refs/heads/foo"); curr.Ref() != want {
 			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 		}
-		if msg, err := readCommitMessage(ctx, env.git, curr.CommitHex()); err != nil {
+		if msg, err := readCommitMessage(ctx, env.git, curr.Commit()); err != nil {
 			t.Error(err)
 		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
 			t.Errorf("commit message = %q; want %q", got, wantMessage)
@@ -373,8 +373,8 @@ func TestHistedit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.CommitHex() != base {
-			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.CommitHex(), names), prettyCommit(base, names))
+		if parent.Commit() != base {
+			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(base, names))
 		}
 	})
 }
@@ -399,32 +399,24 @@ func TestShellEscape(t *testing.T) {
 	}
 }
 
-type rebaseArgFunc = func(masterCommit string) string
+type rebaseArgFunc = func(masterCommit gitobj.Hash) string
 
 func runRebaseArgVariants(t *testing.T, f func(*testing.T, rebaseArgFunc)) {
 	t.Run("NoArg", func(t *testing.T) {
-		f(t, func(_ string) string {
+		f(t, func(_ gitobj.Hash) string {
 			return ""
 		})
 	})
 	t.Run("BranchName", func(t *testing.T) {
-		f(t, func(_ string) string {
+		f(t, func(_ gitobj.Hash) string {
 			return "master"
 		})
 	})
 	t.Run("CommitHex", func(t *testing.T) {
-		f(t, func(masterCommit string) string {
-			return masterCommit
+		f(t, func(masterCommit gitobj.Hash) string {
+			return masterCommit.String()
 		})
 	})
-}
-
-func prettyCommit(hex string, names map[string]string) string {
-	n := names[hex]
-	if n == "" {
-		return hex
-	}
-	return hex + " (" + n + ")"
 }
 
 func appendNonEmpty(args []string, s string) []string {

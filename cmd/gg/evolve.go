@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -63,23 +64,23 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 	var forkPointBytes []byte
 	if dstRef := dstRev.Ref(); dstRef != "" {
 		var err error
-		forkPointBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", dstRef.String(), "HEAD")
+		forkPointBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", dstRef.String(), gitobj.Head.String())
 		if err != nil {
 			return err
 		}
 	} else {
 		var err error
-		forkPointBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", dstRev.CommitHex(), "HEAD")
+		forkPointBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", dstRev.Commit().String(), gitobj.Head.String())
 		if err != nil {
 			return err
 		}
 	}
 	forkPoint := string(forkPointBytes)
-	featureChanges, err := readChanges(ctx, cc.git, "HEAD", forkPoint)
+	featureChanges, err := readChanges(ctx, cc.git, gitobj.Head.String(), forkPoint)
 	if err != nil {
 		return err
 	}
-	upstreamChanges, err := readChanges(ctx, cc.git, dstRev.CommitHex(), forkPoint)
+	upstreamChanges, err := readChanges(ctx, cc.git, dstRev.Commit().String(), forkPoint)
 	if err != nil {
 		return err
 	}

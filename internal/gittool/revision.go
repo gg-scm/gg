@@ -53,9 +53,9 @@ func ParseRev(ctx context.Context, git *Tool, refspec string) (*Rev, error) {
 	}, nil
 }
 
-// CommitHex returns the full hex-encoded commit hash.
-func (r *Rev) CommitHex() string {
-	return r.commit.String()
+// Commit returns the commit hash.
+func (r *Rev) Commit() gitobj.Hash {
+	return r.commit
 }
 
 // Ref returns the full refname or empty if r is not a symbolic revision.

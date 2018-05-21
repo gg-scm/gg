@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -44,8 +45,8 @@ func TestClone(t *testing.T) {
 	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
-		if r.CommitHex() != head {
-			t.Errorf("HEAD = %s; want %s", r.CommitHex(), head)
+		if r.Commit() != head {
+			t.Errorf("HEAD = %s; want %s", r.Commit(), head)
 		}
 		if r.Ref() != "refs/heads/master" {
 			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
@@ -53,18 +54,18 @@ func TestClone(t *testing.T) {
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/foo"); err != nil {
 		t.Error(err)
-	} else if r.CommitHex() != head {
-		t.Errorf("refs/heads/foo = %s; want %s", r.CommitHex(), head)
+	} else if r.Commit() != head {
+		t.Errorf("refs/heads/foo = %s; want %s", r.Commit(), head)
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/remotes/origin/master"); err != nil {
 		t.Error(err)
-	} else if r.CommitHex() != head {
-		t.Errorf("refs/remotes/origin/master = %s; want %s", r.CommitHex(), head)
+	} else if r.Commit() != head {
+		t.Errorf("refs/remotes/origin/master = %s; want %s", r.Commit(), head)
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/remotes/origin/foo"); err != nil {
 		t.Error(err)
-	} else if r.CommitHex() != head {
-		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.CommitHex(), head)
+	} else if r.Commit() != head {
+		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.Commit(), head)
 	}
 	got, err := ioutil.ReadFile(filepath.Join(env.root, "repoB", "foo.txt"))
 	if err != nil {
@@ -93,8 +94,8 @@ func TestClone_Branch(t *testing.T) {
 	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
-		if r.CommitHex() != head {
-			t.Errorf("HEAD = %s; want %s", r.CommitHex(), head)
+		if r.Commit() != head {
+			t.Errorf("HEAD = %s; want %s", r.Commit(), head)
 		}
 		if r.Ref() != "refs/heads/foo" {
 			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref())
@@ -102,18 +103,18 @@ func TestClone_Branch(t *testing.T) {
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.CommitHex() != head {
-		t.Errorf("refs/heads/master = %s; want %s", r.CommitHex(), head)
+	} else if r.Commit() != head {
+		t.Errorf("refs/heads/master = %s; want %s", r.Commit(), head)
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/remotes/origin/master"); err != nil {
 		t.Error(err)
-	} else if r.CommitHex() != head {
-		t.Errorf("refs/remotes/origin/master = %s; want %s", r.CommitHex(), head)
+	} else if r.Commit() != head {
+		t.Errorf("refs/remotes/origin/master = %s; want %s", r.Commit(), head)
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/remotes/origin/foo"); err != nil {
 		t.Error(err)
-	} else if r.CommitHex() != head {
-		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.CommitHex(), head)
+	} else if r.Commit() != head {
+		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.Commit(), head)
 	}
 	got, err := ioutil.ReadFile(filepath.Join(env.root, "repoB", "foo.txt"))
 	if err != nil {
@@ -123,10 +124,10 @@ func TestClone_Branch(t *testing.T) {
 	}
 }
 
-func setupCloneTest(ctx context.Context, env *testEnv) (head string, _ error) {
+func setupCloneTest(ctx context.Context, env *testEnv) (head gitobj.Hash, _ error) {
 	repoA := filepath.Join(env.root, "repoA")
 	if err := env.git.Run(ctx, "init", repoA); err != nil {
-		return "", err
+		return gitobj.Hash{}, err
 	}
 	gitA := env.git.WithDir(repoA)
 	const fileName = "foo.txt"
@@ -135,20 +136,20 @@ func setupCloneTest(ctx context.Context, env *testEnv) (head string, _ error) {
 		[]byte(cloneFileMsg),
 		0666)
 	if err != nil {
-		return "", err
+		return gitobj.Hash{}, err
 	}
 	if err := gitA.Run(ctx, "add", fileName); err != nil {
-		return "", err
+		return gitobj.Hash{}, err
 	}
 	if err := gitA.Run(ctx, "commit", "-m", "initial commit"); err != nil {
-		return "", err
+		return gitobj.Hash{}, err
 	}
 	if err := gitA.Run(ctx, "branch", "foo"); err != nil {
-		return "", err
+		return gitobj.Hash{}, err
 	}
 	r, err := gittool.ParseRev(ctx, gitA, "HEAD")
 	if err != nil {
-		return "", err
+		return gitobj.Hash{}, err
 	}
-	return r.CommitHex(), nil
+	return r.Commit(), nil
 }

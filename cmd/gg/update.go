@@ -63,7 +63,7 @@ func update(ctx context.Context, cc *cmdContext, args []string) error {
 	if b := r.Branch(); b != "" {
 		coArgs = append(coArgs, b)
 	} else {
-		coArgs = append(coArgs, "--detach", r.CommitHex())
+		coArgs = append(coArgs, "--detach", r.Commit().String())
 	}
 	coArgs = append(coArgs, "--")
 	return cc.git.Run(ctx, coArgs...)

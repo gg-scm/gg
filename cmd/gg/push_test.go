@@ -44,12 +44,11 @@ func TestPush(t *testing.T) {
 	gitB := env.git.WithDir(pushEnv.repoB)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pushEnv.commit1 {
-			t.Errorf("refs/heads/master = %s (first commit); want %s", r.CommitHex(), pushEnv.commit2)
-		} else if r.CommitHex() != pushEnv.commit2 {
-			t.Errorf("refs/heads/master = %s; want %s", r.CommitHex(), pushEnv.commit2)
-		}
+	} else if r.Commit() != pushEnv.commit2 {
+		names := pushEnv.commitNames()
+		t.Errorf("refs/heads/master = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pushEnv.commit2, names))
 	}
 }
 
@@ -74,22 +73,20 @@ func TestPush_Arg(t *testing.T) {
 	gitB := env.git.WithDir(pushEnv.repoB)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pushEnv.commit2 {
-			t.Errorf("origin refs/heads/master = %s (pushed commit); want %s", r.CommitHex(), pushEnv.commit1)
-		} else if r.CommitHex() != pushEnv.commit1 {
-			t.Errorf("origin refs/heads/master = %s; want %s", r.CommitHex(), pushEnv.commit1)
-		}
+	} else if r.Commit() != pushEnv.commit1 {
+		names := pushEnv.commitNames()
+		t.Errorf("origin refs/heads/master = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pushEnv.commit1, names))
 	}
 	gitC := env.git.WithDir(filepath.Join(env.root, "repoC"))
 	if r, err := gittool.ParseRev(ctx, gitC, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pushEnv.commit1 {
-			t.Errorf("named remote refs/heads/master = %s (first commit); want %s", r.CommitHex(), pushEnv.commit2)
-		} else if r.CommitHex() != pushEnv.commit2 {
-			t.Errorf("named remote refs/heads/master = %s; want %s", r.CommitHex(), pushEnv.commit2)
-		}
+	} else if r.Commit() != pushEnv.commit2 {
+		names := pushEnv.commitNames()
+		t.Errorf("named remote refs/heads/master = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pushEnv.commit2, names))
 	}
 }
 
@@ -113,24 +110,19 @@ func TestPush_FailUnknownRef(t *testing.T) {
 	gitB := env.git.WithDir(pushEnv.repoB)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pushEnv.commit2 {
-			t.Errorf("refs/heads/master = %s (pushed commit); want %s", r.CommitHex(), pushEnv.commit1)
-		} else if r.CommitHex() != pushEnv.commit1 {
-			t.Errorf("refs/heads/master = %s; want %s", r.CommitHex(), pushEnv.commit1)
-		}
+	} else if r.Commit() != pushEnv.commit1 {
+		names := pushEnv.commitNames()
+		t.Errorf("refs/heads/master = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pushEnv.commit1, names))
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "foo"); err == nil {
 		if ref := r.Ref(); ref != "" {
-			t.Errorf("foo resolved to %s", ref)
+			t.Logf("foo resolved to %s", ref)
 		}
-		if r.CommitHex() == pushEnv.commit1 {
-			t.Errorf("foo = %s (first commit); want to not exist", r.CommitHex())
-		} else if r.CommitHex() == pushEnv.commit2 {
-			t.Errorf("foo = %s (pushed commit); want to not exist", r.CommitHex())
-		} else {
-			t.Errorf("foo = %s; want to not exist", r.CommitHex())
-		}
+		names := pushEnv.commitNames()
+		t.Errorf("on remote, foo = %s; want to not exist",
+			prettyCommit(r.Commit(), names))
 	}
 }
 
@@ -152,21 +144,19 @@ func TestPush_CreateRef(t *testing.T) {
 	gitB := env.git.WithDir(pushEnv.repoB)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pushEnv.commit2 {
-			t.Errorf("refs/heads/master = %s (pushed commit); want %s", r.CommitHex(), pushEnv.commit1)
-		} else if r.CommitHex() != pushEnv.commit1 {
-			t.Errorf("refs/heads/master = %s; want %s", r.CommitHex(), pushEnv.commit1)
-		}
+	} else if r.Commit() != pushEnv.commit1 {
+		names := pushEnv.commitNames()
+		t.Errorf("refs/heads/master = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pushEnv.commit1, names))
 	}
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/foo"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pushEnv.commit1 {
-			t.Errorf("refs/heads/foo = %s (first commit); want %s", r.CommitHex(), pushEnv.commit2)
-		} else if r.CommitHex() != pushEnv.commit2 {
-			t.Errorf("refs/heads/foo = %s; want %s", r.CommitHex(), pushEnv.commit2)
-		}
+	} else if r.Commit() != pushEnv.commit2 {
+		names := pushEnv.commitNames()
+		t.Errorf("refs/heads/foo = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pushEnv.commit2, names))
 	}
 }
 
@@ -188,7 +178,7 @@ func TestPush_RewindFails(t *testing.T) {
 	}
 
 	// Push rewind
-	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-d", "master", "-r", pushEnv.commit1); err == nil {
+	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-d", "master", "-r", pushEnv.commit1.String()); err == nil {
 		t.Error("push of parent rev did not return error")
 	} else if _, isUsage := err.(*usageError); isUsage {
 		t.Errorf("push of parent rev returned usage error: %v", err)
@@ -196,12 +186,11 @@ func TestPush_RewindFails(t *testing.T) {
 	gitB := env.git.WithDir(pushEnv.repoB)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pushEnv.commit1 {
-			t.Errorf("refs/heads/master = %s (commit 1); want %s (commit 2)", r.CommitHex(), pushEnv.commit2)
-		} else if r.CommitHex() != pushEnv.commit2 {
-			t.Errorf("refs/heads/master = %s; want %s", r.CommitHex(), pushEnv.commit2)
-		}
+	} else if r.Commit() != pushEnv.commit2 {
+		names := pushEnv.commitNames()
+		t.Errorf("refs/heads/master = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pushEnv.commit2, names))
 	}
 }
 
@@ -223,18 +212,17 @@ func TestPush_RewindForce(t *testing.T) {
 	}
 
 	// Push rewind
-	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-f", "-d", "master", "-r", pushEnv.commit1); err != nil {
+	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-f", "-d", "master", "-r", pushEnv.commit1.String()); err != nil {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(pushEnv.repoB)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else {
-		if r.CommitHex() == pushEnv.commit2 {
-			t.Errorf("refs/heads/master = %s (commit 2); want %s (commit 1)", r.CommitHex(), pushEnv.commit1)
-		} else if r.CommitHex() != pushEnv.commit1 {
-			t.Errorf("refs/heads/master = %s; want %s", r.CommitHex(), pushEnv.commit1)
-		}
+	} else if r.Commit() != pushEnv.commit1 {
+		names := pushEnv.commitNames()
+		t.Errorf("refs/heads/master = %s; want %s",
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pushEnv.commit1, names))
 	}
 }
 
@@ -253,22 +241,22 @@ func TestPush_AncestorInferDst(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	changes := map[string]string{
-		pushEnv.commit1: "first commit",
-		pushEnv.commit2: "second commit",
-		commit3:         "third commit",
-	}
 
-	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-r", pushEnv.commit2); err != nil {
+	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-r", pushEnv.commit2.String()); err != nil {
 		t.Error(err)
 	}
 	gitB := env.git.WithDir(pushEnv.repoB)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.CommitHex() != pushEnv.commit2 {
+	} else if r.Commit() != pushEnv.commit2 {
+		names := map[gitobj.Hash]string{
+			pushEnv.commit1: "first commit",
+			pushEnv.commit2: "second commit",
+			commit3:         "third commit",
+		}
 		t.Errorf("remote refs/heads/master = %s; want %s",
-			prettyCommit(r.CommitHex(), changes),
-			prettyCommit(pushEnv.commit2, changes))
+			prettyCommit(r.Commit(), names),
+			prettyCommit(pushEnv.commit2, names))
 	}
 }
 
@@ -483,7 +471,7 @@ func gerritOptionsEqual(m1, m2 map[string][]string) bool {
 
 type pushEnv struct {
 	repoA, repoB     string
-	commit1, commit2 string
+	commit1, commit2 gitobj.Hash
 }
 
 func stagePushTest(ctx context.Context, env *testEnv) (*pushEnv, error) {
@@ -510,14 +498,14 @@ func stagePushTest(ctx context.Context, env *testEnv) (*pushEnv, error) {
 	}
 	if r, err := gittool.ParseRev(ctx, gitA, "refs/remotes/origin/master"); err != nil {
 		return nil, err
-	} else if r.CommitHex() != commit1 {
-		return nil, fmt.Errorf("source repository origin/master = %v; want %v", r.CommitHex(), commit1)
+	} else if r.Commit() != commit1 {
+		return nil, fmt.Errorf("source repository origin/master = %v; want %v", r.Commit(), commit1)
 	}
 	gitB := env.git.WithDir(repoB)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		return nil, err
-	} else if r.CommitHex() != commit1 {
-		return nil, fmt.Errorf("destination repository master = %v; want %v", r.CommitHex(), commit1)
+	} else if r.Commit() != commit1 {
+		return nil, fmt.Errorf("destination repository master = %v; want %v", r.Commit(), commit1)
 	}
 
 	commit2, err := dummyRev(ctx, gitA, repoA, "master", "bar.txt", "second commit")
@@ -530,4 +518,11 @@ func stagePushTest(ctx context.Context, env *testEnv) (*pushEnv, error) {
 		commit1: commit1,
 		commit2: commit2,
 	}, nil
+}
+
+func (env *pushEnv) commitNames() map[gitobj.Hash]string {
+	return map[gitobj.Hash]string{
+		env.commit1: "shared commit",
+		env.commit2: "local commit",
+	}
 }

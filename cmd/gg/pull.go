@@ -18,8 +18,10 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -38,7 +40,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	then the branch's remote tracking branch is used or the branch with
 	the same name if the branch has no remote tracking branch. Otherwise,
 	"HEAD" is used.`)
-	remoteRef := f.String("r", "", "remote `ref`erence intended to be pulled")
+	remoteRefArg := f.String("r", "", "remote `ref`erence intended to be pulled")
 	tags := f.Bool("tags", true, "pull all tags from remote")
 	update := f.Bool("u", false, "update to new head if new descendants were pulled")
 	if err := f.Parse(args); flag.IsHelp(err) {
@@ -50,17 +52,12 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	if f.NArg() > 1 {
 		return usagef("can't pass multiple sources")
 	}
-	repo := f.Arg(0)
-	var branch string
-	var cfg *gittool.Config
-	if repo == "" || *remoteRef == "" {
-		var err error
-		cfg, err = gittool.ReadConfig(ctx, cc.git)
-		if err != nil {
-			return err
-		}
-		branch = currentBranch(ctx, cc)
+	cfg, err := gittool.ReadConfig(ctx, cc.git)
+	if err != nil {
+		return err
 	}
+	branch := currentBranch(ctx, cc)
+	repo := f.Arg(0)
 	if repo == "" {
 		if branch != "" {
 			repo = cfg.Value("branch." + branch + ".remote")
@@ -73,8 +70,14 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 			repo = "origin"
 		}
 	}
-	if *remoteRef == "" {
-		*remoteRef = inferUpstream(cfg, branch)
+	var remoteRef gitobj.Ref
+	if *remoteRefArg == "" {
+		remoteRef = inferUpstream(cfg, branch)
+	} else {
+		remoteRef = gitobj.Ref(*remoteRefArg)
+		if !remoteRef.IsValid() {
+			return fmt.Errorf("invalid ref %q", *remoteRefArg)
+		}
 	}
 
 	var gitArgs []string
@@ -86,7 +89,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	if *tags {
 		gitArgs = append(gitArgs, "--tags")
 	}
-	gitArgs = append(gitArgs, "--", repo, *remoteRef+":")
+	gitArgs = append(gitArgs, "--", repo, remoteRef.String()+":")
 	return cc.git.Run(ctx, gitArgs...)
 }
 
@@ -100,15 +103,15 @@ func currentBranch(ctx context.Context, cc *cmdContext) string {
 
 // inferUpstream returns the default remote ref to pull from.
 // localBranch may be empty.
-func inferUpstream(cfg *gittool.Config, localBranch string) string {
+func inferUpstream(cfg *gittool.Config, localBranch string) gitobj.Ref {
 	if localBranch == "" {
-		return "HEAD"
+		return gitobj.Head
 	}
 	merge := cfg.Value("branch." + localBranch + ".merge")
 	if merge != "" {
-		return merge
+		return gitobj.Ref(merge)
 	}
-	return "refs/heads/" + localBranch
+	return gitobj.BranchRef(localBranch)
 }
 
 func listRemotes(ctx context.Context, git *gittool.Tool) (map[string]struct{}, error) {
