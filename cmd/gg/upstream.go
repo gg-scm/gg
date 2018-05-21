@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -45,7 +46,7 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("cannot set multiple upstreams")
 	}
 	if *branch == "" {
-		rev, err := gittool.ParseRev(ctx, cc.git, "HEAD")
+		rev, err := gittool.ParseRev(ctx, cc.git, gitobj.Head.String())
 		if err != nil {
 			return err
 		}

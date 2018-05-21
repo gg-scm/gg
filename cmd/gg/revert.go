@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gitobj"
 )
 
 const revertSynopsis = "restore files to their checkout state"
@@ -25,7 +26,7 @@ const revertSynopsis = "restore files to their checkout state"
 func revert(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg revert [-r REV] [--all] [FILE [...]]", revertSynopsis)
 	all := f.Bool("all", false, "revert all changes when no arguments given")
-	rev := f.String("r", "HEAD", "revert to specified `rev`ision")
+	rev := f.String("r", gitobj.Head.String(), "revert to specified `rev`ision")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil

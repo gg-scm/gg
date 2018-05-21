@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -82,7 +83,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 				return fmt.Errorf("invalid branch name %q", b)
 			}
 		}
-		target := "HEAD"
+		target := gitobj.Head.String()
 		if *rev != "" {
 			target = *rev
 		}
@@ -106,6 +107,8 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		branchArgs = append(branchArgs, "--", "XXX", target)
 		var upstreamArgs []string
 		if upstream != "" {
+			// TODO(soon): This should copy the configuration directly
+			// instead of relying on the default tracking branch pattern.
 			upstreamArgs = append(upstreamArgs, "branch", "--quiet", "--set-upstream-to="+upstream, "--", "XXX")
 		}
 		for _, b := range f.Args() {
@@ -115,7 +118,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 				// since branch would fail otherwise. We need to check for
 				// existence because we don't want to clobber upstream.
 				// TODO(someday): write test that exercises this.
-				_, err := gittool.ParseRev(ctx, cc.git, "refs/heads/"+b)
+				_, err := gittool.ParseRev(ctx, cc.git, gitobj.BranchRef(b).String())
 				exists = err == nil
 			}
 			branchArgs[len(branchArgs)-2] = b
@@ -130,24 +133,26 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 			}
 		}
 		if *rev == "" {
-			return cc.git.Run(ctx, "symbolic-ref", "-m", "gg branch", "HEAD", "refs/heads/"+f.Arg(0))
+			return cc.git.Run(ctx, "symbolic-ref", "-m", "gg branch", gitobj.Head.String(), gitobj.BranchRef(f.Arg(0)).String())
 		}
 	}
 	return nil
 }
 
 func branchUpstream(cfg *gittool.Config, name string) string {
+	// TODO(soon): Remove this function; the branch command should copy
+	// the configuration directly.
+
 	remote := cfg.Value("branch." + name + ".remote")
 	if remote == "" {
 		return ""
 	}
-	merge := cfg.Value("branch." + name + ".merge")
+	merge := gitobj.Ref(cfg.Value("branch." + name + ".merge"))
 	if merge == "" {
 		return ""
 	}
-	const headsPrefix = "refs/heads/"
-	if !strings.HasPrefix(merge, headsPrefix) {
+	if !merge.IsBranch() {
 		return ""
 	}
-	return remote + "/" + merge[len(headsPrefix):]
+	return remote + "/" + merge.Branch()
 }

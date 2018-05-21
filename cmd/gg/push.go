@@ -61,7 +61,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	force := f.Bool("f", false, "allow overwriting ref if it is not an ancestor, as long as it matches the remote-tracking branch")
 	dryRun := f.Bool("n", false, "do everything except send the changes")
 	f.Alias("n", "dry-run")
-	rev := f.String("r", "HEAD", "source `rev`ision")
+	rev := f.String("r", gitobj.Head.String(), "source `rev`ision")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -129,7 +129,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	allowDirty := f.Bool("allow-dirty", false, "allow mailing when working copy has uncommitted changes")
 	dstBranch := f.String("d", "", "destination `branch`")
 	f.Alias("d", "dest", "for")
-	rev := f.String("r", "HEAD", "source `rev`ision")
+	rev := f.String("r", gitobj.Head.String(), "source `rev`ision")
 	gopts := new(gerritOptions)
 	f.MultiStringVar(&gopts.reviewers, "R", "reviewer `email`")
 	f.Alias("R", "reviewer")

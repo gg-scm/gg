@@ -16,14 +16,13 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -31,7 +30,7 @@ const cloneSynopsis = "make a copy of an existing repository"
 
 func clone(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg clone [-b BRANCH] SOURCE [DEST]", cloneSynopsis)
-	branch := f.String("b", "HEAD", "`branch` to check out")
+	branch := f.String("b", gitobj.Head.String(), "`branch` to check out")
 	f.Alias("b", "branch")
 	gerrit := f.Bool("gerrit", false, "install Gerrit hook")
 	gerritHookURL := f.String("gerrit-hook-url", commitMsgHookDefaultURL, "URL of hook script to download")
@@ -51,7 +50,7 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 	if dst == "" {
 		dst = defaultCloneDest(src)
 	}
-	if *branch == "HEAD" {
+	if *branch == gitobj.Head.String() {
 		if err := cc.git.RunInteractive(ctx, "clone", "--", src, dst); err != nil {
 			return err
 		}
@@ -67,20 +66,23 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	branches := make(map[string]struct{}, len(refs))
 	for _, r := range refs {
-		if bytes.HasPrefix(r.name, headsPrefix) {
-			branches[string(r.name[len(headsPrefix):])] = struct{}{}
+		b := r.name.Branch()
+		if b != "" {
+			branches[b] = struct{}{}
 		}
 	}
 	for _, r := range refs {
-		if !bytes.HasPrefix(r.name, originPrefix) {
+		// Guaranteed to be the mapping used by clone.
+		const originPrefix = "refs/remotes/origin/"
+		if !strings.HasPrefix(r.name.String(), originPrefix) {
 			continue
 		}
-		name := r.name[len(originPrefix):]
-		if bytes.Equal(name, headLiteral) {
+		name := string(r.name[len(originPrefix):])
+		if name == gitobj.Head.String() {
 			continue
 		}
 		if _, hasLocal := branches[string(name)]; !hasLocal {
-			if err := cc.git.Run(ctx, "branch", "--track", "--", string(name), string(r.name)); err != nil {
+			if err := cc.git.Run(ctx, "branch", "--track", "--", name, r.name.String()); err != nil {
 				return fmt.Errorf("mirroring local branch %q: %v", name, err)
 			}
 		}
@@ -93,17 +95,11 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 	return nil
 }
 
-var (
-	headLiteral  = []byte("HEAD")
-	headsPrefix  = []byte("refs/heads/")
-	originPrefix = []byte("refs/remotes/origin/")
-)
-
 type refList []refListEntry
 
 type refListEntry struct {
-	name   []byte
-	commit [20]byte
+	name   gitobj.Ref
+	commit gitobj.Hash
 }
 
 func listRefs(ctx context.Context, git *gittool.Tool) (refList, error) {
@@ -118,14 +114,16 @@ func listRefs(ctx context.Context, git *gittool.Tool) (refList, error) {
 		line := s.Bytes()
 		const spaceLoc = len(refListEntry{}.commit) * 2
 		if spaceLoc >= len(line) || line[spaceLoc] != ' ' {
-			return refs, errors.New("parse git show-ref: line must start with SHA1")
+			return refs, errors.New("parse git show-ref: line must start with commit hash")
 		}
-		refs = append(refs, refListEntry{})
-		ent := &refs[len(refs)-1]
-		if _, err := hex.Decode(ent.commit[:], line[:spaceLoc]); err != nil {
-			return refs[:len(refs)-1], errors.New("parse git show-ref: line must start with SHA1")
+		h, err := gitobj.ParseHash(string(line[:spaceLoc]))
+		if err != nil {
+			return refs, fmt.Errorf("parse git show-ref: %v", err)
 		}
-		ent.name = append([]byte(nil), line[spaceLoc+1:]...)
+		refs = append(refs, refListEntry{
+			name:   gitobj.Ref(line[spaceLoc+1:]),
+			commit: h,
+		})
 	}
 	if err := p.Wait(); err != nil {
 		return refs, err

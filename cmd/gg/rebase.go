@@ -71,7 +71,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		if strings.HasPrefix(*src, "-") {
 			return fmt.Errorf("revision cannot start with '-'")
 		}
-		if isAncestor(ctx, cc.git, *src, "HEAD") {
+		if isAncestor(ctx, cc.git, *src, gitobj.Head.String()) {
 			// Simple case: this is an ancestor revision.
 			return cc.git.RunInteractive(ctx, "rebase", "--onto="+*dst, "--no-fork-point", "--", *src+"~")
 		}
@@ -93,7 +93,13 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		editorCmd := fmt.Sprintf(
 			"%s log --reverse --first-parent --pretty='tformat:pick %%H' %s~..%s >",
 			shellEscape(cc.git.Path()), shellEscape(*src), shellEscape(descend[0].String()))
-		return cc.git.RunInteractive(ctx, "-c", "sequence.editor="+editorCmd, "rebase", "-i", "--onto="+*dst, "--no-fork-point", "HEAD")
+		return cc.git.RunInteractive(ctx,
+			"-c", "sequence.editor="+editorCmd,
+			"rebase",
+			"-i",
+			"--onto="+*dst,
+			"--no-fork-point",
+			gitobj.Head.String())
 	default:
 		return cc.git.RunInteractive(ctx, "rebase", "--onto="+*dst)
 	}

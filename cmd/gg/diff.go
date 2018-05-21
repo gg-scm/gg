@@ -19,6 +19,7 @@ import (
 	"errors"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -52,7 +53,7 @@ func diff(ctx context.Context, cc *cmdContext, args []string) error {
 	case rev.r1 != "" && *change != "":
 		return usagef("can't pass both -r and -c")
 	default:
-		if rev, err := gittool.ParseRev(ctx, cc.git, "HEAD"); err == nil {
+		if rev, err := gittool.ParseRev(ctx, cc.git, gitobj.Head.String()); err == nil {
 			diffArgs = append(diffArgs, rev.Commit().String())
 		} else {
 			// HEAD not found; repository has not been initialized.
