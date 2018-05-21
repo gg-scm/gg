@@ -95,7 +95,6 @@ func TestParseRev(t *testing.T) {
 		refspec string
 		commit  gitobj.Hash
 		ref     gitobj.Ref
-		branch  string
 		err     bool
 	}{
 		{
@@ -114,7 +113,6 @@ func TestParseRev(t *testing.T) {
 			refspec: "HEAD",
 			commit:  commit2,
 			ref:     "refs/heads/master",
-			branch:  "master",
 		},
 		{
 			refspec: "FETCH_HEAD",
@@ -125,7 +123,6 @@ func TestParseRev(t *testing.T) {
 			refspec: "master",
 			commit:  commit2,
 			ref:     "refs/heads/master",
-			branch:  "master",
 		},
 		{
 			refspec: commit1.String(),
@@ -158,9 +155,6 @@ func TestParseRev(t *testing.T) {
 		}
 		if got := rev.Ref(); got != test.ref {
 			t.Errorf("ParseRev(ctx, git, %q).RefName() = %q; want %q", test.refspec, got, test.ref)
-		}
-		if got := rev.Branch(); got != test.branch {
-			t.Errorf("ParseRev(ctx, git, %q).Branch() = %q; want %q", test.refspec, got, test.branch)
 		}
 	}
 }

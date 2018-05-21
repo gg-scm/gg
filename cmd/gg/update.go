@@ -60,7 +60,7 @@ func update(ctx context.Context, cc *cmdContext, args []string) error {
 	if *merge {
 		coArgs = append(coArgs, "--merge")
 	}
-	if b := r.Branch(); b != "" {
+	if b := r.Ref().Branch(); b != "" {
 		coArgs = append(coArgs, b)
 	} else {
 		coArgs = append(coArgs, "--detach", r.Commit().String())

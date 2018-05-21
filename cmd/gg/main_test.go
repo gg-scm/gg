@@ -160,7 +160,7 @@ func dummyRev(ctx context.Context, git *gittool.Tool, dir string, branch string,
 		if branch != "master" {
 			return gitobj.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 		}
-	} else if curr.Branch() != branch {
+	} else if curr.Ref().Branch() != branch {
 		if _, err := gittool.ParseRev(ctx, git, "refs/heads/"+branch); err != nil {
 			// Branch doesn't exist, create it.
 			if err := git.Run(ctx, "branch", "--", branch); err != nil {

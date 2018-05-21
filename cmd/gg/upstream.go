@@ -49,7 +49,7 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 		if err != nil {
 			return err
 		}
-		*branch = rev.Branch()
+		*branch = rev.Ref().Branch()
 		if *branch == "" {
 			return errors.New("no branch currently checked out; please specify branch with -b")
 		}

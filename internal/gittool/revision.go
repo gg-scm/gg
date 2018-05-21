@@ -63,19 +63,10 @@ func (r *Rev) Ref() gitobj.Ref {
 	return r.refname
 }
 
-// Branch parses the branch name from r or empty if r does not reference
-// a branch.
-//
-// If Branch returns a non-empty string, it implies that RefName will
-// also return a non-empty string.
-func (r *Rev) Branch() string {
-	return r.refname.Branch()
-}
-
 // String returns the shortest symbolic name if possible, falling back
 // to the commit hash.
 func (r *Rev) String() string {
-	if b := r.Branch(); b != "" {
+	if b := r.refname.Branch(); b != "" {
 		return b
 	}
 	if r.refname.IsValid() {

@@ -98,7 +98,7 @@ func currentBranch(ctx context.Context, cc *cmdContext) string {
 	if err != nil {
 		return ""
 	}
-	return r.Branch()
+	return r.Ref().Branch()
 }
 
 // inferUpstream returns the default remote ref to pull from.

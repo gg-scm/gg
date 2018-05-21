@@ -162,7 +162,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	if err != nil {
 		return err
 	}
-	srcBranch := src.Branch()
+	srcBranch := src.Ref().Branch()
 	if srcBranch == "" {
 		possible, err := branchesContaining(ctx, cc.git, src.Commit().String())
 		if err == nil && len(possible) == 1 {
