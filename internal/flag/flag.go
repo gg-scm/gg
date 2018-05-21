@@ -79,6 +79,22 @@ func (f *FlagSet) BoolVar(p *bool, name string, value bool, usage string) {
 	f.Var((*boolValue)(p), name, usage)
 }
 
+// Int defines an int flag with specified name, default value, and
+// usage string. The return value is the address of an int variable
+// that stores the value of the flag.
+func (f *FlagSet) Int(name string, value int, usage string) *int {
+	f.Var((*intValue)(&value), name, usage)
+	return &value
+}
+
+// IntVar defines an int flag with specified name, default value, and
+// usage string. The argument p points to an int variable in which to
+// store the value of the flag.
+func (f *FlagSet) IntVar(p *int, name string, value int, usage string) {
+	*p = value
+	f.Var((*intValue)(p), name, usage)
+}
+
 // String defines a string flag with specified name, default value, and
 // usage string. The return value is the address of a string variable
 // that stores the value of the flag.
@@ -361,6 +377,26 @@ func (b *boolValue) Get() interface{} {
 
 func (b *boolValue) IsBoolFlag() bool {
 	return true
+}
+
+type intValue int
+
+func (i *intValue) String() string {
+	return strconv.FormatInt(int64(*i), 10)
+}
+
+func (i *intValue) Set(s string) error {
+	v, err := strconv.ParseInt(s, 10, 0)
+	*i = intValue(v)
+	return err
+}
+
+func (i *intValue) Get() interface{} {
+	return int(*i)
+}
+
+func (i *intValue) IsBoolFlag() bool {
+	return false
 }
 
 type stringValue string

@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"zombiezen.com/go/gg/internal/flag"
 	"zombiezen.com/go/gg/internal/gitobj"
@@ -27,10 +28,22 @@ const diffSynopsis = "diff repository (or selected files)"
 
 func diff(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg diff [--stat] [-c REV | -r REV1 [-r REV2]] [FILE [...]]", diffSynopsis)
+	ignoreSpaceChange := f.Bool("b", false, "ignore changes in amount of whitespace")
+	f.Alias("b", "ignore-space-change")
+	ignoreBlankLines := f.Bool("B", false, "ignore changes whose lines are all blank")
+	f.Alias("B", "ignore-blank-lines")
 	change := f.String("c", "", "change made by `rev`ision")
+	ncontext := f.Int("U", 3, "number of lines of context to show")
 	var rev revFlag
 	f.Var(&rev, "r", "`rev`ision")
 	stat := f.Bool("stat", false, "output diffstat-style summary of changes")
+	ignoreAllSpace := f.Bool("w", false, "ignore whitespace when comparing lines")
+	f.Alias("w", "ignore-all-space")
+	ignoreSpaceAtEOL := f.Bool("Z", false, "ignore changes in whitespace at EOL")
+	f.Alias("Z", "ignore-space-at-eol")
+	renames := f.String("M", "50%", "report new files with the set `percent`age of similarity to a removed file as renamed")
+	copies := f.String("C", "50%", "report new files with the set `percent`age of similarity as copied")
+	copiesUnmodified := f.Bool("copies-unmodified", true, "whether to check unmodified files when detecting copies (can be expensive)")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -41,6 +54,29 @@ func diff(ctx context.Context, cc *cmdContext, args []string) error {
 	diffArgs = append(diffArgs, "diff")
 	if *stat {
 		diffArgs = append(diffArgs, "--stat")
+	} else {
+		diffArgs = append(diffArgs, fmt.Sprintf("-U%d", *ncontext))
+	}
+	if *ignoreSpaceChange {
+		diffArgs = append(diffArgs, "--ignore-space-change")
+	}
+	if *ignoreBlankLines {
+		diffArgs = append(diffArgs, "--ignore-blank-lines")
+	}
+	if *ignoreAllSpace {
+		diffArgs = append(diffArgs, "--ignore-all-space")
+	}
+	if *ignoreSpaceAtEOL {
+		diffArgs = append(diffArgs, "--ignore-space-at-eol")
+	}
+	if *renames != "" {
+		diffArgs = append(diffArgs, "--find-renames="+*renames)
+	}
+	if *copies != "" {
+		diffArgs = append(diffArgs, "--find-copies="+*copies)
+	}
+	if *copiesUnmodified {
+		diffArgs = append(diffArgs, "--find-copies-harder")
 	}
 	switch {
 	case rev.r1 != "" && *change == "":
