@@ -16,53 +16,51 @@ package gittool
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"strings"
-)
 
-const hashSize = 20
+	"zombiezen.com/go/gg/internal/gitobj"
+)
 
 // Rev is a reference to a commit.
 type Rev struct {
-	commit  [hashSize]byte
-	refname string
+	commit  gitobj.Hash
+	refname gitobj.Ref
 }
 
 // ParseRev parses a revision.
 func ParseRev(ctx context.Context, git *Tool, refspec string) (*Rev, error) {
 	if strings.HasPrefix(refspec, "-") {
-		return nil, fmt.Errorf("parse revision %q: refspec cannot start with '-'", refspec)
+		return nil, fmt.Errorf("parse revision %q: cannot start with '-'", refspec)
 	}
 
 	commitHex, err := git.RunOneLiner(ctx, '\n', "rev-parse", "-q", "--verify", "--revs-only", refspec)
 	if err != nil {
 		return nil, fmt.Errorf("parse revision %q: %v", refspec, err)
 	}
-	if len(commitHex) != hex.EncodedLen(hashSize) {
-		return nil, fmt.Errorf("parse revision %q: invalid output from git rev-parse", refspec)
-	}
-	r := new(Rev)
-	if _, err := hex.Decode(r.commit[:], commitHex); err != nil {
-		return nil, fmt.Errorf("parse revision %q: invalid output from git rev-parse", refspec)
+	h, err := gitobj.ParseHash(string(commitHex))
+	if err != nil {
+		return nil, fmt.Errorf("parse revision %q: %v", refspec, err)
 	}
 
 	refname, err := git.RunOneLiner(ctx, '\n', "rev-parse", "-q", "--verify", "--revs-only", "--symbolic-full-name", refspec)
 	if err != nil {
 		return nil, fmt.Errorf("parse revision %q: %v", refspec, err)
 	}
-	r.refname = string(refname)
-	return r, nil
+	return &Rev{
+		commit:  h,
+		refname: gitobj.Ref(refname),
+	}, nil
 }
 
 // CommitHex returns the full hex-encoded commit hash.
 func (r *Rev) CommitHex() string {
-	return hex.EncodeToString(r.commit[:])
+	return r.commit.String()
 }
 
 // RefName returns the full refname or empty if r is not a symbolic revision.
 func (r *Rev) RefName() string {
-	return r.refname
+	return r.refname.String()
 }
 
 // Branch parses the branch name from r or empty if r does not reference
@@ -71,11 +69,7 @@ func (r *Rev) RefName() string {
 // If Branch returns a non-empty string, it implies that RefName will
 // also return a non-empty string.
 func (r *Rev) Branch() string {
-	const prefix = "refs/heads/"
-	if strings.HasPrefix(r.refname, prefix) {
-		return r.refname[len(prefix):]
-	}
-	return ""
+	return r.refname.Branch()
 }
 
 // String returns the shortest symbolic name if possible, falling back
@@ -84,8 +78,8 @@ func (r *Rev) String() string {
 	if b := r.Branch(); b != "" {
 		return b
 	}
-	if r.refname != "" {
-		return r.refname
+	if r.refname.IsValid() {
+		return r.refname.String()
 	}
-	return r.CommitHex()
+	return r.commit.String()
 }
