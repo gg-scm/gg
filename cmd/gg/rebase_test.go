@@ -363,7 +363,7 @@ func TestHistedit(t *testing.T) {
 		if want := gitobj.Ref("refs/heads/foo"); curr.Ref() != want {
 			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 		}
-		if msg, err := readCommitMessage(ctx, env.git, curr.Commit()); err != nil {
+		if msg, err := readCommitMessage(ctx, env.git, curr.Commit().String()); err != nil {
 			t.Error(err)
 		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
 			t.Errorf("commit message = %q; want %q", got, wantMessage)

@@ -61,12 +61,12 @@ func TestCommit_NoArgs(t *testing.T) {
 	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
-	if data, err := catBlob(ctx, env.git, r2.Commit(), "added.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "added.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != commitAddedFileContent {
 		t.Errorf("added.txt = %q; want %q", data, commitAddedFileContent)
 	}
-	if data, err := catBlob(ctx, env.git, r2.Commit(), "modified.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "modified.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != commitModifiedFileContent {
 		t.Errorf("modified.txt = %q; want %q", data, commitModifiedFileContent)
@@ -74,7 +74,7 @@ func TestCommit_NoArgs(t *testing.T) {
 	if err := objectExists(ctx, env.git, r2.Commit().String()+":deleted.txt"); err == nil {
 		t.Error("deleted.txt exists")
 	}
-	if msg, err := readCommitMessage(ctx, env.git, r2.Commit()); err != nil {
+	if msg, err := readCommitMessage(ctx, env.git, r2.Commit().String()); err != nil {
 		t.Error(err)
 	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
 		t.Errorf("commit message = %q; want %q", got, wantMessage)
@@ -109,7 +109,7 @@ func TestCommit_Selective(t *testing.T) {
 	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
-	if data, err := catBlob(ctx, env.git, r2.Commit(), "modified.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "modified.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != commitModifiedFileContent {
 		t.Errorf("modified.txt = %q; want %q", data, commitModifiedFileContent)
@@ -120,7 +120,7 @@ func TestCommit_Selective(t *testing.T) {
 	if err := objectExists(ctx, env.git, r2.Commit().String()+":deleted.txt"); err != nil {
 		t.Error("deleted.txt was removed but not put in arguments:", err)
 	}
-	if msg, err := readCommitMessage(ctx, env.git, r2.Commit()); err != nil {
+	if msg, err := readCommitMessage(ctx, env.git, r2.Commit().String()); err != nil {
 		t.Error(err)
 	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
 		t.Errorf("commit message = %q; want %q", got, wantMessage)
@@ -170,12 +170,12 @@ func TestCommit_Amend(t *testing.T) {
 	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
-	if data, err := catBlob(ctx, env.git, r2.Commit(), "added.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "added.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != commitAddedFileContent {
 		t.Errorf("added.txt = %q; want %q", data, commitAddedFileContent)
 	}
-	if data, err := catBlob(ctx, env.git, r2.Commit(), "modified.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "modified.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != commitModifiedFileContent {
 		t.Errorf("modified.txt = %q; want %q", data, commitModifiedFileContent)
@@ -183,7 +183,7 @@ func TestCommit_Amend(t *testing.T) {
 	if err := objectExists(ctx, env.git, r2.Commit().String()+":deleted.txt"); err == nil {
 		t.Error("deleted.txt exists")
 	}
-	if msg, err := readCommitMessage(ctx, env.git, r2.Commit()); err != nil {
+	if msg, err := readCommitMessage(ctx, env.git, r2.Commit().String()); err != nil {
 		t.Error(err)
 	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
 		t.Errorf("commit message = %q; want %q", got, wantMessage)
@@ -264,12 +264,12 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
-	if msg, err := readCommitMessage(ctx, env.git, r2.Commit()); err != nil {
+	if msg, err := readCommitMessage(ctx, env.git, r2.Commit().String()); err != nil {
 		t.Error(err)
 	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
 		t.Errorf("commit message = %q; want %q", got, wantMessage)
 	}
-	if data, err := catBlob(ctx, env.git, r2.Commit(), "modified.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "modified.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != commitModifiedFileOldContent {
 		t.Errorf("modified.txt = %q; want %q", data, commitModifiedFileContent)
@@ -313,12 +313,12 @@ func TestCommit_NoArgs_InSubdir(t *testing.T) {
 	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
-	if data, err := catBlob(ctx, env.git, r2.Commit(), "added.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "added.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != commitAddedFileContent {
 		t.Errorf("added.txt = %q; want %q", data, commitAddedFileContent)
 	}
-	if data, err := catBlob(ctx, env.git, r2.Commit(), "modified.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "modified.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != commitModifiedFileContent {
 		t.Errorf("modified.txt = %q; want %q", data, commitModifiedFileContent)
@@ -326,7 +326,7 @@ func TestCommit_NoArgs_InSubdir(t *testing.T) {
 	if err := objectExists(ctx, env.git, r2.Commit().String()+":deleted.txt"); err == nil {
 		t.Error("deleted.txt exists")
 	}
-	if msg, err := readCommitMessage(ctx, env.git, r2.Commit()); err != nil {
+	if msg, err := readCommitMessage(ctx, env.git, r2.Commit().String()); err != nil {
 		t.Error(err)
 	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
 		t.Errorf("commit message = %q; want %q", got, wantMessage)
@@ -367,12 +367,12 @@ func TestCommit_Named_InSubdir(t *testing.T) {
 	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
-	if data, err := catBlob(ctx, env.git, r2.Commit(), "added.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "added.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != commitAddedFileContent {
 		t.Errorf("added.txt = %q; want %q", data, commitAddedFileContent)
 	}
-	if data, err := catBlob(ctx, env.git, r2.Commit(), "modified.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "modified.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != commitModifiedFileContent {
 		t.Errorf("modified.txt = %q; want %q", data, commitModifiedFileContent)
@@ -380,7 +380,7 @@ func TestCommit_Named_InSubdir(t *testing.T) {
 	if err := objectExists(ctx, env.git, r2.Commit().String()+":deleted.txt"); err == nil {
 		t.Error("deleted.txt exists")
 	}
-	if msg, err := readCommitMessage(ctx, env.git, r2.Commit()); err != nil {
+	if msg, err := readCommitMessage(ctx, env.git, r2.Commit().String()); err != nil {
 		t.Error(err)
 	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
 		t.Errorf("commit message = %q; want %q", got, wantMessage)
@@ -563,34 +563,34 @@ func stageCommitTest(ctx context.Context, env *testEnv, changeWC bool) error {
 	return nil
 }
 
-func catBlob(ctx context.Context, git *gittool.Tool, commit gitobj.Hash, path string) ([]byte, error) {
-	p, err := git.Start(ctx, "cat-file", "blob", commit.String()+":"+path)
+func catBlob(ctx context.Context, git *gittool.Tool, rev string, path string) ([]byte, error) {
+	p, err := git.Start(ctx, "cat-file", "blob", rev+":"+path)
 	if err != nil {
-		return nil, fmt.Errorf("cat %s @ %v: %v", path, commit, err)
+		return nil, fmt.Errorf("cat %s @ %s: %v", path, rev, err)
 	}
 	data, err := ioutil.ReadAll(p)
 	waitErr := p.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("cat %s @ %v: %v", path, commit, err)
+		return nil, fmt.Errorf("cat %s @ %s: %v", path, rev, err)
 	}
 	if waitErr != nil {
-		return nil, fmt.Errorf("cat %s @ %v: %v", path, commit, waitErr)
+		return nil, fmt.Errorf("cat %s @ %s: %v", path, rev, waitErr)
 	}
 	return data, nil
 }
 
-func readCommitMessage(ctx context.Context, git *gittool.Tool, commit gitobj.Hash) ([]byte, error) {
-	p, err := git.Start(ctx, "show", "-s", "--format=%B", commit.String())
+func readCommitMessage(ctx context.Context, git *gittool.Tool, rev string) ([]byte, error) {
+	p, err := git.Start(ctx, "show", "-s", "--format=%B", rev)
 	if err != nil {
-		return nil, fmt.Errorf("log %v: %v", commit, err)
+		return nil, fmt.Errorf("log %s: %v", rev, err)
 	}
 	data, err := ioutil.ReadAll(p)
 	waitErr := p.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("log %v: %v", commit, err)
+		return nil, fmt.Errorf("log %s: %v", rev, err)
 	}
 	if waitErr != nil {
-		return nil, fmt.Errorf("log %v: %v", commit, waitErr)
+		return nil, fmt.Errorf("log %s: %v", rev, waitErr)
 	}
 	return data, nil
 }
