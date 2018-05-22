@@ -17,6 +17,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -375,6 +377,232 @@ func TestHistedit(t *testing.T) {
 		}
 		if parent.Commit() != base {
 			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(base, names))
+		}
+	})
+}
+
+func TestHistedit_ContinueWithModifications(t *testing.T) {
+	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
+		ctx := context.Background()
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := env.git.Run(ctx, "init"); err != nil {
+			t.Fatal(err)
+		}
+		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
+		if err != nil {
+			t.Fatal(err)
+		}
+		c1, err := dummyRev(ctx, env.git, env.root, "foo", "bar.txt", "Divergence 1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		const wantMessage2 = "Divergence 2"
+		c2, err := dummyRev(ctx, env.git, env.root, "foo", "baz.txt", wantMessage2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		head, err := dummyRev(ctx, env.git, env.root, "master", "quux.txt", "Upstream")
+		if err != nil {
+			t.Fatal(err)
+		}
+		names := map[gitobj.Hash]string{
+			base: "initial import",
+			c1:   "branch change 1",
+			c2:   "branch change 2",
+			head: "mainline change",
+		}
+
+		if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
+			t.Fatal(err)
+		}
+		rebaseEditor, err := env.editorCmd([]byte(
+			"edit " + c1.String() + "\n" +
+				"pick " + c2.String() + "\n"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		const wantMessage1 = "New commit message for bar.txt"
+		msgEditor, err := env.editorCmd([]byte(wantMessage1 + "\n"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		config := fmt.Sprintf("[sequence]\neditor = %s\n[core]\neditor = %s\n",
+			configEscape(rebaseEditor), configEscape(msgEditor))
+		if err := env.writeConfig([]byte(config)); err != nil {
+			t.Fatal(err)
+		}
+		out, err := env.gg(ctx, env.root, appendNonEmpty([]string{"histedit"}, argFunc(head))...)
+		if err != nil {
+			t.Fatalf("failed: %v; output:\n%s", err, out)
+		}
+
+		// Stopped for amending after applying c1.
+		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if parent.Commit() != base {
+			t.Errorf("After first stop, HEAD~ = %s; want %s",
+				prettyCommit(parent.Commit(), names),
+				prettyCommit(base, names))
+		}
+		const amendedData = "This is edited history\n"
+		err = ioutil.WriteFile(filepath.Join(env.root, "bar.txt"), []byte(amendedData), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Continue rebase, should be finished.
+		out, err = env.gg(ctx, env.root, "histedit", "-continue")
+		if err != nil {
+			t.Fatalf("failed: %v; output:\n%s", err, out)
+		}
+		grandparent, err := gittool.ParseRev(ctx, env.git, "HEAD~2")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if grandparent.Commit() != base {
+			t.Errorf("After continuing, HEAD~2 = %s; want %s",
+				prettyCommit(grandparent.Commit(), names),
+				prettyCommit(base, names))
+		}
+
+		if msg, err := readCommitMessage(ctx, env.git, "HEAD~"); err != nil {
+			t.Errorf("Rebased change 1: %v", err)
+		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage1 {
+			t.Errorf("Rebased change 1 commit message = %q; want %q", got, wantMessage1)
+		}
+		if content, err := catBlob(ctx, env.git, "HEAD~", "bar.txt"); err != nil {
+			t.Error(err)
+		} else if string(content) != amendedData {
+			t.Errorf("bar.txt @ HEAD~ = %q; want %q", content, amendedData)
+		}
+
+		if msg, err := readCommitMessage(ctx, env.git, "HEAD"); err != nil {
+			t.Errorf("Rebased change 2: %v", err)
+		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage2 {
+			t.Errorf("Rebased change 2 commit message = %q; want %q", got, wantMessage2)
+		}
+		if err := objectExists(ctx, env.git, "HEAD:baz.txt"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestHistedit_ContinueNoModifications(t *testing.T) {
+	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
+		ctx := context.Background()
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := env.git.Run(ctx, "init"); err != nil {
+			t.Fatal(err)
+		}
+		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
+		if err != nil {
+			t.Fatal(err)
+		}
+		const wantMessage1 = "Divergence 1"
+		c1, err := dummyRev(ctx, env.git, env.root, "foo", "bar.txt", wantMessage1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		const wantMessage2 = "Divergence 2"
+		c2, err := dummyRev(ctx, env.git, env.root, "foo", "baz.txt", wantMessage2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		head, err := dummyRev(ctx, env.git, env.root, "master", "quux.txt", "Upstream")
+		if err != nil {
+			t.Fatal(err)
+		}
+		names := map[gitobj.Hash]string{
+			base: "initial import",
+			c1:   "branch change 1",
+			c2:   "branch change 2",
+			head: "mainline change",
+		}
+
+		if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
+			t.Fatal(err)
+		}
+		rebaseEditor, err := env.editorCmd([]byte(
+			"edit " + c1.String() + "\n" +
+				"pick " + c2.String() + "\n"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		msgEditor, err := env.editorCmd([]byte("Amended message, should not occur!\n"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		config := fmt.Sprintf("[sequence]\neditor = %s\n[core]\neditor = %s\n",
+			configEscape(rebaseEditor), configEscape(msgEditor))
+		if err := env.writeConfig([]byte(config)); err != nil {
+			t.Fatal(err)
+		}
+		out, err := env.gg(ctx, env.root, appendNonEmpty([]string{"histedit"}, argFunc(head))...)
+		if err != nil {
+			t.Fatalf("failed: %v; output:\n%s", err, out)
+		}
+
+		// Stopped for amending after applying c1.
+		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if parent.Commit() != base {
+			t.Errorf("After first stop, HEAD~ = %s; want %s",
+				prettyCommit(parent.Commit(), names),
+				prettyCommit(base, names))
+		}
+		rebased1, err := gittool.ParseRev(ctx, env.git, "HEAD")
+		if err != nil {
+			t.Fatal(err)
+		}
+		names[rebased1.Commit()] = "rebased change 1"
+
+		// Continue rebase, should be finished.
+		out, err = env.gg(ctx, env.root, "histedit", "-continue")
+		if err != nil {
+			t.Fatalf("failed: %v; output:\n%s", err, out)
+		}
+		grandparent, err := gittool.ParseRev(ctx, env.git, "HEAD~2")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if grandparent.Commit() != base {
+			t.Errorf("After continuing, HEAD~2 = %s; want %s",
+				prettyCommit(grandparent.Commit(), names),
+				prettyCommit(base, names))
+		}
+
+		if msg, err := readCommitMessage(ctx, env.git, "HEAD~"); err != nil {
+			t.Errorf("Rebased change 1: %v", err)
+		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage1 {
+			t.Errorf("Rebased change 1 commit message = %q; want %q", got, wantMessage1)
+		}
+		if r, err := gittool.ParseRev(ctx, env.git, "HEAD~"); err != nil {
+			t.Errorf("Rebased change 1: %v", err)
+		} else if r.Commit() != rebased1.Commit() {
+			t.Errorf("After continuing, HEAD~ = %s; want %s",
+				prettyCommit(r.Commit(), names),
+				prettyCommit(rebased1.Commit(), names))
+		}
+
+		if msg, err := readCommitMessage(ctx, env.git, "HEAD"); err != nil {
+			t.Errorf("Rebased change 2: %v", err)
+		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage2 {
+			t.Errorf("Rebased change 2 commit message = %q; want %q", got, wantMessage2)
+		}
+		if err := objectExists(ctx, env.git, "HEAD:baz.txt"); err != nil {
+			t.Error(err)
 		}
 	})
 }

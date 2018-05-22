@@ -60,7 +60,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		return cc.git.RunInteractive(ctx, "rebase", "--abort")
 	}
 	if *continue_ {
-		return cc.git.RunInteractive(ctx, "rebase", "--continue")
+		return continueRebase(ctx, cc.git)
 	}
 	switch {
 	case *base != "" && *src != "":
@@ -108,7 +108,16 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 const histeditSynopsis = "interactively edit revision history"
 
 func histedit(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg histedit [options] [UPSTREAM]", histeditSynopsis)
+	f := flag.NewFlagSet(true, "gg histedit [options] [UPSTREAM]", histeditSynopsis+`
+
+	This command lets you interactively edit a linear series of commits.
+	When starting histedit, it will open your editor to plan the series
+	of changes you want to make. You can reorder commits, or use the
+	actions listed in the plan comments.
+
+	Unlike git rebase -i, continuing a histedit will automatically
+	amend the current commit if any changes are made. In most cases,
+	you do not need to run commit --amend yourself.`)
 	abort := f.Bool("abort", false, "abort an edit already in progress")
 	continue_ := f.Bool("continue", false, "continue an edit already in progress")
 	editPlan := f.Bool("edit-plan", false, "edit remaining actions list")
@@ -164,7 +173,7 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		if f.NArg() != 0 {
 			return usagef("can't pass arguments with --continue")
 		}
-		return cc.git.RunInteractive(ctx, "rebase", "--continue")
+		return continueRebase(ctx, cc.git)
 	case !*abort && !*continue_ && *editPlan:
 		if f.NArg() != 0 {
 			return usagef("can't pass arguments with --edit-todo")
@@ -173,6 +182,24 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 	default:
 		return usagef("must specify at most one of --abort, --continue, or --edit-plan")
 	}
+}
+
+// continueRebase adds any modified files to the index and then runs
+// `git rebase --continue`.
+func continueRebase(ctx context.Context, git *gittool.Tool) error {
+	addArgs := []string{"add", "--"}
+	fileStart := len(addArgs)
+	var err error
+	addArgs, err = inferCommitFiles(ctx, git, addArgs)
+	if err != nil {
+		return err
+	}
+	if len(addArgs) > fileStart {
+		if err := git.RunInteractive(ctx, addArgs...); err != nil {
+			return err
+		}
+	}
+	return git.RunInteractive(ctx, "rebase", "--continue")
 }
 
 // findDescendants returns the set of distinct heads under refs/heads/
