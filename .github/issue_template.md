@@ -1,7 +1,7 @@
 ### Steps to Reproduce
 
-```
-gg init
+```shell
+$ gg init
 # ...
 ```
 
