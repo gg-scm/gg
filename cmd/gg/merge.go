@@ -45,7 +45,7 @@ func merge(ctx context.Context, cc *cmdContext, args []string) error {
 		*rev = f.Arg(0)
 	}
 	if *rev != "" {
-		return cc.git.RunInteractive(ctx, "merge", "--no-ff", "--", *rev)
+		return cc.git.RunInteractive(ctx, "merge", "--no-ff", "--no-commit", "--", *rev)
 	}
-	return cc.git.RunInteractive(ctx, "merge", "--no-ff")
+	return cc.git.RunInteractive(ctx, "merge", "--no-ff", "--no-commit")
 }
