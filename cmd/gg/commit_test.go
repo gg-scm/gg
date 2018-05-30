@@ -387,6 +387,111 @@ func TestCommit_Named_InSubdir(t *testing.T) {
 	}
 }
 
+func TestCommit_Merge(t *testing.T) {
+	// Regression test for https://github.com/zombiezen/gg/issues/38
+
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.git.Run(ctx, "init"); err != nil {
+		t.Fatal(err)
+	}
+	base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "checkout", "--quiet", "-b", "feature"); err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(filepath.Join(env.root, "foo.txt"), []byte("feature content\n"), 0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "commit", "-a", "-m", "Made a change myself"); err != nil {
+		t.Fatal(err)
+	}
+	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(filepath.Join(env.root, "foo.txt"), []byte("boring text\n"), 0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "commit", "-a", "-m", "Upstream change"); err != nil {
+		t.Fatal(err)
+	}
+	r1, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Run the merge, resolve the conflict.
+	// Using gg, since this is a multi-interaction integration test.
+	out, err := env.gg(ctx, env.root, "merge", "feature")
+	if len(out) > 0 {
+		t.Logf("merge output:\n%s", out)
+	}
+	if err == nil {
+		t.Errorf("Wanted merge to return error (conflict). Output:\n%s", out)
+	} else if isUsage(err) {
+		t.Fatalf("merge returned usage error: %v", err)
+	}
+	err = ioutil.WriteFile(filepath.Join(env.root, "foo.txt"), []byte("merged content!\n"), 0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
+		t.Error("add:", err)
+	}
+
+	// Commit merge.
+	out, err = env.gg(ctx, env.root, "commit", "-m", "Merged feature into master")
+	if len(out) > 0 {
+		t.Logf("commit output:\n%s", out)
+	}
+	if err != nil {
+		t.Error("commit:", err)
+	}
+	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := map[gitobj.Hash]string{
+		base:        "initial commit",
+		r1.Commit(): "master commit",
+		r2.Commit(): "branch commit",
+	}
+	if curr.Commit() == base || curr.Commit() == r1.Commit() || curr.Commit() == r2.Commit() {
+		t.Errorf("after merge commit, HEAD = %s; want new commit",
+			prettyCommit(curr.Commit(), names))
+	}
+	parent1, err := gittool.ParseRev(ctx, env.git, "HEAD^1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parent1.Commit() != r1.Commit() {
+		t.Errorf("after merge commit, HEAD^1 = %s; want %s",
+			prettyCommit(parent1.Commit(), names),
+			prettyCommit(r1.Commit(), names))
+	}
+	parent2, err := gittool.ParseRev(ctx, env.git, "HEAD^2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parent2.Commit() != r2.Commit() {
+		t.Errorf("after merge commit, HEAD^2 = %s; want %s",
+			prettyCommit(parent2.Commit(), names),
+			prettyCommit(r2.Commit(), names))
+	}
+}
+
 func TestToPathspecs(t *testing.T) {
 	tests := []struct {
 		top  string

@@ -57,21 +57,27 @@ aliases: ci`)
 	if *msg != "" {
 		commitArgs = append(commitArgs, "--message="+*msg)
 	}
-	commitArgs = append(commitArgs, "--")
-	if f.NArg() == 0 {
-		var err error
+	if f.NArg() > 0 {
+		// Commit specific files.
+		commitArgs = append(commitArgs, "--")
+		commitArgs = append(commitArgs, f.Args()...)
+		if err := toPathspecs(cc.dir, top, commitArgs[len(commitArgs)-f.NArg():]); err != nil {
+			return err
+		}
+	} else if err := cc.git.Run(ctx, "cat-file", "-e", "MERGE_HEAD"); err == nil {
+		// Merging: must not provide selective files.
+		commitArgs = append(commitArgs, "-a")
+	} else {
+		// Commit all tracked files without modifying index.
+		commitArgs = append(commitArgs, "--")
 		fileStart := len(commitArgs)
+		var err error
 		commitArgs, err = inferCommitFiles(ctx, cc.git, commitArgs)
 		if err != nil {
 			return err
 		}
 		if len(commitArgs) == fileStart && !*amend {
 			return errors.New("nothing changed")
-		}
-	} else {
-		commitArgs = append(commitArgs, f.Args()...)
-		if err := toPathspecs(cc.dir, top, commitArgs[len(commitArgs)-f.NArg():]); err != nil {
-			return err
 		}
 	}
 	return cc.git.WithDir(top).RunInteractive(ctx, commitArgs...)
