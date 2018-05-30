@@ -28,6 +28,7 @@ func log(ctx context.Context, cc *cmdContext, args []string) error {
 
 aliases: history`)
 	follow := f.Bool("follow", false, "follow file history across copies and renames")
+	followFirst := f.Bool("follow-first", false, "only follow the first parent of merge commits")
 	graph := f.Bool("graph", false, "show the revision DAG")
 	f.Alias("graph", "G")
 	rev := f.MultiString("r", "show the specified `rev`ision or range")
@@ -46,6 +47,9 @@ aliases: history`)
 	logArgs = append(logArgs, "log", "--decorate=auto")
 	if *follow {
 		logArgs = append(logArgs, "--follow")
+	}
+	if *followFirst {
+		logArgs = append(logArgs, "--first-parent")
 	}
 	if *graph {
 		logArgs = append(logArgs, "--graph")
