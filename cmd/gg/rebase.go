@@ -66,7 +66,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 	case *base != "" && *src != "":
 		return usagef("can't specify both -s and -b")
 	case *base != "":
-		return cc.git.RunInteractive(ctx, "rebase", "--onto="+*dst, "--fork-point", "--", *base)
+		return cc.git.RunInteractive(ctx, "rebase", "--onto="+*dst, "--no-fork-point", "--", *base)
 	case *src != "":
 		if strings.HasPrefix(*src, "-") {
 			return fmt.Errorf("revision cannot start with '-'")
@@ -101,7 +101,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 			"--no-fork-point",
 			gitobj.Head.String())
 	default:
-		return cc.git.RunInteractive(ctx, "rebase", "--onto="+*dst)
+		return cc.git.RunInteractive(ctx, "rebase", "--onto="+*dst, "--no-fork-point")
 	}
 }
 
@@ -140,17 +140,7 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		if upstream == "" {
 			upstream = "@{upstream}"
 		}
-		upstreamRev, err := gittool.ParseRev(ctx, cc.git, upstream)
-		if err != nil {
-			return err
-		}
-		var mergeBaseBytes []byte
-		if upstreamRev.Ref() != "" {
-			// --fork-point only works on refs.
-			mergeBaseBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", upstreamRev.Ref().String(), gitobj.Head.String())
-		} else {
-			mergeBaseBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", upstreamRev.Commit().String(), gitobj.Head.String())
-		}
+		mergeBaseBytes, err := cc.git.RunOneLiner(ctx, '\n', "merge-base", upstream, gitobj.Head.String())
 		if err != nil {
 			return err
 		}

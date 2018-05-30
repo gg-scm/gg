@@ -301,6 +301,75 @@ func TestRebase_Base(t *testing.T) {
 	}
 }
 
+func TestRebase_ResetUpstream(t *testing.T) {
+	// Regression test for https://github.com/zombiezen/gg/issues/41
+
+	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
+		ctx := context.Background()
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := env.git.Run(ctx, "init"); err != nil {
+			t.Fatal(err)
+		}
+		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
+		if err != nil {
+			t.Fatal(err)
+		}
+		feature, err := dummyRev(ctx, env.git, env.root, "master", "bar.txt", "Feature change")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.git.Run(ctx, "reset", "--hard", base.String()); err != nil {
+			t.Fatal(err)
+		}
+		upstream, err := dummyRev(ctx, env.git, env.root, "master", "baz.txt", "Upstream change")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+			t.Fatal(err)
+		}
+
+		rebaseArgs := []string{"rebase", "-dst=master"}
+		if arg := argFunc(upstream); arg != "" {
+			rebaseArgs = append(rebaseArgs, "-base="+arg)
+		}
+		if _, err := env.gg(ctx, env.root, rebaseArgs...); err != nil {
+			t.Error(err)
+		}
+		curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+		if err != nil {
+			t.Fatal(err)
+		}
+		names := map[gitobj.Hash]string{
+			base:     "initial import",
+			feature:  "feature change",
+			upstream: "upstream change",
+		}
+		if curr.Commit() == base || curr.Commit() == feature || curr.Commit() == upstream {
+			t.Errorf("after rebase, HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
+		}
+		if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err != nil {
+			t.Error("bar.txt not in rebased change:", err)
+		}
+		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if parent.Commit() != upstream {
+			t.Errorf("after rebase, HEAD~ = %s; want %s",
+				prettyCommit(parent.Commit(), names),
+				prettyCommit(upstream, names))
+		}
+	})
+}
+
 func TestHistedit(t *testing.T) {
 	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
 		ctx := context.Background()

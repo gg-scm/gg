@@ -61,26 +61,16 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 			return err
 		}
 	}
-	var forkPointBytes []byte
-	if dstRef := dstRev.Ref(); dstRef != "" {
-		var err error
-		forkPointBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", "--fork-point", dstRef.String(), gitobj.Head.String())
-		if err != nil {
-			return err
-		}
-	} else {
-		var err error
-		forkPointBytes, err = cc.git.RunOneLiner(ctx, '\n', "merge-base", dstRev.Commit().String(), gitobj.Head.String())
-		if err != nil {
-			return err
-		}
-	}
-	forkPoint := string(forkPointBytes)
-	featureChanges, err := readChanges(ctx, cc.git, gitobj.Head.String(), forkPoint)
+	mergeBaseBytes, err := cc.git.RunOneLiner(ctx, '\n', "merge-base", dstRev.Commit().String(), gitobj.Head.String())
 	if err != nil {
 		return err
 	}
-	upstreamChanges, err := readChanges(ctx, cc.git, dstRev.Commit().String(), forkPoint)
+	mergeBase := string(mergeBaseBytes)
+	featureChanges, err := readChanges(ctx, cc.git, gitobj.Head.String(), mergeBase)
+	if err != nil {
+		return err
+	}
+	upstreamChanges, err := readChanges(ctx, cc.git, dstRev.Commit().String(), mergeBase)
 	if err != nil {
 		return err
 	}
