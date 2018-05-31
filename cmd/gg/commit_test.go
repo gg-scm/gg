@@ -701,8 +701,12 @@ func readCommitMessage(ctx context.Context, git *gittool.Tool, rev string) ([]by
 }
 
 func objectExists(ctx context.Context, git *gittool.Tool, obj string) error {
-	if err := git.Run(ctx, "cat-file", "-e", obj); err != nil {
+	exists, err := git.Query(ctx, "cat-file", "-e", obj)
+	if err != nil {
 		return fmt.Errorf("object %s does not exist: %v", obj, err)
+	}
+	if !exists {
+		return fmt.Errorf("object %s does not exist", obj)
 	}
 	return nil
 }

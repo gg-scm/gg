@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -65,30 +64,20 @@ aliases: ci`)
 		if err := toPathspecs(cc.dir, top, commitArgs[len(commitArgs)-f.NArg():]); err != nil {
 			return err
 		}
+	} else if exists, err := cc.git.Query(ctx, "cat-file", "-e", "MERGE_HEAD"); err == nil && exists {
+		// Merging: must not provide selective files.
+		commitArgs = append(commitArgs, "-a")
 	} else {
-		gitDir, err := cc.git.RunOneLiner(ctx, '\n', "rev-parse", "--absolute-git-dir")
+		// Commit all tracked files without modifying index.
+		commitArgs = append(commitArgs, "--")
+		fileStart := len(commitArgs)
+		var err error
+		commitArgs, err = inferCommitFiles(ctx, cc.git, commitArgs)
 		if err != nil {
 			return err
 		}
-		merging, err := isMerging(string(gitDir))
-		if err != nil {
-			return err
-		}
-		if merging {
-			// Merging: must not provide selective files.
-			commitArgs = append(commitArgs, "-a")
-		} else {
-			// Commit all tracked files without modifying index.
-			commitArgs = append(commitArgs, "--")
-			fileStart := len(commitArgs)
-			var err error
-			commitArgs, err = inferCommitFiles(ctx, cc.git, commitArgs)
-			if err != nil {
-				return err
-			}
-			if len(commitArgs) == fileStart && !*amend {
-				return errors.New("nothing changed")
-			}
+		if len(commitArgs) == fileStart && !*amend {
+			return errors.New("nothing changed")
 		}
 	}
 	return cc.git.WithDir(top).RunInteractive(ctx, commitArgs...)
@@ -183,16 +172,4 @@ func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([
 		return files[:filesStart], fmt.Errorf("git has staged changes for %d missing file; see 'gg status'", missingStaged)
 	}
 	return files, p.Wait()
-}
-
-func isMerging(gitDir string) (bool, error) {
-	_, err := os.Stat(filepath.Join(gitDir, "MERGE_HEAD"))
-	switch {
-	case err == nil:
-		return true, nil
-	case os.IsNotExist(err):
-		return false, nil
-	default:
-		return false, fmt.Errorf("check merge status: %v", err)
-	}
 }
