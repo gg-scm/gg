@@ -135,6 +135,38 @@ func (t *Tool) Run(ctx context.Context, args ...string) error {
 	return nil
 }
 
+// Query starts the specified git subcommand and waits for it to exit
+// with code zero (returns true) or one (returns false).
+//
+// stderr will be buffered, being returned as part of the error if the
+// tool does not exit with zero or one. stdin and stdout will be
+// connected to the null device.
+func (t *Tool) Query(ctx context.Context, args ...string) (bool, error) {
+	if t.log != nil {
+		t.log(ctx, args)
+	}
+	c := t.cmd(ctx, args)
+	stderr := new(bytes.Buffer)
+	c.Stderr = stderr
+	if err := c.Run(); err != nil {
+		exitErr, ok := err.(*exec.ExitError)
+		if !ok {
+			return false, err
+		}
+		if exitStatus(exitErr.ProcessState) == 1 {
+			return false, nil
+		}
+		var msg string
+		if errOut := bytes.TrimRight(stderr.Bytes(), "\n"); len(errOut) > 0 {
+			msg = fmt.Sprintf("run %s: %s (%v)", errorSubject(args), errOut, exitErr)
+		} else {
+			msg = fmt.Sprintf("run %s: %v", errorSubject(args), exitErr)
+		}
+		return false, (*exitError)(&msg)
+	}
+	return true, nil
+}
+
 // RunInteractive starts the specified git subcommand and waits for it
 // to finish.  All standard streams will be attached to the
 // corresponding streams specified in the tool's options.

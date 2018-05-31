@@ -71,7 +71,11 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		if strings.HasPrefix(*src, "-") {
 			return fmt.Errorf("revision cannot start with '-'")
 		}
-		if isAncestor(ctx, cc.git, *src, gitobj.Head.String()) {
+		ancestor, err := cc.git.Query(ctx, "merge-base", "--is-ancestor", *src, gitobj.Head.String())
+		if err != nil {
+			return err
+		}
+		if ancestor {
 			// Simple case: this is an ancestor revision.
 			return cc.git.RunInteractive(ctx, "rebase", "--onto="+*dst, "--no-fork-point", "--", *src+"~")
 		}
@@ -240,11 +244,6 @@ func branchesContaining(ctx context.Context, git *gittool.Tool, object string) (
 		return nil, fmt.Errorf("list branches: %v", err)
 	}
 	return refs, nil
-}
-
-func isAncestor(ctx context.Context, git *gittool.Tool, ancestor, descendant string) bool {
-	// TODO(someday): differentiate exit status 1 from other errors
-	return git.Run(ctx, "merge-base", "--is-ancestor", ancestor, descendant) == nil
 }
 
 // shellEscape quotes s such that it can be used as a literal argument
