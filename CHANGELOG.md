@@ -1,5 +1,12 @@
 # Release Notes
 
+## 0.5.1
+
+### Bug Fixes
+
+-   Running `commit` with no arguments no longer emits a misleading "fatal"
+    error message. ([#43](https://github.com/zombiezen/gg/issues/43))
+
 ## 0.5.0
 
 ### Features
