@@ -1,5 +1,44 @@
 # Release Notes
 
+## 0.5.0
+
+### Features
+
+-   `diff` now has more flags for controlling comparisons: `-U`,
+    `--ignore-space-change`, `--ignore-blank-lines`, `--ignore-all-space`,
+    `--ignore-space-at-eol`, `-M`, `-C`, and `--copies-unmodified`. See `gg
+    help diff` for more details.
+    ([#26](https://github.com/zombiezen/gg/issues/26))
+-   `log` now has more flags for controlling output:
+    `--reverse`, `--stat`, and `--follow-first`.
+    ([#22](https://github.com/zombiezen/gg/issues/22) and
+    [#41](https://github.com/zombiezen/gg/issues/41))
+-   `push` and `mail` now infer the destination ref for commits that are only
+    present in one branch. For example, a command like `gg push -r master~`
+    will push to `master` on the destination.
+    ([#31](https://github.com/zombiezen/gg/issues/31))
+-   `rebase --continue` and `histedit --continue` will now
+    automatically amend the current commit if changes were made.
+    ([#21](https://github.com/zombiezen/gg/issues/21))
+-   `rm` has a `-r` flag
+    ([#24](https://github.com/zombiezen/gg/issues/24))
+
+### Bug Fixes
+
+-   Fix crash when running `diff` before first commit
+    ([#30](https://github.com/zombiezen/gg/issues/30))
+-   When `push` checks whether a ref exists for `-create`, it will use the
+    push URL instead of the fetch URL.
+    ([#28](https://github.com/zombiezen/gg/issues/28))
+-   Running `add` on the working directory root now works.
+    ([#29](https://github.com/zombiezen/gg/issues/29))
+-   `rebase` and `histedit` no longer use `--fork-point`, since it can
+    cause unexpected, hard-to-debug results.
+-   `commit` now works properly when finishing a merge.
+    ([#38](https://github.com/zombiezen/gg/issues/38))
+-   `merge` no longer creates a commit.
+    ([#42](https://github.com/zombiezen/gg/issues/42))
+
 ## 0.4.2
 
 ### Bug Fixes
