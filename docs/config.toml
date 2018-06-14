@@ -1,0 +1,35 @@
+baseURL = "https://zombiezen.github.io/gg"
+languageCode = "en-us"
+title = "gg"
+disableKinds = ["taxonomy", "taxonomyTerm"]
+
+[permalinks]
+commands = "/cmd/:filename/"
+workflows = "/workflow/:filename/"
+
+[[menu.main]]
+identifier = "home"
+name = "Home"
+url = "/"
+weight = 1
+
+[[menu.main]]
+identifier = "workflows"
+name = "Workflows"
+url = "/workflow/"
+weight = 2
+
+[[menu.main]]
+identifier = "commands"
+name = "Commands"
+url = "/cmd/"
+weight = 3
+
+[[menu.main]]
+identifier = "github"
+name = "GitHub"
+url = "https://github.com/zombiezen/gg"
+weight = 4
+
+[params]
+licenseURL = "https://github.com/zombiezen/gg/blob/master/LICENSE"
