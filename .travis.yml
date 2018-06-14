@@ -23,7 +23,7 @@ jobs:
       os: linux
       env: ""
       install: "curl -fsSL https://github.com/gohugoio/hugo/releases/download/v0.42.1/hugo_0.42.1_Linux-64bit.tar.gz | tar zxf - -C \"$HOME\" hugo"
-      script: "hugo -s docs -d out"
+      script: "\"$HOME/hugo\" -s docs -d out"
       deploy:
         provider: pages
         skip-cleanup: true
