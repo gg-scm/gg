@@ -19,6 +19,19 @@ jobs:
       env: VGO=0 GIT_VERSION=2.16.2
     - os: osx
       env: *stdenv
+    - stage: docs
+      os: linux
+      env: ""
+      install: "curl -fsSL https://github.com/gohugoio/hugo/releases/download/v0.42.1/hugo_0.42.1_Linux-64bit.tar.gz | tar zxf - -C \"$HOME\" hugo"
+      script: "hugo -s docs -d docs.out"
+      deploy:
+        provider: pages
+        skip-cleanup: true
+        local-dir: docs.out
+        github-token: $GITHUB_TOKEN
+        keep-history: true
+        on:
+          branch: master
     - stage: release
       os: linux
       env: ""
