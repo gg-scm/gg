@@ -3,6 +3,11 @@ title: "Gerrit"
 date: 2018-06-13 08:48:58-07:00
 ---
 
+gg has a number of features to support sending changes to the [Gerrit][] code
+review tool.
+
+[Gerrit]: https://www.gerritcodereview.com/
+
 ## Cloning
 
 Cloning a Gerrit repository is as simple as using the `gg clone` command. You
