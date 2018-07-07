@@ -1,7 +1,7 @@
 ---
 title: Shared Repository
 date: 2018-07-07 08:21:47 -07:00
-weight: 2
+weight: 3
 ---
 
 In the [shared repository model][models], the source of truth is a single

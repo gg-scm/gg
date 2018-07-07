@@ -1,7 +1,7 @@
 ---
 title: Fork and Pull
 date: 2018-06-21T13:29:21-07:00
-weight: 1
+weight: 2
 ---
 
 The fork and pull model [popularized by GitHub][flow] is the most common way

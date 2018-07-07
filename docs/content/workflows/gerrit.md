@@ -1,7 +1,7 @@
 ---
 title: "Gerrit"
 date: 2018-06-13 08:48:58-07:00
-weight: 3
+weight: 4
 ---
 
 Some popular open source projects use [Gerrit][], a code review tool, to
