@@ -34,8 +34,8 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 	Rebasing will replay a set of changes on top of the destination
 	revision and set the current branch to the final revision.
 
-	If neither --src or --base is specified, it acts as if
-	--base=@{upstream} was specified.`)
+	If neither `+"`--src`"+` or `+"`--base`"+` is specified, it acts as if
+	`+"`--base=@{upstream}`"+` was specified.`)
 	base := f.String("base", "", "rebase everything from branching point of specified `rev`ision")
 	dst := f.String("dst", "@{upstream}", "rebase onto the specified `rev`ision")
 	src := f.String("src", "", "rebase the specified `rev`ision and descendants")
@@ -115,13 +115,13 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg histedit [options] [UPSTREAM]", histeditSynopsis+`
 
 	This command lets you interactively edit a linear series of commits.
-	When starting histedit, it will open your editor to plan the series
+	When starting `+"`histedit`"+`, it will open your editor to plan the series
 	of changes you want to make. You can reorder commits, or use the
 	actions listed in the plan comments.
 
-	Unlike git rebase -i, continuing a histedit will automatically
+	Unlike `+"`git rebase -i`"+`, continuing a `+"`histedit`"+` will automatically
 	amend the current commit if any changes are made. In most cases,
-	you do not need to run commit --amend yourself.`)
+	you do not need to run `+"`commit --amend`"+` yourself.`)
 	abort := f.Bool("abort", false, "abort an edit already in progress")
 	continue_ := f.Bool("continue", false, "continue an edit already in progress")
 	editPlan := f.Bool("edit-plan", false, "edit remaining actions list")

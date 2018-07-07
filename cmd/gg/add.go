@@ -30,7 +30,7 @@ const addSynopsis = "add the specified files on the next commit"
 func add(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg add FILE [...]", addSynopsis+`
 
-	add also marks merge conflicts as resolved like 'git add'.`)
+	add also marks merge conflicts as resolved like `+"`git add`.")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil

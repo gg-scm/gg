@@ -35,7 +35,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	
 	Creating or updating to a branch causes it to be marked as active.
 	When a commit is made, the active branch will advance to the new
-	commit. A plain 'gg update' will also advance an active branch, if
+	commit. A plain `+"`gg update`"+` will also advance an active branch, if
 	possible. If the revision specifies a branch with an upstream, then
 	any new branch will use the named branch's upstream.`)
 	delete := f.Bool("d", false, "delete the given branches")

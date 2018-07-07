@@ -33,7 +33,7 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 	printed to stdout (defaulting to the current branch if none given).
 
 	If a ref argument is given, then the branch's upstream branch
-	(specified by branch.*.remote and branch.*.merge configuration
+	(specified by `+"`branch.*.remote`"+` and `+"`branch.*.merge`"+` configuration
 	settings) will be set to the given value.`)
 	branch := f.String("b", "", "`branch` to query or modify")
 	if err := f.Parse(args); flag.IsHelp(err) {

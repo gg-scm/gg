@@ -36,25 +36,25 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	When no destination repository is given, push uses the first non-
 	empty configuration value of:
 
-	1.  branch.*.pushRemote, if the source is a branch or is part of only
+	1.  `+"`branch.*.pushRemote`"+`, if the source is a branch or is part of only
 	    one branch.
-	2.  remote.pushDefault.
-	3.  branch.*.remote, if the source is a branch or is part of only one
+	2.  `+"`remote.pushDefault`"+`.
+	3.  `+"`branch.*.remote`"+`, if the source is a branch or is part of only one
 	    branch.
-	4.  Otherwise, the remote called "origin" is used.
+	4.  Otherwise, the remote called `+"`origin`"+` is used.
 
-	If -d is given and begins with "refs/", then it specifies the remote
-	ref to update. If the argument passed to -d does not begin with
-	"refs/", it is assumed to be a branch name ("refs/heads/<arg>").
-	If -d is not given and the source is a ref or part of only one local
+	If `+"`-d`"+` is given and begins with `+"`refs/`"+`, then it specifies the remote
+	ref to update. If the argument passed to `+"`-d`"+` does not begin with
+	`+"`refs/`"+`, it is assumed to be a branch name (`+"`refs/heads/<arg>`"+`).
+	If `+"`-d`"+` is not given and the source is a ref or part of only one local
 	branch, then the same ref name is used. Otherwise, push exits with a
 	failure exit code. This differs from git, which will consult
-	remote.*.push and push.default. You can imagine this being the most
-	similar to push.default=current.
+	`+"`remote.*.push`"+` and `+"`push.default`"+`. You can imagine this being the most
+	similar to `+"`push.default=current`"+`.
 
-	By default, gg push will fail instead of creating a new ref on the
+	By default, `+"`gg push`"+` will fail instead of creating a new ref on the
 	remote. If this is desired (e.g. you are creating a new branch), then
-	you can pass -create to override this check.`)
+	you can pass `+"`--create`"+` to override this check.`)
 	create := f.Bool("create", false, "allow pushing a new ref")
 	dstRefArg := f.String("d", "", "destination `ref`")
 	f.Alias("d", "dest")
