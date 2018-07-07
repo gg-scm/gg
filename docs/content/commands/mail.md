@@ -1,6 +1,6 @@
-{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:30:43-07:00","synopsis":"creates or updates a Gerrit change","title":"gg mail","usage":"gg mail [options] [DST]"}
+{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:36:13-07:00","synopsis":"creates or updates a Gerrit change","title":"gg mail","usage":"gg mail [options] [DST]"}
 
-## Flags
+## Options
 
 <dl class="flag_list">
 	<dt>-allow-dirty</dt>

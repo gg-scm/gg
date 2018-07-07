@@ -1,4 +1,4 @@
-{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:30:43-07:00","synopsis":"query or set upstream branch","title":"gg upstream","usage":"gg upstream [-b BRANCH] [REF]"}
+{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:36:13-07:00","synopsis":"query or set upstream branch","title":"gg upstream","usage":"gg upstream [-b BRANCH] [REF]"}
 
 If no positional arguments are given, the branch's upstream branch is
 printed to stdout (defaulting to the current branch if none given).
@@ -7,7 +7,7 @@ If a ref argument is given, then the branch's upstream branch
 (specified by `branch.*.remote` and `branch.*.merge` configuration
 settings) will be set to the given value.
 
-## Flags
+## Options
 
 <dl class="flag_list">
 	<dt>-b branch</dt>

@@ -200,7 +200,7 @@ func writePage(path string, c *command, genTime time.Time) error {
 		buf.WriteString("\n")
 	}
 	if len(c.flags) > 0 {
-		buf.WriteString("\n## Flags\n\n<dl class=\"flag_list\">\n")
+		buf.WriteString("\n## Options\n\n<dl class=\"flag_list\">\n")
 		for _, f := range c.flags {
 			for _, name := range f.names {
 				buf.WriteString("\t<dt>-")

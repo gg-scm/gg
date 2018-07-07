@@ -1,4 +1,4 @@
-{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:30:43-07:00","synopsis":"pull changes from the specified source","title":"gg pull","usage":"gg pull [-u] [-r REF] [SOURCE]"}
+{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:36:13-07:00","synopsis":"pull changes from the specified source","title":"gg pull","usage":"gg pull [-u] [-r REF] [SOURCE]"}
 
 The fetched reference is written to FETCH_HEAD.
 
@@ -11,7 +11,7 @@ then the branch's remote tracking branch is used or the branch with
 the same name if the branch has no remote tracking branch. Otherwise,
 "HEAD" is used.
 
-## Flags
+## Options
 
 <dl class="flag_list">
 	<dt>-r ref</dt>

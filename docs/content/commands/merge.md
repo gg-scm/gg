@@ -1,6 +1,6 @@
-{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:30:43-07:00","synopsis":"merge another revision into working directory","title":"gg merge","usage":"gg merge [[-r] REV]"}
+{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:36:13-07:00","synopsis":"merge another revision into working directory","title":"gg merge","usage":"gg merge [[-r] REV]"}
 
-## Flags
+## Options
 
 <dl class="flag_list">
 	<dt>-r rev</dt>

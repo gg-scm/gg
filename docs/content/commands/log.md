@@ -1,6 +1,6 @@
-{"cmd_aliases":["history"],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:30:43-07:00","synopsis":"show revision history of entire repository or files","title":"gg log","usage":"gg log [OPTION [...]] [FILE]"}
+{"cmd_aliases":["history"],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:36:13-07:00","synopsis":"show revision history of entire repository or files","title":"gg log","usage":"gg log [OPTION [...]] [FILE]"}
 
-## Flags
+## Options
 
 <dl class="flag_list">
 	<dt>-follow</dt>

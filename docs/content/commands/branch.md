@@ -1,4 +1,4 @@
-{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:30:43-07:00","synopsis":"list or manage branches","title":"gg branch","usage":"gg branch [-d] [-f] [-r REV] [NAME [...]]"}
+{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:36:13-07:00","synopsis":"list or manage branches","title":"gg branch","usage":"gg branch [-d] [-f] [-r REV] [NAME [...]]"}
 
 Branches are references to commits to help track lines of
 development. Branches are unversioned and can be moved, renamed, and
@@ -10,7 +10,7 @@ commit. A plain `gg update` will also advance an active branch, if
 possible. If the revision specifies a branch with an upstream, then
 any new branch will use the named branch's upstream.
 
-## Flags
+## Options
 
 <dl class="flag_list">
 	<dt>-d</dt>

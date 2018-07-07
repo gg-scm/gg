@@ -1,4 +1,4 @@
-{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:30:43-07:00","synopsis":"push changes to the specified destination","title":"gg push","usage":"gg push [-f] [-n] [-r REV] [-d REF] [--create] [DST]"}
+{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:36:13-07:00","synopsis":"push changes to the specified destination","title":"gg push","usage":"gg push [-f] [-n] [-r REV] [-d REF] [--create] [DST]"}
 
 When no destination repository is given, push uses the first non-
 empty configuration value of:
@@ -23,7 +23,7 @@ By default, `gg push` will fail instead of creating a new ref on the
 remote. If this is desired (e.g. you are creating a new branch), then
 you can pass `--create` to override this check.
 
-## Flags
+## Options
 
 <dl class="flag_list">
 	<dt>-create</dt>
