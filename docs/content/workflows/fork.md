@@ -1,6 +1,7 @@
 ---
 title: Fork and Pull
 date: 2018-06-21T13:29:21-07:00
+weight: 1
 ---
 
 gg supports the fork-and-pull model of development [popularized by

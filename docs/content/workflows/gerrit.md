@@ -1,6 +1,7 @@
 ---
 title: "Gerrit"
 date: 2018-06-13 08:48:58-07:00
+weight: 3
 ---
 
 gg has a number of features to support sending changes to the [Gerrit][] code
