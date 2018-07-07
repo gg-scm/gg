@@ -185,6 +185,8 @@ control lets you keep track of how your files have changed over time, and lets
 you bring back files you may have accidentally deleted. However, version control
 is an important tool for being able to share these changes with others. Once
 you've gotten used to the commands in this guide, take a look at the other
-[workflows][] to see how to share your work with others.
+[workflows][] to see how to share your work with others. You may also want to
+look at the [command reference][].
 
+[commands]: {{< sectionref "commands" >}}
 [workflows]: {{< sectionref "workflows" >}}

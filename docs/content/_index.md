@@ -1,11 +1,12 @@
 ---
 title: "Home"
 date: 2018-06-13 08:48:58-07:00
+lastmod: 2018-07-07 15:35:48-07:00
 ---
 
-gg is a wrapper around [Git][] that behaves like [Mercurial][]. It works well
-enough for the primary author's everyday use. It can be thought of as an
-alternate [porcelain][] for Git.
+gg is a command-line wrapper around [Git][] that behaves like [Mercurial][]. It
+works well enough for the primary author's everyday use. It can be thought of as
+an alternate [porcelain][] for Git.
 
 gg is built around three basic principles:
 
@@ -27,15 +28,18 @@ gg is built around three basic principles:
 [Mercurial]: https://www.mercurial-scm.org/
 [porcelain]: https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain
 
-## Installing
+## Getting Started
 
-Download the latest [release][releases] from GitHub.  Binaries are available for
-Linux and macOS.
+{{< latestrelease >}} Binaries are available for Linux and macOS.
 
-You must have a moderately recent copy of git in your PATH to run gg. gg is
-tested against 2.7.4 and newer. Older versions may work, but are not supported.
+You must have a moderately recent copy of Git in your `PATH` to run gg. gg is
+tested against Git 2.7.4 and newer. Older versions may work, but are not
+supported.
 
-[releases]: https://github.com/zombiezen/gg/releases
+Once you have gg installed in your `PATH`, the [Working Locally][] guide will
+show you how to use the basic commands.
+
+[Working Locally]: {{< relref "workflows/local.md" >}}
 
 ## Testimonials
 
