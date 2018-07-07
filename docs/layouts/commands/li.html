@@ -1,1 +1,4 @@
-<li class="page_list_item"><a href="{{.RelPermalink}}">{{.LinkTitle}}</a>{{with .Summary}}: {{. | plainify}}{{end}}</li>
+<div class="command_listing">
+  <dt><a href="{{.RelPermalink}}">{{.LinkTitle}}</a></dt>
+  <dd>{{.Summary | plainify}}</dd>
+</div>

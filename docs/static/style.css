@@ -103,6 +103,20 @@ html, body {
   width: 100%;
 }
 
+.command_list {
+  display: table;
+}
+
+.command_listing {
+  display: table-row;
+  font-size: 110%;
+}
+
+.command_listing > dt, .command_listing > dd {
+  display: table-cell;
+  padding: 0 2em 0 0;
+}
+
 .command_usage {
   font-family: monospace;
   font-size: 120%;

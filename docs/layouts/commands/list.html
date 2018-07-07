@@ -8,20 +8,20 @@
 
 {{with where .Data.Pages.ByLinkTitle "Params.cmd_class" "basic"}}
 <h2>Basic Commands</h2>
-<ul class="page_list">
+<dl class="command_list">
 {{- range .}}
   {{.Render "li"}}
 {{- end}}
-</ul>
+</dl>
 {{end}}
 
 {{with where .Data.Pages.ByLinkTitle "Params.cmd_class" "advanced"}}
 <h2>Advanced Commands</h2>
-<ul class="page_list">
+<dl class="command_list">
 {{- range .}}
   {{.Render "li"}}
 {{- end}}
-</ul>
+</dl>
 {{end}}
 
 {{end}}
