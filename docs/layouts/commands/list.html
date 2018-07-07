@@ -6,12 +6,22 @@
 </div>
 {{- end}}
 
-{{with .Data.Pages}}
-<h2>Commands</h2>
+{{with where .Data.Pages.ByLinkTitle "Params.cmd_class" "basic"}}
+<h2>Basic Commands</h2>
 <ul class="page_list">
 {{- range .}}
   {{.Render "li"}}
 {{- end}}
 </ul>
 {{end}}
+
+{{with where .Data.Pages.ByLinkTitle "Params.cmd_class" "advanced"}}
+<h2>Advanced Commands</h2>
+<ul class="page_list">
+{{- range .}}
+  {{.Render "li"}}
+{{- end}}
+</ul>
+{{end}}
+
 {{end}}
