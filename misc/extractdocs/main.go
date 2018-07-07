@@ -47,7 +47,7 @@ func main() {
 	const exitUsage = 64
 	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	f.Usage = func() {
-		fmt.Fprintf(f.Output(), "usage: %s [options] OUTDIR\n", os.Args[0])
+		fmt.Fprintf(f.Output(), "usage: %s [options] OUTDIR [NAME [...]]\n", os.Args[0])
 		f.PrintDefaults()
 	}
 	touch := f.Bool("touch", true, "update page lastmod")
@@ -56,18 +56,18 @@ func main() {
 	} else if err != nil {
 		os.Exit(exitUsage)
 	}
-	if f.NArg() != 1 {
+	if f.NArg() == 0 {
 		f.Usage()
 		os.Exit(exitUsage)
 	}
 
-	if err := run(f.Arg(0), *touch); err != nil {
+	if err := run(f.Arg(0), f.Args()[1:], *touch); err != nil {
 		fmt.Fprintln(os.Stderr, "extractdocs:", err)
 		os.Exit(1)
 	}
 }
 
-func run(outDir string, touch bool) error {
+func run(outDir string, names []string, touch bool) error {
 	t := time.Now()
 	cmds, err := findCommands()
 	if err != nil {
@@ -76,6 +76,9 @@ func run(outDir string, touch bool) error {
 	fmt.Fprintf(os.Stderr, "extractdocs: Found %d commands.\n", len(cmds))
 	success := true
 	for _, c := range cmds {
+		if len(names) > 0 && !stringInSet(names, c.name) {
+			continue
+		}
 		if err := writePage(filepath.Join(outDir, c.name+".md"), c, t, touch); err != nil {
 			fmt.Fprintf(os.Stderr, "extractdocs: %v\n", err)
 			success = false
@@ -459,4 +462,13 @@ func processFuncExpr(info *types.Info, expr ast.Expr) funcExpr {
 	default:
 		panic("unknown receiver type")
 	}
+}
+
+func stringInSet(set []string, s string) bool {
+	for _, v := range set {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
