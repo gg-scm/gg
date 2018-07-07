@@ -29,6 +29,7 @@ html, body {
 
 .top {
   background: #e89933;
+  background: linear-gradient(0deg, #e89933 0%, #dd750f 100%);
   color: white;
   margin: 0 0 1.5em;
   padding: 1ex 3em;
@@ -89,12 +90,13 @@ html, body {
   box-sizing: border-box;
   flex: 1;
   margin: 0;
-  padding: 0 2em;
+  padding: 0 2em 3em;
   width: 100%;
 }
 
 .pagefooter {
   background: #b7b7b7;
+  background: linear-gradient(0deg, #b7b7b7 85%, #aaaaaa 100%);
   box-sizing: border-box;
   font-size: 85%;
   padding: 1ex 6em;
