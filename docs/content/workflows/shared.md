@@ -4,16 +4,18 @@ date: 2018-07-07 08:21:47 -07:00
 weight: 2
 ---
 
-gg supports the [shared repository model][models] of development used by
-individuals and smaller teams. In this workflow, the source of truth is a single
-shared repository. Each developer clones to a repository on their own machine
-and makes their changes. When they are ready to share, they push to a branch on
-the single shared repository. If they are using pull requests, each change goes
-onto a [branch][], which then gets reviewed. Otherwise, usually commits go
-directly to the default branch (usually `master`).
+In the [shared repository model][models], the source of truth is a single
+shared repository. This pattern is popular with individuals and smaller teams.
+Each developer clones to a repository on their own machine and makes their
+changes. When they are ready to share, they push to a branch on the single
+shared repository. If they are using pull requests, each change goes onto a
+distinct [branch][] for review. Otherwise, usually commits go directly to the
+default branch (usually `master`).
 
 [models]: https://help.github.com/articles/about-collaborative-development-models/
 [branch]: https://help.github.com/articles/about-branches/
+
+<!--more-->
 
 ## Cloning
 

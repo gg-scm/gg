@@ -103,6 +103,8 @@ html, body {
   width: 100%;
 }
 
+/* Commands index */
+
 .command_list {
   display: table;
 }
@@ -117,6 +119,8 @@ html, body {
   padding: 0 2em 0 0;
 }
 
+/* Command page */
+
 .command_usage {
   font-family: monospace;
   font-size: 120%;
@@ -128,4 +132,54 @@ html, body {
 
 .flag_list dt {
   font-family: monospace;
+}
+
+/* Workflows index */
+
+.workflows_page_list {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  place-content: start start;
+}
+
+.workflows_page_list .page_list_item {
+  display: flex;
+  border: 1px solid #1a1a1a;
+  box-shadow: 2px 3px 10px 0 rgba(0, 0, 0, 0.20);
+  box-sizing: border-box;
+  flex-direction: column;
+  margin: 1ex;
+  min-height: 5em;
+  padding: 1em;
+  place-content: start;
+  width: 25em;
+}
+
+.workflows_page_list .page_list_summary {
+  flex: 1;
+  margin: 0;
+}
+
+.page_list_title {
+  font-size: 100%;
+  font-weight: bold;
+  margin: 0 0 1ex;
+  padding: 0;
+}
+
+.page_list_title > :link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.page_list_title > :visited {
+  color: inherit;
+  text-decoration: none;
+}
+
+.page_list_title > :link:hover {
+  text-decoration: underline;
 }

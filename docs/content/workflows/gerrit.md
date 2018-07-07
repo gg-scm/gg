@@ -4,10 +4,20 @@ date: 2018-06-13 08:48:58-07:00
 weight: 3
 ---
 
-gg has a number of features to support sending changes to the [Gerrit][] code
-review tool.
+Some popular open source projects use [Gerrit][], a code review tool, to
+manage code contributions. Examples include [Go][], [Android][], and
+[Chromium][]. Gerrit has a somewhat unique model for receiving changes that
+involves amending commits and pushing to specially formatted ref names.
+Developers using Gerrit usually build shortcuts on top of Git to manage this
+complexity, but gg has built-in support for Gerrit. gg makes working with
+Gerrit as easy as other Git workflows.
 
 [Gerrit]: https://www.gerritcodereview.com/
+[Go]: https://golang.org/
+[Android]: https://source.android.com/
+[Chromium]: https://www.chromium.org/
+
+<!--more-->
 
 ## Cloning
 

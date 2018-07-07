@@ -7,10 +7,10 @@
 {{- end}}
 
 {{with .Data.Pages}}
-<ul class="page_list">
+<div class="page_list {{$.Section}}_page_list">
 {{- range .}}
   {{.Render "li"}}
 {{- end}}
-</ul>
+</div>
 {{end}}
 {{end}}

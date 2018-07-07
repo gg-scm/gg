@@ -4,10 +4,16 @@ date: 2018-06-21T13:29:21-07:00
 weight: 1
 ---
 
-gg supports the fork-and-pull model of development [popularized by
-GitHub][flow].
+The fork and pull model [popularized by GitHub][flow] is the most common way
+to use gg. When using this model, the project has a primary repository that
+only the maintainers of the project have write access to.  Contributors make
+changes by sharing a cloned repository (called the fork) with new branches.
+Contributors send pull requests to maintainers, who then review the code and
+merge in the changes.
 
 [flow]: https://guides.github.com/introduction/flow/
+
+<!--more-->
 
 ## Cloning
 
