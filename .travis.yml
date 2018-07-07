@@ -12,11 +12,11 @@ script:
 jobs:
   include:
     - os: linux
-      env: &stdenv "VGO=1 GIT_VERSION=2.16.2"
+      env: &stdenv "VGO=1 GIT_VERSION=2.18.0"
     - os: linux
       env: VGO=1 GIT_VERSION=2.7.4
     - os: linux
-      env: VGO=0 GIT_VERSION=2.16.2
+      env: VGO=0 GIT_VERSION=2.18.0
     - os: osx
       env: *stdenv
     - stage: docs
