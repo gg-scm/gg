@@ -1,4 +1,11 @@
-{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:36:13-07:00","synopsis":"list or manage branches","title":"gg branch","usage":"gg branch [-d] [-f] [-r REV] [NAME [...]]"}
+{
+    "cmd_aliases": [],
+    "date": "2018-07-06 22:13:11-07:00",
+    "lastmod": "2018-07-06 22:36:13-07:00",
+    "synopsis": "list or manage branches",
+    "title": "gg branch",
+    "usage": "gg branch [-d] [-f] [-r REV] [NAME [...]]"
+}
 
 Branches are references to commits to help track lines of
 development. Branches are unversioned and can be moved, renamed, and

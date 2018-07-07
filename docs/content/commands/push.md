@@ -1,4 +1,11 @@
-{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:36:13-07:00","synopsis":"push changes to the specified destination","title":"gg push","usage":"gg push [-f] [-n] [-r REV] [-d REF] [--create] [DST]"}
+{
+    "cmd_aliases": [],
+    "date": "2018-07-06 22:13:11-07:00",
+    "lastmod": "2018-07-06 22:36:13-07:00",
+    "synopsis": "push changes to the specified destination",
+    "title": "gg push",
+    "usage": "gg push [-f] [-n] [-r REV] [-d REF] [--create] [DST]"
+}
 
 When no destination repository is given, push uses the first non-
 empty configuration value of:

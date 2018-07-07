@@ -191,7 +191,10 @@ func writePage(path string, c *command, genTime time.Time) error {
 
 	// Write to file.
 	buf := new(bytes.Buffer)
-	if err := json.NewEncoder(buf).Encode(frontMatter); err != nil {
+	enc := json.NewEncoder(buf)
+	enc.SetIndent("", "    ")
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(frontMatter); err != nil {
 		return fmt.Errorf("write page for %s: %v", c.name, err)
 	}
 	if c.doc != "" {
