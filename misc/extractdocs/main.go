@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"go/ast"
 	"go/build"
@@ -43,17 +44,30 @@ const (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintln(os.Stderr, "usage: extractdocs OUTDIR")
-		os.Exit(64)
+	const exitUsage = 64
+	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	f.Usage = func() {
+		fmt.Fprintf(f.Output(), "usage: %s [options] OUTDIR\n", os.Args[0])
+		f.PrintDefaults()
 	}
-	if err := run(os.Args[1]); err != nil {
+	touch := f.Bool("touch", true, "update page lastmod")
+	if err := f.Parse(os.Args[1:]); err == flag.ErrHelp {
+		os.Exit(0)
+	} else if err != nil {
+		os.Exit(exitUsage)
+	}
+	if f.NArg() != 1 {
+		f.Usage()
+		os.Exit(exitUsage)
+	}
+
+	if err := run(f.Arg(0), *touch); err != nil {
 		fmt.Fprintln(os.Stderr, "extractdocs:", err)
 		os.Exit(1)
 	}
 }
 
-func run(outDir string) error {
+func run(outDir string, touch bool) error {
 	t := time.Now()
 	cmds, err := findCommands()
 	if err != nil {
@@ -62,7 +76,7 @@ func run(outDir string) error {
 	fmt.Fprintf(os.Stderr, "extractdocs: Found %d commands.\n", len(cmds))
 	success := true
 	for _, c := range cmds {
-		if err := writePage(filepath.Join(outDir, c.name+".md"), c, t); err != nil {
+		if err := writePage(filepath.Join(outDir, c.name+".md"), c, t, touch); err != nil {
 			fmt.Fprintf(os.Stderr, "extractdocs: %v\n", err)
 			success = false
 		}
@@ -164,7 +178,7 @@ func findCommands() ([]*command, error) {
 
 const hugoDateFormat = "2006-01-02 15:04:05Z07:00"
 
-func writePage(path string, c *command, genTime time.Time) error {
+func writePage(path string, c *command, genTime time.Time, touch bool) error {
 	// Get or create front matter.
 	var frontMatter map[string]interface{}
 	if content, err := ioutil.ReadFile(path); err == nil {
@@ -182,7 +196,9 @@ func writePage(path string, c *command, genTime time.Time) error {
 	}
 	frontMatter["usage"] = c.usage
 	frontMatter["synopsis"] = c.synopsis
-	frontMatter["lastmod"] = genTime.Format(hugoDateFormat)
+	if touch {
+		frontMatter["lastmod"] = genTime.Format(hugoDateFormat)
+	}
 	if len(c.aliases) > 0 {
 		frontMatter["cmd_aliases"] = c.aliases
 	} else {
