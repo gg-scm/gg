@@ -100,3 +100,12 @@ html, body {
   padding: 1ex 6em;
   width: 100%;
 }
+
+.command_usage {
+  font-family: monospace;
+  font-size: 120%;
+}
+
+.flag_list dt {
+  font-family: monospace;
+}

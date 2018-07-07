@@ -9,7 +9,7 @@
 {{with .Data.Pages}}
 <ul class="page_list">
 {{- range .}}
-  <li class="page_list_item"><a href="{{.RelPermalink}}">{{.Title}}</a></li>
+  {{.Render "li"}}
 {{- end}}
 </ul>
 {{end}}

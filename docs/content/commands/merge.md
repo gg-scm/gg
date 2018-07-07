@@ -1,0 +1,10 @@
+{"aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:13:11-07:00","synopsis":"merge another revision into working directory","title":"gg merge","usage":"gg merge [[-r] REV]"}
+
+## Flags
+
+<dl class="flag_list">
+	<dt>-r rev</dt>
+	<dd>revision to merge</dd>
+	<dt>-abort</dt>
+	<dd>abort the ongoing merge</dd>
+</dl>
