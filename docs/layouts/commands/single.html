@@ -1,15 +1,15 @@
 {{define "main"}}
 <h1 class="pagetitle">{{.Title}}</h1>
 <p class="command_usage">{{.Params.usage}}</p>
-<p class="command_synopsis">{{.Params.synopsis}}</p>
+
+{{.Content}}
+
 {{with .Params.cmd_aliases}}
-<div class="command_alias_heading">Aliases:</div>
+<h2>Aliases</h2>
 <ul class="command_alias_list">
-  {{range .}}
-  <li class="command_alias">{{.}}</li>
+  {{range . | sort}}
+  <li><span class="command_alias">{{.}}</span></li>
   {{- end}}
 </ul>
 {{end}}
-
-{{.Content}}
 {{end}}

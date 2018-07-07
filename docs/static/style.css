@@ -108,6 +108,10 @@ html, body {
   font-size: 120%;
 }
 
+.command_alias {
+  font-family: monospace;
+}
+
 .flag_list dt {
   font-family: monospace;
 }

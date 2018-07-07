@@ -3,10 +3,13 @@
     "cmd_class": "basic",
     "date": "2018-07-06 22:13:11-07:00",
     "lastmod": "2018-07-06 22:36:13-07:00",
-    "synopsis": "pull changes from the specified source",
     "title": "gg pull",
     "usage": "gg pull [-u] [-r REF] [SOURCE]"
 }
+
+pull changes from the specified source
+
+<!--more-->
 
 The fetched reference is written to FETCH_HEAD.
 

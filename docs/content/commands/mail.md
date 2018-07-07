@@ -3,10 +3,13 @@
     "cmd_class": "advanced",
     "date": "2018-07-06 22:13:11-07:00",
     "lastmod": "2018-07-06 22:36:13-07:00",
-    "synopsis": "creates or updates a Gerrit change",
     "title": "gg mail",
     "usage": "gg mail [options] [DST]"
 }
+
+creates or updates a Gerrit change
+
+<!--more-->
 
 ## Options
 

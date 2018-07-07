@@ -3,10 +3,13 @@
     "cmd_class": "basic",
     "date": "2018-07-06 22:13:11-07:00",
     "lastmod": "2018-07-06 22:36:13-07:00",
-    "synopsis": "make a copy of an existing repository",
     "title": "gg clone",
     "usage": "gg clone [-b BRANCH] SOURCE [DEST]"
 }
+
+make a copy of an existing repository
+
+<!--more-->
 
 ## Options
 

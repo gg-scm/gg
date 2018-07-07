@@ -195,7 +195,6 @@ func writePage(path string, c *command, genTime time.Time, touch bool) error {
 		return fmt.Errorf("write page for %s: %v", c.name, err)
 	}
 	frontMatter["usage"] = c.usage
-	frontMatter["synopsis"] = c.synopsis
 	if touch {
 		frontMatter["lastmod"] = genTime.Format(hugoDateFormat)
 	}
@@ -213,11 +212,16 @@ func writePage(path string, c *command, genTime time.Time, touch bool) error {
 	if err := enc.Encode(frontMatter); err != nil {
 		return fmt.Errorf("write page for %s: %v", c.name, err)
 	}
+	buf.WriteString("\n") // Leave a blank line between front matter and content.
+
+	buf.WriteString(c.synopsis)
+	buf.WriteString("\n\n<!--more-->\n")
 	if c.doc != "" {
 		buf.WriteString("\n")
 		buf.WriteString(c.doc)
 		buf.WriteString("\n")
 	}
+
 	if len(c.flags) > 0 {
 		buf.WriteString("\n## Options\n\n<dl class=\"flag_list\">\n")
 		for _, f := range c.flags {

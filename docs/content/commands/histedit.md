@@ -3,10 +3,13 @@
     "cmd_class": "advanced",
     "date": "2018-07-06 22:13:11-07:00",
     "lastmod": "2018-07-06 22:36:13-07:00",
-    "synopsis": "interactively edit revision history",
     "title": "gg histedit",
     "usage": "gg histedit [options] [UPSTREAM]"
 }
+
+interactively edit revision history
+
+<!--more-->
 
 This command lets you interactively edit a linear series of commits.
 When starting `histedit`, it will open your editor to plan the series

@@ -5,10 +5,13 @@
     "cmd_class": "basic",
     "date": "2018-07-06 22:13:11-07:00",
     "lastmod": "2018-07-06 22:36:13-07:00",
-    "synopsis": "remove the specified files on the next commit",
     "title": "gg remove",
     "usage": "gg remove [-f] [-r] [-after] FILE [...]"
 }
+
+remove the specified files on the next commit
+
+<!--more-->
 
 ## Options
 

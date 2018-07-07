@@ -1,1 +1,1 @@
-<li class="page_list_item"><a href="{{.RelPermalink}}">{{.LinkTitle}}</a>{{with .Params.synopsis}}: {{.}}{{end}}</li>
+<li class="page_list_item"><a href="{{.RelPermalink}}">{{.LinkTitle}}</a>{{with .Summary}}: {{. | plainify}}{{end}}</li>
