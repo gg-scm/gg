@@ -1,0 +1,17 @@
+{{define "main"}}
+<h1 class="pagetitle">{{.Title}}</h1>
+{{- with .Content -}}
+<div class="list_intro_content">
+{{.}}
+</div>
+{{- end}}
+
+{{with .Data.Pages}}
+<h2>Commands</h2>
+<ul class="page_list">
+{{- range .}}
+  {{.Render "li"}}
+{{- end}}
+</ul>
+{{end}}
+{{end}}
