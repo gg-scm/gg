@@ -184,9 +184,9 @@ func writePage(path string, c *command, genTime time.Time) error {
 	frontMatter["synopsis"] = c.synopsis
 	frontMatter["lastmod"] = genTime.Format(hugoDateFormat)
 	if len(c.aliases) > 0 {
-		frontMatter["aliases"] = c.aliases
+		frontMatter["cmd_aliases"] = c.aliases
 	} else {
-		frontMatter["aliases"] = []string{}
+		frontMatter["cmd_aliases"] = []string{}
 	}
 
 	// Write to file.

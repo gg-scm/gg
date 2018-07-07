@@ -1,4 +1,4 @@
-{"aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:13:11-07:00","synopsis":"move revision (and descendants) to a different branch","title":"gg rebase","usage":"gg rebase [--src REV | --base REV] [--dst REV] [options]"}
+{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:30:43-07:00","synopsis":"move revision (and descendants) to a different branch","title":"gg rebase","usage":"gg rebase [--src REV | --base REV] [--dst REV] [options]"}
 
 Rebasing will replay a set of changes on top of the destination
 revision and set the current branch to the final revision.

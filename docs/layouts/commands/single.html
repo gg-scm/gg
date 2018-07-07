@@ -2,7 +2,7 @@
 <h1 class="pagetitle">{{.Title}}</h1>
 <p class="command_usage">{{.Params.usage}}</p>
 <p class="command_synopsis">{{.Params.synopsis}}</p>
-{{with .Params.aliases}}
+{{with .Params.cmd_aliases}}
 <div class="command_alias_heading">Aliases:</div>
 <ul class="command_alias_list">
   {{range .}}

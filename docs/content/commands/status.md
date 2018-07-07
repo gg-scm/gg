@@ -1,1 +1,1 @@
-{"aliases":["st","check"],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:13:11-07:00","synopsis":"show changed files in the working directory","title":"gg status","usage":"gg status [FILE [...]]"}
+{"cmd_aliases":["st","check"],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:30:43-07:00","synopsis":"show changed files in the working directory","title":"gg status","usage":"gg status [FILE [...]]"}

@@ -1,4 +1,4 @@
-{"aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:13:11-07:00","synopsis":"diff repository (or selected files)","title":"gg diff","usage":"gg diff [--stat] [-c REV | -r REV1 [-r REV2]] [FILE [...]]"}
+{"cmd_aliases":[],"date":"2018-07-06 22:13:11-07:00","lastmod":"2018-07-06 22:30:43-07:00","synopsis":"diff repository (or selected files)","title":"gg diff","usage":"gg diff [--stat] [-c REV | -r REV1 [-r REV2]] [FILE [...]]"}
 
 ## Flags
 
