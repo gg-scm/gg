@@ -188,5 +188,5 @@ you've gotten used to the commands in this guide, take a look at the other
 [workflows][] to see how to share your work with others. You may also want to
 look at the [command reference][].
 
-[commands]: {{< sectionref "commands" >}}
+[command reference]: {{< sectionref "commands" >}}
 [workflows]: {{< sectionref "workflows" >}}
