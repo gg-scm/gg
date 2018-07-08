@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{block "title" .}}{{.Page.Title}} - {{.Site.Title}}{{end}}</title>
   <link href="https://fonts.googleapis.com/css?family=Lato:400,400i,700,700i|Patua+One" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{{ "/favicon.png" | relURL }}" sizes="16x16">
+  <link rel="icon" type="image/png" href="{{ "/favicon128.png" | relURL }}" sizes="128x128">
+  <link rel="icon" type="image/png" href="{{ "/favicon512.png" | relURL }}" sizes="512x512">
   <link rel="stylesheet" type="text/css" href="{{ "/style.css" | relURL }}">
   {{ template "_internal/google_analytics_async.html" . }}
 </head>
