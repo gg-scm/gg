@@ -19,6 +19,7 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -127,7 +128,7 @@ func TestAdd_DoesNotStageModified(t *testing.T) {
 			continue
 		}
 		found = true
-		if ent.code[0] != ' ' && ent.code[1] != 'M' {
+		if ent.code[0] != ' ' || ent.code[1] != 'M' {
 			t.Errorf("status = '%c%c'; want ' M'", ent.code[0], ent.code[1])
 		}
 	}
@@ -242,6 +243,9 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 		filepath.Join(env.root, "foo.txt"),
 		[]byte("I resolved it!\n"),
 		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
@@ -266,11 +270,124 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 			continue
 		}
 		found = true
-		if ent.code[0] != 'M' && ent.code[1] != ' ' {
+		if ent.code[0] != 'M' || ent.code[1] != ' ' {
 			t.Errorf("status = '%c%c'; want 'M '", ent.code[0], ent.code[1])
 		}
 	}
 	if !found {
 		t.Errorf("file foo.txt not in git status")
+	}
+}
+
+func TestAdd_Directory(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.git.Run(ctx, "init"); err != nil {
+		t.Fatal(err)
+	}
+
+	dirPath := filepath.Join(env.root, "foo")
+	if err := os.Mkdir(dirPath, 0777); err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(dirPath, "bar.txt"),
+		[]byte("Hello, World!\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "add", "."); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "commit", "-m", "commit"); err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(dirPath, "bar.txt"),
+		[]byte("Change A\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "commit", "-a", "-m", "branch A"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "checkout", "-b", "feature", "HEAD~"); err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(dirPath, "bar.txt"),
+		[]byte("Change B\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "commit", "-a", "-m", "branch B"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "checkout", "master"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "merge", "--no-ff", "feature"); err == nil {
+		t.Fatal("merge did not exit; want conflict")
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(dirPath, "bar.txt"),
+		[]byte("I resolved it!\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(dirPath, "newfile.txt"),
+		[]byte("Another file!\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := env.gg(ctx, env.root, "add", "foo"); err != nil {
+		t.Error("gg:", err)
+	}
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Wait()
+	r := bufio.NewReader(p)
+	foundBar, foundNewFile := false, false
+	for {
+		ent, err := readStatusEntry(r)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal("read status entry:", err)
+		}
+		switch ent.name {
+		case "foo/bar.txt":
+			foundBar = true
+			if ent.code[0] != 'M' || ent.code[1] != ' ' {
+				t.Errorf("foo/bar.txt status = '%c%c'; want 'M '", ent.code[0], ent.code[1])
+			}
+		case "foo/newfile.txt":
+			foundNewFile = true
+			if ent.code[0] != 'A' && ent.code[1] != 'A' {
+				t.Errorf("foo/newfile.txt status = '%c%c'; want to contain 'A'", ent.code[0], ent.code[1])
+			}
+		default:
+			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+		}
+	}
+	if !foundBar {
+		t.Errorf("file foo/bar.txt not in git status")
+	}
+	if !foundNewFile {
+		t.Errorf("file foo/newfile.txt not in git status")
 	}
 }
