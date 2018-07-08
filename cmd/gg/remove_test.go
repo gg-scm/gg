@@ -15,9 +15,7 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -43,32 +41,32 @@ func TestRemove(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "rm", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != removeTestFileName {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != removeTestFileName {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != 'D' || ent.code[1] != ' ' {
-			t.Errorf("status = '%c%c'; want 'D '", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
+			t.Errorf("%s status = '%v'; want 'D '", removeTestFileName, code)
 		}
 	}
 	if !found {
-		t.Errorf("file %s unmodified", removeTestFileName)
+		t.Errorf("File %s unmodified", removeTestFileName)
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -99,32 +97,32 @@ func TestRemove_AddedFails(t *testing.T) {
 	} else if isUsage(err) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != removeTestFileName {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != removeTestFileName {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != 'A' || ent.code[1] != ' ' {
-			t.Errorf("status = '%c%c'; want 'A '", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != 'A' || code[1] != ' ' {
+			t.Errorf("%s status = '%v'; want 'A '", removeTestFileName, code)
 		}
 	}
 	if !found {
-		t.Errorf("file %s removed", removeTestFileName)
+		t.Errorf("File %s removed", removeTestFileName)
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -153,21 +151,20 @@ func TestRemove_AddedForce(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "rm", "-f", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
 		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		t.Errorf("found status: '%c%c' %s; want clean working copy", ent.code[0], ent.code[1], ent.name)
+	}()
+	for st.Scan() {
+		t.Errorf("Found status: %v; want clean working copy", st.Entry())
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -195,32 +192,32 @@ func TestRemove_ModifiedFails(t *testing.T) {
 	} else if isUsage(err) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != removeTestFileName {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != removeTestFileName {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != ' ' || ent.code[1] != 'M' {
-			t.Errorf("status = '%c%c'; want ' M'", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != ' ' || code[1] != 'M' {
+			t.Errorf("%s status = '%v'; want ' M'", removeTestFileName, code)
 		}
 	}
 	if !found {
-		t.Errorf("file %s reverted", removeTestFileName)
+		t.Errorf("File %s reverted", removeTestFileName)
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -246,32 +243,32 @@ func TestRemove_ModifiedForce(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "rm", "-f", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != removeTestFileName {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != removeTestFileName {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != 'D' || ent.code[1] != ' ' {
-			t.Errorf("status = '%c%c'; want 'D '", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
+			t.Errorf("%s status = '%v'; want 'D '", removeTestFileName, code)
 		}
 	}
 	if !found {
-		t.Errorf("file %s unmodified", removeTestFileName)
+		t.Errorf("File %s unmodified", removeTestFileName)
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -295,32 +292,32 @@ func TestRemove_MissingFails(t *testing.T) {
 	} else if isUsage(err) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != removeTestFileName {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != removeTestFileName {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != ' ' || ent.code[1] != 'D' {
-			t.Errorf("status = '%c%c'; want ' D'", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != ' ' || code[1] != 'D' {
+			t.Errorf("%s status = '%v'; want ' D'", removeTestFileName, code)
 		}
 	}
 	if !found {
-		t.Errorf("file %s reverted", removeTestFileName)
+		t.Errorf("File %s reverted", removeTestFileName)
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -342,32 +339,32 @@ func TestRemove_MissingAfter(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "rm", "-after", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != removeTestFileName {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != removeTestFileName {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != 'D' || ent.code[1] != ' ' {
-			t.Errorf("status = '%c%c'; want 'D '", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
+			t.Errorf("%s status = '%v'; want 'D '", removeTestFileName, code)
 		}
 	}
 	if !found {
-		t.Errorf("file %s reverted", removeTestFileName)
+		t.Errorf("File %s reverted", removeTestFileName)
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -403,32 +400,32 @@ func TestRemove_Recursive(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "rm", "-r", "foo"); err != nil {
 		t.Error(err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != relpath {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != relpath {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != 'D' || ent.code[1] != ' ' {
-			t.Errorf("status = '%c%c'; want 'D '", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
+			t.Errorf("%s status = '%v'; want 'D '", relpath, code)
 		}
 	}
 	if !found {
-		t.Errorf("file %s unmodified", relpath)
+		t.Errorf("File %s unmodified", relpath)
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -469,32 +466,32 @@ func TestRemove_RecursiveMissingFails(t *testing.T) {
 	} else if isUsage(err) {
 		t.Errorf("`gg rm -r` error: %v; want failure, not usage", err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != relpath {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != relpath {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != ' ' || ent.code[1] != 'D' {
-			t.Errorf("status = '%c%c'; want ' D'", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != ' ' || code[1] != 'D' {
+			t.Errorf("%s status = '%v'; want ' D'", relpath, code)
 		}
 	}
 	if !found {
-		t.Errorf("file %s unmodified", relpath)
+		t.Errorf("File %s unmodified", relpath)
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -533,32 +530,32 @@ func TestRemove_RecursiveMissingAfter(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "rm", "-r", "-after", "foo"); err != nil {
 		t.Error(err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != relpath {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != relpath {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != 'D' || ent.code[1] != ' ' {
-			t.Errorf("status = '%c%c'; want 'D '", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
+			t.Errorf("%s status = '%v'; want 'D '", relpath, code)
 		}
 	}
 	if !found {
-		t.Errorf("file %s unmodified", relpath)
+		t.Errorf("File %s unmodified", relpath)
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 

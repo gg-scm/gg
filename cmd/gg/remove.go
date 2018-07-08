@@ -15,10 +15,8 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"path/filepath"
 	"strings"
 
@@ -35,7 +33,6 @@ func remove(ctx context.Context, cc *cmdContext, args []string) error {
 	force := f.Bool("f", false, "forget added files, delete modified files")
 	f.Alias("f", "force")
 	recursive := f.Bool("r", false, "remove files under any directory specified")
-	_ = recursive
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -51,20 +48,7 @@ func remove(ctx context.Context, cc *cmdContext, args []string) error {
 		rmArgs = append(rmArgs, "--force")
 	}
 	if !*after {
-		wt, err := gittool.WorkTree(ctx, cc.git)
-		if err != nil {
-			return err
-		}
-		// TODO(someday): this doesn't take into account any Git patterns.
-		repoPaths := make([]string, f.NArg())
-		for i, a := range f.Args() {
-			var err error
-			repoPaths[i], err = repoRelativePath(cc, wt, a)
-			if err != nil {
-				return err
-			}
-		}
-		if err := verifyPresent(ctx, cc.git, repoPaths); err != nil {
+		if err := verifyPresent(ctx, cc.git, f.Args()); err != nil {
 			return err
 		}
 	}
@@ -73,34 +57,30 @@ func remove(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	rmArgs = append(rmArgs, "--")
 	rmArgs = append(rmArgs, f.Args()...)
-	_ = after
 	return cc.git.Run(ctx, rmArgs...)
 }
 
-func verifyPresent(ctx context.Context, git *gittool.Tool, repoPaths []string) error {
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+func verifyPresent(ctx context.Context, git *gittool.Tool, args []string) error {
+	statusArgs := make([]string, len(args))
+	for i := range args {
+		statusArgs[i] = ":(literal)" + args[i]
+	}
+	st, err := gittool.Status(ctx, git, statusArgs)
 	if err != nil {
 		return err
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Code().IsMissing() {
+			st.Close()
+			return fmt.Errorf("missing %s", ent.Name())
 		}
-		if err != nil {
-			return err
-		}
-		if !ent.isMissing() {
-			continue
-		}
-		for _, p := range repoPaths {
-			if ent.name == p {
-				// TODO(maybe): convert back to original reference?
-				return fmt.Errorf("missing %s", ent.name)
-			}
-		}
+	}
+	if err := st.Close(); err != nil {
+		return err
+	}
+	if err := st.Err(); err != nil {
+		return err
 	}
 	return nil
 }

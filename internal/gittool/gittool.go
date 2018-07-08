@@ -162,7 +162,10 @@ func (t *Tool) Query(ctx context.Context, args ...string) (bool, error) {
 		} else {
 			msg = fmt.Sprintf("run %s: %v", errorSubject(args), exitErr)
 		}
-		return false, (*exitError)(&msg)
+		return false, &exitError{
+			msg:      msg,
+			signaled: wasSignaled(exitErr.ProcessState),
+		}
 	}
 	return true, nil
 }
@@ -294,12 +297,18 @@ func (p *Process) Wait() error {
 	return nil
 }
 
-type exitError string
+type exitError struct {
+	msg      string
+	signaled bool // Terminated by signal.
+}
 
 func wrapError(subject string, e error) error {
 	msg := fmt.Sprintf("run %s: %v", subject, e)
-	if _, ok := e.(*exec.ExitError); ok {
-		return (*exitError)(&msg)
+	if e, ok := e.(*exec.ExitError); ok {
+		return &exitError{
+			msg:      msg,
+			signaled: wasSignaled(e.ProcessState),
+		}
 	}
 	return errors.New(msg)
 }
@@ -312,7 +321,7 @@ func IsExitError(e error) bool {
 }
 
 func (ee *exitError) Error() string {
-	return string(*ee)
+	return ee.msg
 }
 
 func errorSubject(args []string) string {

@@ -15,13 +15,13 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"zombiezen.com/go/gg/internal/gittool"
 )
 
 func TestAdd(t *testing.T) {
@@ -45,32 +45,32 @@ func TestAdd(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != "foo.txt" {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != "foo.txt" {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != 'A' && ent.code[1] != 'A' {
-			t.Errorf("status = '%c%c'; want to contain 'A'", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != 'A' && code[1] != 'A' {
+			t.Errorf("foo.txt status = '%v'; want to contain 'A'", code)
 		}
 	}
 	if !found {
-		t.Errorf("file foo.txt not in git status")
+		t.Error("File foo.txt not in git status")
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -108,32 +108,32 @@ func TestAdd_DoesNotStageModified(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != "foo.txt" {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != "foo.txt" {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != ' ' || ent.code[1] != 'M' {
-			t.Errorf("status = '%c%c'; want ' M'", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != ' ' || code[1] != 'M' {
+			t.Errorf("foo.txt status = '%v'; want ' M'", code)
 		}
 	}
 	if !found {
-		t.Errorf("file foo.txt not in git status")
+		t.Error("File foo.txt not in git status")
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -158,32 +158,32 @@ func TestAdd_WholeRepo(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "add", "."); err != nil {
 		t.Error(err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != "foo.txt" {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != "foo.txt" {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != 'A' && ent.code[1] != 'A' {
-			t.Errorf("status = '%c%c'; want to contain 'A'", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != 'A' && code[1] != 'A' {
+			t.Errorf("foo.txt status = '%v'; want to contain 'A'", code)
 		}
 	}
 	if !found {
-		t.Errorf("file foo.txt not in git status")
+		t.Error("File foo.txt not in git status")
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -237,7 +237,7 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := env.git.Run(ctx, "merge", "--no-ff", "feature"); err == nil {
-		t.Fatal("merge did not exit; want conflict")
+		t.Fatal("Merge did not exit; want conflict")
 	}
 	err = ioutil.WriteFile(
 		filepath.Join(env.root, "foo.txt"),
@@ -250,32 +250,32 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != "foo.txt" {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != "foo.txt" {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if ent.code[0] != 'M' || ent.code[1] != ' ' {
-			t.Errorf("status = '%c%c'; want 'M '", ent.code[0], ent.code[1])
+		if code := ent.Code(); code[0] != 'M' || code[1] != ' ' {
+			t.Errorf("foo.txt status = '%v'; want 'M '", code)
 		}
 	}
 	if !found {
-		t.Errorf("file foo.txt not in git status")
+		t.Error("File foo.txt not in git status")
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -334,7 +334,7 @@ func TestAdd_Directory(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := env.git.Run(ctx, "merge", "--no-ff", "feature"); err == nil {
-		t.Fatal("merge did not exit; want conflict")
+		t.Fatal("Merge did not exit; want conflict")
 	}
 	err = ioutil.WriteFile(
 		filepath.Join(dirPath, "bar.txt"),
@@ -354,40 +354,41 @@ func TestAdd_Directory(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "add", "foo"); err != nil {
 		t.Error("gg:", err)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	foundBar, foundNewFile := false, false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		switch ent.name {
+	for st.Scan() {
+		ent := st.Entry()
+		code := ent.Code()
+		switch ent.Name() {
 		case "foo/bar.txt":
 			foundBar = true
-			if ent.code[0] != 'M' || ent.code[1] != ' ' {
-				t.Errorf("foo/bar.txt status = '%c%c'; want 'M '", ent.code[0], ent.code[1])
+			if code[0] != 'M' || code[1] != ' ' {
+				t.Errorf("foo/bar.txt status = '%v'; want 'M '", code)
 			}
 		case "foo/newfile.txt":
 			foundNewFile = true
-			if ent.code[0] != 'A' && ent.code[1] != 'A' {
-				t.Errorf("foo/newfile.txt status = '%c%c'; want to contain 'A'", ent.code[0], ent.code[1])
+			if code[0] != 'A' && code[1] != 'A' {
+				t.Errorf("foo/newfile.txt status = '%v'; want to contain 'A'", code)
 			}
 		default:
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+			t.Errorf("Unknown line in status: %v", ent)
 		}
 	}
 	if !foundBar {
-		t.Errorf("file foo/bar.txt not in git status")
+		t.Error("File foo/bar.txt not in git status")
 	}
 	if !foundNewFile {
-		t.Errorf("file foo/newfile.txt not in git status")
+		t.Error("File foo/newfile.txt not in git status")
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }

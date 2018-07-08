@@ -15,15 +15,13 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 
 	"zombiezen.com/go/gg/internal/flag"
 	"zombiezen.com/go/gg/internal/gittool"
+	"zombiezen.com/go/gg/internal/singleclose"
 )
 
 const commitSynopsis = "commit the specified files or all outstanding changes"
@@ -93,69 +91,65 @@ aliases: ci
 
 // argsToFiles finds the files named by the arguments.
 func argsToFiles(ctx context.Context, git *gittool.Tool, args []string) ([]string, error) {
-	statusArgs := []string{"status", "--porcelain", "-z", "-unormal", "--"}
-	for _, a := range args {
-		statusArgs = append(statusArgs, ":(literal)"+a)
+	statusArgs := make([]string, len(args))
+	for i := range args {
+		statusArgs[i] = ":(literal)" + args[i]
 	}
-	p, err := git.Start(ctx, statusArgs...)
+	st, err := gittool.Status(ctx, git, statusArgs)
 	if err != nil {
 		return nil, err
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	stClose := singleclose.For(st)
+	defer stClose.Close()
 	var files []string
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			if waitErr := p.Wait(); waitErr != nil {
-				return nil, waitErr
-			}
-			return nil, err
-		}
-		files = append(files, ":(top,literal)"+ent.name)
+	for st.Scan() {
+		files = append(files, ":(top,literal)"+st.Entry().Name())
 	}
-	return files, p.Wait()
+	if err := st.Err(); err != nil {
+		return nil, err
+	}
+	if err := stClose.Close(); err != nil {
+		return nil, err
+	}
+	return files, nil
 }
 
 func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([]string, error) {
 	missing, missingStaged, unmerged := 0, 0, 0
-	p, err := git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, git, nil)
 	if err != nil {
 		return files, err
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	stClose := singleclose.For(st)
+	defer stClose.Close()
 	filesStart := len(files)
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return files[:filesStart], err
-		}
+	for st.Scan() {
+		ent := st.Entry()
 		switch {
-		case ent.isMissing():
+		case ent.Code().IsMissing():
 			missing++
-			if ent.code[0] != ' ' {
+			if ent.Code()[0] != ' ' {
 				missingStaged++
 			}
-		case ent.isAdded() || ent.isModified() || ent.isRemoved() || ent.isCopied():
+		case ent.Code().IsAdded() || ent.Code().IsModified() || ent.Code().IsRemoved() || ent.Code().IsCopied():
 			// Prepend pathspec options to interpret relative to top of
 			// repository and ignore globs. See gitglossary(7) for more details.
-			files = append(files, ":(top,literal)"+ent.name)
-		case ent.isRenamed():
-			files = append(files, ":(top,literal)"+ent.name, ":(top,literal)"+ent.from)
-		case ent.isIgnored() || ent.isUntracked():
+			files = append(files, ":(top,literal)"+ent.Name())
+		case ent.Code().IsRenamed():
+			files = append(files, ":(top,literal)"+ent.Name(), ":(top,literal)"+ent.From())
+		case ent.Code().IsUntracked():
 			// Skip
-		case ent.isUnmerged():
+		case ent.Code().IsUnmerged():
 			unmerged++
 		default:
-			panic("unhandled status code")
+			return files[:filesStart], fmt.Errorf("unhandled status: %v", ent)
 		}
+	}
+	if err := st.Err(); err != nil {
+		return files[:filesStart], err
+	}
+	if err := stClose.Close(); err != nil {
+		return files[:filesStart], err
 	}
 	if unmerged == 1 {
 		return files[:filesStart], errors.New("1 unmerged file; see 'gg status'")
@@ -179,21 +173,5 @@ func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([
 	if missingStaged > 1 {
 		return files[:filesStart], fmt.Errorf("git has staged changes for %d missing file; see 'gg status'", missingStaged)
 	}
-	return files, p.Wait()
-}
-
-func scanNulSepFields(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-	if i := bytes.IndexByte(data, 0); i >= 0 {
-		// We have a full nul-terminated entry.
-		return i + 1, data[0:i], nil
-	}
-	// If we're at EOF, we have a final, non-terminated line. Return it.
-	if atEOF {
-		return len(data), data, io.ErrUnexpectedEOF
-	}
-	// Request more data.
-	return 0, nil, nil
+	return files, nil
 }

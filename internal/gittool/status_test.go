@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package gittool
 
 import (
 	"io"
@@ -22,9 +22,12 @@ import (
 
 func TestReadStatusEntry(t *testing.T) {
 	tests := []struct {
-		name      string
-		data      string
-		ent       statusEntry
+		name string
+		data string
+
+		code      StatusCode
+		entName   string
+		from      string
 		err       func(error) bool
 		remaining string
 	}{
@@ -34,12 +37,10 @@ func TestReadStatusEntry(t *testing.T) {
 			err:  func(e error) bool { return e == io.EOF },
 		},
 		{
-			name: "ModifiedWorkTree",
-			data: " M foo.txt\x00",
-			ent: statusEntry{
-				code: [2]byte{' ', 'M'},
-				name: "foo.txt",
-			},
+			name:    "ModifiedWorkTree",
+			data:    " M foo.txt\x00",
+			code:    StatusCode{' ', 'M'},
+			entName: "foo.txt",
 		},
 		{
 			name: "MissingNul",
@@ -47,37 +48,32 @@ func TestReadStatusEntry(t *testing.T) {
 			err:  func(e error) bool { return e != nil && e != io.EOF },
 		},
 		{
-			name: "ModifiedIndex",
-			data: "MM foo.txt\x00",
-			ent: statusEntry{
-				code: [2]byte{'M', 'M'},
-				name: "foo.txt",
-			},
+			name:    "ModifiedIndex",
+			data:    "MM foo.txt\x00",
+			code:    StatusCode{'M', 'M'},
+			entName: "foo.txt",
 		},
 		{
-			name: "Renamed",
-			data: "R  bar.txt\x00foo.txt\x00",
-			ent: statusEntry{
-				code: [2]byte{'R', ' '},
-				name: "bar.txt",
-				from: "foo.txt",
-			},
+			name:    "Renamed",
+			data:    "R  bar.txt\x00foo.txt\x00",
+			code:    StatusCode{'R', ' '},
+			entName: "bar.txt",
+			from:    "foo.txt",
 		},
 		{
-			name: "Multiple",
-			data: "R  bar.txt\x00foo.txt\x00MM baz.txt\x00",
-			ent: statusEntry{
-				code: [2]byte{'R', ' '},
-				name: "bar.txt",
-				from: "foo.txt",
-			},
+			name:      "Multiple",
+			data:      "R  bar.txt\x00foo.txt\x00MM baz.txt\x00",
+			code:      StatusCode{'R', ' '},
+			entName:   "bar.txt",
+			from:      "foo.txt",
 			remaining: "MM baz.txt\x00",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			r := strings.NewReader(test.data)
-			ent, err := readStatusEntry(r)
+			var ent StatusEntry
+			err := readStatusEntry(&ent, r)
 			if remaining := test.data[len(test.data)-r.Len():]; remaining != test.remaining {
 				t.Errorf("after readStatusEntry, remaining = %q; want %q", remaining, test.remaining)
 			}
@@ -93,8 +89,14 @@ func TestReadStatusEntry(t *testing.T) {
 			if test.err != nil {
 				t.Fatal("readStatusEntry(...) = _, <nil>; want error")
 			}
-			if ent.code != test.ent.code || ent.name != test.ent.name || ent.from != test.ent.from {
-				t.Fatalf("readStatusEntry(...) = %#v; want %#v", ent, test.ent)
+			if got, want := ent.Code(), test.code; got != want {
+				t.Errorf("readStatusEntry(...).Code() = '%v'; want '%v'", got, want)
+			}
+			if got, want := ent.Name(), test.entName; got != want {
+				t.Errorf("readStatusEntry(...).Name() = %q; want %q", got, want)
+			}
+			if got, want := ent.From(), test.from; got != want {
+				t.Errorf("readStatusEntry(...).From() = %q; want %q", got, want)
 			}
 		})
 	}

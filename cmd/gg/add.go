@@ -15,12 +15,11 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"io"
 
 	"zombiezen.com/go/gg/internal/flag"
 	"zombiezen.com/go/gg/internal/gittool"
+	"zombiezen.com/go/gg/internal/singleclose"
 )
 
 const addSynopsis = "add the specified files on the next commit"
@@ -61,32 +60,29 @@ func add(ctx context.Context, cc *cmdContext, args []string) error {
 // splitUnmerged finds the files described by the arguments and groups
 // them into normal files and unmerged files.
 func splitUnmerged(ctx context.Context, git *gittool.Tool, args []string) (normal, unmerged []string, _ error) {
-	statusArgs := []string{"status", "--porcelain", "-z", "-unormal", "--"}
-	for _, a := range args {
-		statusArgs = append(statusArgs, ":(literal)"+a)
+	statusArgs := make([]string, len(args))
+	for i := range args {
+		statusArgs[i] = ":(literal)" + args[i]
 	}
-	p, err := git.Start(ctx, statusArgs...)
+	st, err := gittool.Status(ctx, git, statusArgs)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			if waitErr := p.Wait(); waitErr != nil {
-				return nil, nil, waitErr
-			}
-			return nil, nil, err
-		}
-		if ent.isUnmerged() {
-			unmerged = append(unmerged, ":(top,literal)"+ent.name)
+	stClose := singleclose.For(st)
+	defer stClose.Close()
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Code().IsUnmerged() {
+			unmerged = append(unmerged, ":(top,literal)"+ent.Name())
 		} else {
-			normal = append(normal, ":(top,literal)"+ent.name)
+			normal = append(normal, ":(top,literal)"+ent.Name())
 		}
 	}
-	return normal, unmerged, p.Wait()
+	if err := st.Err(); err != nil {
+		return nil, nil, err
+	}
+	if err := stClose.Close(); err != nil {
+		return nil, nil, err
+	}
+	return normal, unmerged, nil
 }

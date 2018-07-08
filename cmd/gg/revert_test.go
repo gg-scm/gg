@@ -15,9 +15,7 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -89,21 +87,20 @@ func TestRevert(t *testing.T) {
 	} else if string(data2) != revertTestContent2 {
 		t.Errorf("staged modified file content = %q after revert; want %q", data2, revertTestContent2)
 	}
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
 		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		t.Errorf("found status: '%c%c' %s; want clean working copy", ent.code[0], ent.code[1], ent.name)
+	}()
+	for st.Scan() {
+		t.Errorf("Found status: %v; want clean working copy", st.Entry())
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -153,21 +150,20 @@ func TestRevert_All(t *testing.T) {
 		t.Errorf("staged modified file content = %q after revert; want %q", data2, revertTestContent2)
 	}
 
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
 		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		t.Errorf("found status: '%c%c' %s; want clean working copy", ent.code[0], ent.code[1], ent.name)
+	}()
+	for st.Scan() {
+		t.Errorf("Found status: %v; want clean working copy", st.Entry())
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -200,35 +196,35 @@ func TestRevert_Rev(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	} else if string(data1) != revertTestContent1 {
-		t.Errorf("file content = %q after revert; want %q", data1, revertTestContent1)
+		t.Errorf("File content = %q after revert; want %q", data1, revertTestContent1)
 	}
 
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
 	found := false
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		if ent.name != revertTestFileName1 {
-			t.Errorf("unknown line in status: '%c%c' %s", ent.code[0], ent.code[1], ent.name)
+	for st.Scan() {
+		ent := st.Entry()
+		if ent.Name() != revertTestFileName1 {
+			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
-		if !(ent.code[0] == ' ' && ent.code[1] == 'M') && !(ent.code[0] == 'M' || ent.code[1] == ' ') {
-			t.Errorf("status = '%c%c'; want ' M' or 'M '", ent.code[0], ent.code[1])
+		if code := ent.Code(); !(code[0] == ' ' && code[1] == 'M') && !(code[0] == 'M' || code[1] == ' ') {
+			t.Errorf("%s status = '%v'; want ' M' or 'M '", revertTestFileName1, code)
 		}
 	}
 	if !found {
-		t.Errorf("file %s unmodified", revertTestFileName1)
+		t.Errorf("File %s unmodified", revertTestFileName1)
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -257,21 +253,20 @@ func TestRevert_Missing(t *testing.T) {
 		t.Errorf("file content = %q after revert; want %q", data1, revertTestContent1)
 	}
 
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	st, err := gittool.Status(ctx, env.git, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Wait()
-	r := bufio.NewReader(p)
-	for {
-		ent, err := readStatusEntry(r)
-		if err == io.EOF {
-			break
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
 		}
-		if err != nil {
-			t.Fatal("read status entry:", err)
-		}
-		t.Errorf("found status: '%c%c' %s; want clean working copy", ent.code[0], ent.code[1], ent.name)
+	}()
+	for st.Scan() {
+		t.Errorf("Found status: %v; want clean working copy", st.Entry())
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
 	}
 }
 
