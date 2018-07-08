@@ -26,6 +26,7 @@ show you how to use the basic commands. The [main site][] also includes workflow
 guides and reference documentation.
 
 [main site]: https://zombiezen.github.io/gg/
+[releases]: https://github.com/zombiezen/gg/releases
 [Working Locally]: https://zombiezen.github.io/gg/workflow/local/
 
 ## Testimonials
