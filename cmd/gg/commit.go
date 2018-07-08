@@ -16,12 +16,11 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
-	"path/filepath"
-	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
 	"zombiezen.com/go/gg/internal/gittool"
@@ -67,11 +66,12 @@ aliases: ci
 	}
 	if f.NArg() > 0 {
 		// Commit specific files.
-		commitArgs = append(commitArgs, "--")
-		commitArgs = append(commitArgs, f.Args()...)
-		if err := toPathspecs(cc.dir, top, commitArgs[len(commitArgs)-f.NArg():]); err != nil {
+		files, err := argsToFiles(ctx, cc.git, f.Args())
+		if err != nil {
 			return err
 		}
+		commitArgs = append(commitArgs, "--")
+		commitArgs = append(commitArgs, files...)
 	} else if exists, err := cc.git.Query(ctx, "cat-file", "-e", "MERGE_HEAD"); err == nil && exists {
 		// Merging: must not provide selective files.
 		commitArgs = append(commitArgs, "-a")
@@ -91,33 +91,33 @@ aliases: ci
 	return cc.git.WithDir(top).RunInteractive(ctx, commitArgs...)
 }
 
-// toPathspecs rewrites the given set of arguments into either absolute
-// path specs or top-level path specs.
-func toPathspecs(wd, top string, files []string) error {
-	var err error
-	wd, err = filepath.EvalSymlinks(wd)
+// argsToFiles finds the files named by the arguments.
+func argsToFiles(ctx context.Context, git *gittool.Tool, args []string) ([]string, error) {
+	statusArgs := []string{"status", "--porcelain", "-z", "-unormal", "--"}
+	for _, a := range args {
+		statusArgs = append(statusArgs, ":(literal)"+a)
+	}
+	p, err := git.Start(ctx, statusArgs...)
 	if err != nil {
-		return fmt.Errorf("find current directory: %v", err)
+		return nil, err
 	}
-	top, err = filepath.EvalSymlinks(top)
-	if err != nil {
-		return fmt.Errorf("find top directory: %v", err)
-	}
-	for i := range files {
-		if !filepath.IsAbs(files[i]) {
-			files[i] = filepath.Join(wd, files[i])
+	defer p.Wait()
+	r := bufio.NewReader(p)
+	var files []string
+	for {
+		ent, err := readStatusEntry(r)
+		if err == io.EOF {
+			break
 		}
-		if files[i] == top {
-			files[i] = ":(top,literal)"
-		} else if strings.HasPrefix(files[i], top+string(filepath.Separator)) {
-			// Prepend pathspec options to interpret relative to top of
-			// repository and ignore globs. See gitglossary(7) for more details.
-			files[i] = ":(top,literal)" + files[i][len(top)+len(string(filepath.Separator)):]
-		} else {
-			files[i] = ":(literal)" + files[i]
+		if err != nil {
+			if waitErr := p.Wait(); waitErr != nil {
+				return nil, waitErr
+			}
+			return nil, err
 		}
+		files = append(files, ":(top,literal)"+ent.name)
 	}
-	return nil
+	return files, p.Wait()
 }
 
 func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([]string, error) {
@@ -180,4 +180,20 @@ func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([
 		return files[:filesStart], fmt.Errorf("git has staged changes for %d missing file; see 'gg status'", missingStaged)
 	}
 	return files, p.Wait()
+}
+
+func scanNulSepFields(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, 0); i >= 0 {
+		// We have a full nul-terminated entry.
+		return i + 1, data[0:i], nil
+	}
+	// If we're at EOF, we have a final, non-terminated line. Return it.
+	if atEOF {
+		return len(data), data, io.ErrUnexpectedEOF
+	}
+	// Request more data.
+	return 0, nil, nil
 }

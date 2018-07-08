@@ -17,9 +17,7 @@ package main
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"io"
-	"strings"
 
 	"zombiezen.com/go/gg/internal/flag"
 	"zombiezen.com/go/gg/internal/gittool"
@@ -41,16 +39,7 @@ func add(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("must pass one or more files to add")
 	}
 
-	topBytes, err := cc.git.RunOneLiner(ctx, '\n', "rev-parse", "--show-toplevel")
-	if err != nil {
-		return err
-	}
-	top := string(topBytes)
-	pathspecs := append([]string(nil), f.Args()...)
-	if err := toPathspecs(cc.dir, top, pathspecs); err != nil {
-		return err
-	}
-	normal, unmerged, err := splitUnmerged(ctx, cc.git, pathspecs)
+	normal, unmerged, err := splitUnmerged(ctx, cc.git, f.Args())
 	if err != nil {
 		return err
 	}
@@ -69,20 +58,13 @@ func add(ctx context.Context, cc *cmdContext, args []string) error {
 	return nil
 }
 
-// splitUnmerged filters out the unmerged files from a list of pathspecs.
-// The pathspecs slice will be mutated in-place.
-func splitUnmerged(ctx context.Context, git *gittool.Tool, pathspecs []string) (normal, unmerged []string, _ error) {
-	const prefix = ":(top,literal)"
-	for _, spec := range pathspecs {
-		// TODO(someday): It would be better to find a way to map git status
-		// entries back to arguments provided.  This depends far too much on
-		// the output of toPathspecs.
-		if !strings.HasPrefix(spec, prefix) {
-			return nil, nil, fmt.Errorf("file %q is outside the working copy; cannot be added", spec[len(":(literal)"):])
-		}
-	}
+// splitUnmerged finds the files described by the arguments and groups
+// them into normal files and unmerged files.
+func splitUnmerged(ctx context.Context, git *gittool.Tool, args []string) (normal, unmerged []string, _ error) {
 	statusArgs := []string{"status", "--porcelain", "-z", "-unormal", "--"}
-	statusArgs = append(statusArgs, pathspecs...)
+	for _, a := range args {
+		statusArgs = append(statusArgs, ":(literal)"+a)
+	}
 	p, err := git.Start(ctx, statusArgs...)
 	if err != nil {
 		return nil, nil, err
@@ -100,20 +82,11 @@ func splitUnmerged(ctx context.Context, git *gittool.Tool, pathspecs []string) (
 			}
 			return nil, nil, err
 		}
-		if !ent.isUnmerged() {
-			continue
+		if ent.isUnmerged() {
+			unmerged = append(unmerged, ":(top,literal)"+ent.name)
+		} else {
+			normal = append(normal, ":(top,literal)"+ent.name)
 		}
-		unmerged = append(unmerged, prefix+ent.name)
-		// Filter out from pathspecs
-		n := 0
-		for i := range pathspecs {
-			if pathspecs[i][len(prefix):] != ent.name {
-				pathspecs[n] = pathspecs[i]
-				n++
-			}
-		}
-		pathspecs = pathspecs[:n]
 	}
-	err = p.Wait()
-	return pathspecs, unmerged, err
+	return normal, unmerged, p.Wait()
 }
