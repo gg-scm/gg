@@ -19,7 +19,7 @@ html, body {
   padding: 0;
 }
 
-.page {
+#page {
   display: flex;
   flex-direction: column;
   font-family: 'Lato', sans-serif;
@@ -27,7 +27,7 @@ html, body {
   min-height: 100vh;
 }
 
-.top {
+#top {
   background: #e89933;
   background: linear-gradient(0deg, #e89933 0%, #dd750f 100%);
   color: white;
@@ -35,29 +35,33 @@ html, body {
   padding: 1ex 3em;
 }
 
-.site_title {
+#site_title {
   font-family: 'Patua One', sans-serif;
   font-size: 250%;
   font-weight: normal;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
+  max-width: 1000px;
 }
 
-.site_title_link {
+#site_title_link {
   color: inherit;
   text-decoration: none;
 }
 
-.subtitle {
+#subtitle {
   font-size: 150%;
   font-weight: italic;
+  margin: 0 auto;
+  max-width: 1000px;
 }
 
-.main_nav_list {
+#main_nav_list {
   display: flex;
   flex-direction: row;
-  margin: 1ex 0 0;
+  margin: 1ex auto 0;
   padding: 0;
+  max-width: 1000px;
 }
 
 .main_nav_item {
@@ -68,7 +72,7 @@ html, body {
 }
 
 @media (max-width: 640px) {
-  .main_nav_list {
+  #main_nav_list {
     flex-direction: column;
   }
 
@@ -86,7 +90,8 @@ html, body {
   text-decoration: none;
 }
 
-.main {
+#main_block {
+  background: white;
   box-sizing: border-box;
   flex: 1;
   margin: 0;
@@ -94,13 +99,23 @@ html, body {
   width: 100%;
 }
 
-.pagefooter {
+#main {
+  margin: 0 auto;
+  max-width: 1000px;
+}
+
+#pagefooter {
   background: #b7b7b7;
   background: linear-gradient(0deg, #b7b7b7 85%, #aaaaaa 100%);
   box-sizing: border-box;
   font-size: 85%;
   padding: 1ex 6em;
   width: 100%;
+}
+
+#pagefooter_content {
+  margin: 0 auto;
+  max-width: 1000px;
 }
 
 /* Commands index */
@@ -137,12 +152,17 @@ html, body {
 /* Workflows index */
 
 .workflows_page_list {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  display: grid;
+  grid-auto-rows: 1fr;
+  grid-template-columns: repeat(2, minmax(15em, 1fr));
   margin: 0;
   padding: 0;
-  place-content: start start;
+}
+
+@media (max-width: 640px) {
+  .workflows_page_list {
+    grid-template-columns: minmax(15em, 1fr);
+  }
 }
 
 .workflows_page_list .page_list_item {
@@ -155,7 +175,6 @@ html, body {
   min-height: 5em;
   padding: 1em;
   place-content: start;
-  width: 25em;
 }
 
 .workflows_page_list .page_list_summary {
