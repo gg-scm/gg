@@ -17,6 +17,7 @@ package singleclose_test
 import (
 	"io/ioutil"
 	"log"
+	"os"
 
 	"zombiezen.com/go/gg/internal/singleclose"
 )
