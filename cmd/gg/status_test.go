@@ -18,6 +18,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -47,7 +50,54 @@ func TestStatus(t *testing.T) {
 	}
 	diff := cmp.Diff(want, got,
 		cmp.AllowUnexported(ggStatusLine{}),
-		cmpopts.SortSlices(ggStatusLine.less),
+		cmp.Transformer("Map", ggStatusMap),
+		cmpopts.EquateEmpty())
+	if diff != "" {
+		t.Errorf("Output differs (-want +got):\n%s", diff)
+	}
+}
+
+// TestStatus_RenamedLocally is a regression test for
+// https://github.com/zombiezen/gg/issues/44.
+func TestStatus_RenamedLocally(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.git.Run(ctx, "init"); err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(filepath.Join(env.root, "foo.txt"), []byte("Hello, World!\n"), 0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "add", "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "commit", "-m", "initial commit"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(filepath.Join(env.root, "foo.txt"), filepath.Join(env.root, "bar.txt")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "add", "-N", "bar.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := env.gg(ctx, env.root, "status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := parseGGStatus(out, t)
+	want := []ggStatusLine{
+		{letter: '!', name: "foo.txt"},
+		{letter: 'A', name: "bar.txt"},
+	}
+	diff := cmp.Diff(want, got,
+		cmp.AllowUnexported(ggStatusLine{}),
+		cmp.Transformer("Map", ggStatusMap),
 		cmpopts.EquateEmpty())
 	if diff != "" {
 		t.Errorf("Output differs (-want +got):\n%s", diff)
@@ -159,8 +209,12 @@ func TestParseGGStatus(t *testing.T) {
 	}
 }
 
-func (line ggStatusLine) less(other ggStatusLine) bool {
-	return line.name < other.name
+func ggStatusMap(lines []ggStatusLine) map[string]ggStatusLine {
+	m := make(map[string]ggStatusLine)
+	for _, l := range lines {
+		m[l.name] = l
+	}
+	return m
 }
 
 func hasGGStatusLine(lines []ggStatusLine, name string) bool {

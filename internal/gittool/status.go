@@ -141,7 +141,7 @@ func readStatusEntry(out *StatusEntry, r io.ByteReader) error {
 	if err != nil {
 		return fmt.Errorf("read status entry: %v", err)
 	}
-	if out.code[0] == 'R' || out.code[0] == 'C' {
+	if out.code[0] == 'R' || out.code[0] == 'C' || out.code[1] == 'R' || out.code[1] == 'C' {
 		out.from, err = readString(r, 2048)
 		if err != nil {
 			return fmt.Errorf("read status entry: %v", err)
@@ -236,21 +236,33 @@ func (code StatusCode) IsRemoved() bool {
 	return code[0] == 'D' && code[1] == ' '
 }
 
-// IsRenamed reports whether the file has been renamed.
+// IsRenamed reports whether the file is the result of a rename.
 func (code StatusCode) IsRenamed() bool {
 	return code[0] == 'R' && (code[1] == ' ' || code[1] == 'M')
 }
 
-// IsCopied reports whether the file has been copied.
-func (code StatusCode) IsCopied() bool {
-	return code[0] == 'C' && (code[1] == ' ' || code[1] == 'M')
+// IsOriginalMissing reports whether the file has been detected as a
+// rename in the work tree, but neither this file or its original have
+// been updated in the index. If IsOriginalMissing is true, then IsAdded
+// returns true.
+func (code StatusCode) IsOriginalMissing() bool {
+	return code[0] == ' ' && code[1] == 'R'
 }
 
-// IsAdded reports whether the file has been added in either the index
-// or the work tree.
+// IsCopied reports whether the file has been copied from elsewhere.
+func (code StatusCode) IsCopied() bool {
+	return code[0] == 'C' && (code[1] == ' ' || code[1] == 'M') ||
+		// TODO(someday): Is this even possible?
+		code[0] == ' ' && code[1] == 'C'
+}
+
+// IsAdded reports whether the file is new to the index (including
+// copies, but not renames).
 func (code StatusCode) IsAdded() bool {
 	return code[0] == 'A' && (code[1] == ' ' || code[1] == 'M') ||
-		code[0] == ' ' && code[1] == 'A'
+		code[0] == ' ' && code[1] == 'A' ||
+		code.IsOriginalMissing() ||
+		code.IsCopied()
 }
 
 // IsUntracked returns true if the file is not being tracked by Git.
@@ -271,7 +283,7 @@ func (code StatusCode) IsUnmerged() bool {
 
 func (code StatusCode) isValid() bool {
 	const codes = "??!!" +
-		" M D A" +
+		" M D A R" +
 		"M MMMD" +
 		"A AMAD" +
 		"D " +

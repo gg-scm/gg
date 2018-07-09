@@ -61,6 +61,14 @@ func TestReadStatusEntry(t *testing.T) {
 			from:    "foo.txt",
 		},
 		{
+			// Regression test for https://github.com/zombiezen/gg/issues/44
+			name:    "RenamedLocally",
+			data:    " R bar.txt\x00foo.txt\x00",
+			code:    StatusCode{' ', 'R'},
+			entName: "bar.txt",
+			from:    "foo.txt",
+		},
+		{
 			name:      "Multiple",
 			data:      "R  bar.txt\x00foo.txt\x00MM baz.txt\x00",
 			code:      StatusCode{'R', ' '},

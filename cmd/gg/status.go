@@ -97,6 +97,15 @@ aliases: st, check`)
 			_, err = fmt.Fprintf(cc.stdout, "%sM %s\n", modifiedColor, ent.Name())
 		case ent.Code().IsAdded():
 			_, err = fmt.Fprintf(cc.stdout, "%sA %s\n", addedColor, ent.Name())
+			if ent.Code().IsOriginalMissing() {
+				// See https://github.com/zombiezen/gg/issues/44 for explanation.
+				if colorize {
+					if err := terminal.ResetTextStyle(cc.stdout); err != nil {
+						return err
+					}
+				}
+				_, err = fmt.Fprintf(cc.stdout, "%s! %s\n", missingColor, ent.From())
+			}
 		case ent.Code().IsRemoved():
 			_, err = fmt.Fprintf(cc.stdout, "%sR %s\n", removedColor, ent.Name())
 		case ent.Code().IsCopied():
