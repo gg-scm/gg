@@ -139,7 +139,7 @@ aliases: st, check`)
 	if err := st.Err(); err != nil {
 		return err
 	}
-	if err := st.Close(); err != nil {
+	if err := stClose.Close(); err != nil {
 		return err
 	}
 	if foundUnrecognized {
