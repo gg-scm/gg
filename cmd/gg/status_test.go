@@ -17,7 +17,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestStatus(t *testing.T) {
@@ -35,65 +39,151 @@ func TestStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Output:\n%s", out)
-	foundAdded, foundModified, foundDeleted := false, false, false
-	for lineno := 1; len(out) > 0; lineno++ {
-		var line []byte
-		line, out = splitLine(out)
-		if len(line) < 2 {
-			t.Errorf("Line %d: got %q; want >3 characters for status, then space, then name", lineno, line)
-			continue
-		}
-		if line[1] != ' ' {
-			t.Errorf("Line %d: got %q; want second character to be a space", lineno, line)
-		}
-		switch name := string(line[2:]); name {
-		case "added.txt":
-			if foundAdded {
-				t.Error("Duplicate for added.txt")
-				continue
-			}
-			foundAdded = true
-			if line[0] != 'A' {
-				t.Errorf("Line %d: added.txt status = %q; want 'A'", lineno, line[0])
-			}
-		case "modified.txt":
-			if foundModified {
-				t.Error("Duplicate for modified.txt")
-				continue
-			}
-			foundModified = true
-			if line[0] != 'M' {
-				t.Errorf("Line %d: modified.txt status = %q; want 'M'", lineno, line[0])
-			}
-		case "deleted.txt":
-			if foundDeleted {
-				t.Error("Duplicate for deleted.txt")
-				continue
-			}
-			foundDeleted = true
-			if line[0] != 'R' {
-				t.Errorf("Line %d: deleted.txt status = %q; want 'R'", lineno, line[0])
-			}
-		default:
-			t.Errorf("Line %d: got unexpected file %q", lineno, name)
-		}
+	got := parseGGStatus(out, t)
+	want := []ggStatusLine{
+		{letter: 'A', name: "added.txt"},
+		{letter: 'M', name: "modified.txt"},
+		{letter: 'R', name: "deleted.txt"},
 	}
-	if !foundAdded {
-		t.Error("No status line for added.txt")
-	}
-	if !foundModified {
-		t.Error("No status line for modified.txt")
-	}
-	if !foundDeleted {
-		t.Error("No status line for deleted.txt")
+	diff := cmp.Diff(want, got,
+		cmp.AllowUnexported(ggStatusLine{}),
+		cmpopts.SortSlices(ggStatusLine.less),
+		cmpopts.EquateEmpty())
+	if diff != "" {
+		t.Errorf("Output differs (-want +got):\n%s", diff)
 	}
 }
 
-func splitLine(b []byte) (line, rest []byte) {
-	i := bytes.IndexByte(b, '\n')
-	if i == -1 {
-		return b, nil
+type ggStatusLine struct {
+	letter byte
+	name   string
+	from   string
+}
+
+// parseGGStatus parses the lines emitted by `gg status`, reporting any parse errors to e.
+func parseGGStatus(out []byte, e errorer) []ggStatusLine {
+	var lines []ggStatusLine
+	for lineno, canAddFrom := 1, false; len(out) > 0; lineno++ {
+		// Find end of current line.
+		var line []byte
+		if i := bytes.IndexByte(out, '\n'); i != -1 {
+			line, out = out[:i], out[i+1:]
+		} else {
+			line, out = out, nil
+		}
+
+		// Validate format of line.
+		if len(line) < 3 {
+			e.Errorf("Line %d: got %q; want >=3 characters for status, then space, then name", lineno, line)
+			canAddFrom = false
+			continue
+		}
+		if line[1] != ' ' {
+			e.Errorf("Line %d: got %q; want second character to be a space", lineno, line)
+			canAddFrom = false
+			continue
+		}
+		name := string(line[2:])
+
+		if line[0] == ' ' {
+			// Copy/rename source.
+			if !canAddFrom {
+				e.Errorf("Line %d: got %q (a \"from\" line); not valid with previous line", lineno, name)
+				continue
+			}
+			lines[len(lines)-1].from = name
+			canAddFrom = false
+			continue
+		}
+
+		if hasGGStatusLine(lines, name) {
+			e.Errorf("Line %d: duplicate for %s", lineno, name)
+			canAddFrom = false
+			continue
+		}
+		lines = append(lines, ggStatusLine{
+			letter: line[0],
+			name:   name,
+		})
+		canAddFrom = true
 	}
-	return b[:i], b[i+1:]
+	return lines
+}
+
+func TestParseGGStatus(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want []ggStatusLine
+		err  bool
+	}{
+		{name: "Empty", in: "", want: nil},
+		{name: "SingleFile", in: "A foo.txt\n", want: []ggStatusLine{
+			{letter: 'A', name: "foo.txt"},
+		}},
+		{name: "Copied", in: "A foo.txt\n  bar.txt\n", want: []ggStatusLine{
+			{letter: 'A', name: "foo.txt", from: "bar.txt"},
+		}},
+		{name: "ThreeFiles", in: "A added.txt\nM modified.txt\nR deleted.txt\n", want: []ggStatusLine{
+			{letter: 'A', name: "added.txt"},
+			{letter: 'M', name: "modified.txt"},
+			{letter: 'R', name: "deleted.txt"},
+		}},
+
+		// Error conditions.
+		{name: "Dupes", in: "A foo.txt\nM foo.txt\n", err: true, want: []ggStatusLine{
+			{letter: 'A', name: "foo.txt"},
+		}},
+		{name: "Blank", in: "\n", err: true},
+		{name: "OneChar", in: "A\n", err: true},
+		{name: "NoFile", in: "A \n", err: true},
+		{name: "NoSpace", in: "ABfoo.txt\n", err: true},
+		{name: "StartSpaced", in: "  foo.txt\n", err: true, want: nil},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			e := new(recordErrorer)
+			got := parseGGStatus([]byte(test.in), e)
+			diff := cmp.Diff(test.want, got,
+				cmp.AllowUnexported(ggStatusLine{}),
+				cmpopts.EquateEmpty())
+			if diff != "" {
+				t.Errorf("parseGGStatus(...) incorrect (-want +got)\n%s", diff)
+			}
+			if bool(*e) && !test.err {
+				t.Error("parseGGStatus(...) reported errors; did not want errors")
+			} else if !bool(*e) && test.err {
+				t.Error("parseGGStatus(...) did not report errors; want errors")
+			}
+		})
+	}
+}
+
+func (line ggStatusLine) less(other ggStatusLine) bool {
+	return line.name < other.name
+}
+
+func hasGGStatusLine(lines []ggStatusLine, name string) bool {
+	for i := range lines {
+		if lines[i].name == name {
+			return true
+		}
+	}
+	return false
+}
+
+type errorer interface {
+	Errorf(format string, args ...interface{})
+}
+
+type panicErrorer struct{}
+
+func (panicErrorer) Errorf(format string, args ...interface{}) {
+	panic(fmt.Sprintf(format, args...))
+}
+
+type recordErrorer bool
+
+func (e *recordErrorer) Errorf(format string, args ...interface{}) {
+	*e = true
 }
