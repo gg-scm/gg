@@ -37,11 +37,24 @@ type StatusReader struct {
 
 // Status starts a `git status` subprocess.
 func Status(ctx context.Context, git *Tool, args []string) (*StatusReader, error) {
+	allArgs := make([]string, 0, 5+len(args))
+	allArgs = append(allArgs, "status", "--porcelain", "-z", "-unormal", "--")
+	allArgs = append(allArgs, args...)
+	return startStatus(ctx, git, allArgs)
+}
+
+// StatusWithIgnored starts a `git status` subprocess with the
+// `--ignored` option set.
+func StatusWithIgnored(ctx context.Context, git *Tool, args []string) (*StatusReader, error) {
+	allArgs := make([]string, 0, 6+len(args))
+	allArgs = append(allArgs, "status", "--porcelain", "-z", "-unormal", "--ignored", "--")
+	allArgs = append(allArgs, args...)
+	return startStatus(ctx, git, allArgs)
+}
+
+func startStatus(ctx context.Context, git *Tool, allArgs []string) (*StatusReader, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	gitArgs := make([]string, 0, 5+len(args))
-	gitArgs = append(gitArgs, "status", "--porcelain", "-z", "-unormal", "--")
-	gitArgs = append(gitArgs, args...)
-	p, err := git.Start(ctx, gitArgs...)
+	p, err := git.Start(ctx, allArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -263,6 +276,11 @@ func (code StatusCode) IsAdded() bool {
 		code[0] == ' ' && code[1] == 'A' ||
 		code.IsOriginalMissing() ||
 		code.IsCopied()
+}
+
+// IsIgnored returns true if the file is being ignored by Git.
+func (code StatusCode) IsIgnored() bool {
+	return code[0] == '!' && code[1] == '!'
 }
 
 // IsUntracked returns true if the file is not being tracked by Git.

@@ -392,3 +392,142 @@ func TestAdd_Directory(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestAdd_IgnoredFile(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.git.Run(ctx, "init"); err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(env.root, "foo.txt"),
+		[]byte("Hello, World!\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(env.root, ".gitignore"),
+		[]byte("/foo.txt\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
+		t.Error("gg:", err)
+	}
+	st, err := gittool.Status(ctx, env.git, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
+	found := false
+	for st.Scan() {
+		ent := st.Entry()
+		switch ent.Name() {
+		case "foo.txt":
+			found = true
+			if code := ent.Code(); code[0] != 'A' && code[1] != 'A' {
+				t.Errorf("foo.txt status = '%v'; want to contain 'A'", code)
+			}
+		case ".gitignore":
+			if code := ent.Code(); !code.IsUntracked() {
+				t.Errorf(".gitignore status = '%v'; want untracked", code)
+			}
+		default:
+			t.Errorf("Unknown line in status: %v", ent)
+		}
+	}
+	if !found {
+		t.Error("File foo.txt not in git status")
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestAdd_IgnoredFileInDirectory(t *testing.T) {
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.git.Run(ctx, "init"); err != nil {
+		t.Fatal(err)
+	}
+	err = os.Mkdir(filepath.Join(env.root, "foo"), 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(env.root, "foo", "bar.txt"),
+		[]byte("Hello, World!\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(env.root, "foo", "baz.txt"),
+		[]byte("Hello, World!\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ioutil.WriteFile(
+		filepath.Join(env.root, ".gitignore"),
+		[]byte("/foo/bar.txt\n"),
+		0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := env.gg(ctx, env.root, "add", "foo"); err != nil {
+		t.Error("gg:", err)
+	}
+	st, err := gittool.Status(ctx, env.git, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Error("st.Close():", err)
+		}
+	}()
+	foundBaz := false
+	for st.Scan() {
+		ent := st.Entry()
+		switch ent.Name() {
+		case "foo/bar.txt":
+			if code := ent.Code(); code[0] != '!' || code[1] != '!' {
+				t.Errorf("foo/bar.txt status = '%v'; want '!!'", code)
+			}
+		case "foo/baz.txt":
+			foundBaz = true
+			if code := ent.Code(); code[0] != 'A' && code[1] != 'A' {
+				t.Errorf("foo/baz.txt status = '%v'; want to contain 'A'", code)
+			}
+		case ".gitignore":
+			if code := ent.Code(); !code.IsUntracked() {
+				t.Errorf(".gitignore status = '%v'; want untracked", code)
+			}
+		default:
+			t.Errorf("Unknown line in status: %v", ent)
+		}
+	}
+	if !foundBaz {
+		t.Error("File foo/baz.txt not in git status")
+	}
+	if err := st.Err(); err != nil {
+		t.Error(err)
+	}
+}
