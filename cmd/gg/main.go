@@ -51,6 +51,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"basic commands:\n" +
 		"  add           " + addSynopsis + "\n" +
 		"  branch        " + branchSynopsis + "\n" +
+		"  cat           " + catSynopsis + "\n" +
 		"  clone         " + cloneSynopsis + "\n" +
 		"  commit        " + commitSynopsis + "\n" +
 		"  diff          " + diffSynopsis + "\n" +
@@ -175,6 +176,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return add(ctx, cc, args)
 	case "branch":
 		return branch(ctx, cc, args)
+	case "cat":
+		return cat(ctx, cc, args)
 	case "clone":
 		return clone(ctx, cc, args)
 	case "commit", "ci":
