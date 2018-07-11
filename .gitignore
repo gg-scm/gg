@@ -1,2 +1,4 @@
-cmd/gg/gg
-dist/
+# Build Products
+/cmd/gg/gg
+/dist/
+/docs/public
