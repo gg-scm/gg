@@ -19,6 +19,7 @@ import (
 	"io"
 
 	"zombiezen.com/go/gg/internal/flag"
+	"zombiezen.com/go/gg/internal/gitobj"
 	"zombiezen.com/go/gg/internal/gittool"
 )
 
@@ -29,7 +30,7 @@ func cat(ctx context.Context, cc *cmdContext, args []string) error {
 
 	Print the specified files as they were at the given revision. If no
 	revision is given, HEAD is used.`)
-	r := f.String("r", "HEAD", "print the `rev`ision")
+	r := f.String("r", gitobj.Head.String(), "print the `rev`ision")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
