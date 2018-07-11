@@ -36,7 +36,9 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 	var coArgs []string
 	coArgs = append(coArgs, "checkout", "--quiet", *rev, "--")
 	if f.NArg() > 0 {
-		coArgs = append(coArgs, f.Args()...)
+		for _, a := range f.Args() {
+			coArgs = append(coArgs, ":(literal)"+a)
+		}
 	} else if *all {
 		coArgs = append(coArgs, ":/:")
 	} else {
