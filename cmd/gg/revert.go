@@ -103,7 +103,7 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 
 	// Now revert files.
 	if len(adds) > 0 {
-		// TODO(now): Can be fully removed if no local modifications (add test).
+		// TODO(#59): Can be fully removed if no local modifications (add test).
 		rmArgs := append([]string{"rm", "--cached", "--"}, adds...)
 		if err := cc.git.Run(ctx, rmArgs...); err != nil {
 			return err
