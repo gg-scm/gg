@@ -78,7 +78,9 @@ aliases: st, check`)
 			fmt.Fprintln(cc.stderr, "gg:", err)
 		}
 	}
-	st, err := gittool.Status(ctx, cc.git, f.Args())
+	st, err := gittool.Status(ctx, cc.git, gittool.StatusOptions{
+		Pathspec: f.Args(),
+	})
 	if err != nil {
 		return err
 	}

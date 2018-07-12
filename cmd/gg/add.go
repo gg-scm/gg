@@ -114,13 +114,10 @@ func findAddFiles(ctx context.Context, git *gittool.Tool, args []string, include
 	for i := range args {
 		statusArgs[i] = ":(literal)" + args[i]
 	}
-	var st *gittool.StatusReader
-	var err error
-	if includeIgnored {
-		st, err = gittool.StatusWithIgnored(ctx, git, statusArgs)
-	} else {
-		st, err = gittool.Status(ctx, git, statusArgs)
-	}
+	st, err := gittool.Status(ctx, git, gittool.StatusOptions{
+		Pathspec:       statusArgs,
+		IncludeIgnored: includeIgnored,
+	})
 	if err != nil {
 		return nil, nil, err
 	}

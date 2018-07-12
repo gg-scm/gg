@@ -109,3 +109,79 @@ func TestReadStatusEntry(t *testing.T) {
 		})
 	}
 }
+
+func TestReadDiffStatusEntry(t *testing.T) {
+	tests := []struct {
+		name string
+		data string
+
+		code      DiffStatusCode
+		entName   string
+		err       func(error) bool
+		remaining string
+	}{
+		{
+			name: "Empty",
+			data: "",
+			err:  func(e error) bool { return e == io.EOF },
+		},
+		{
+			name:    "Modified",
+			data:    "M\x00foo.txt\x00",
+			code:    'M',
+			entName: "foo.txt",
+		},
+		{
+			name: "MissingNul",
+			data: "M\x00foo.txt",
+			err:  func(e error) bool { return e != nil && e != io.EOF },
+		},
+		{
+			name:    "Renamed",
+			data:    "R00\x00foo.txt\x00bar.txt\x00",
+			code:    'R',
+			entName: "bar.txt",
+		},
+		{
+			name:      "RenamedScoreTooLong",
+			data:      "R000\x00foo.txt\x00bar.txt\x00",
+			err:       func(e error) bool { return e != nil && e != io.EOF },
+			remaining: "\x00foo.txt\x00bar.txt\x00",
+		},
+		{
+			name:      "Multiple",
+			data:      "A\x00foo.txt\x00D\x00bar.txt\x00",
+			code:      'A',
+			entName:   "foo.txt",
+			remaining: "D\x00bar.txt\x00",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r := strings.NewReader(test.data)
+			var ent DiffStatusEntry
+			err := readDiffStatusEntry(&ent, r)
+			if remaining := test.data[len(test.data)-r.Len():]; remaining != test.remaining {
+				t.Errorf("after readDiffStatusEntry, remaining = %q; want %q", remaining, test.remaining)
+			}
+			if err != nil {
+				if test.err == nil {
+					t.Fatalf("readDiffStatusEntry(...) = _, %v; want <nil>", err)
+				}
+				if !test.err(err) {
+					t.Fatalf("readDiffStatusEntry(...) = _, %v", err)
+				}
+				return
+			}
+			if test.err != nil {
+				t.Fatal("readDiffStatusEntry(...) = _, <nil>; want error")
+			}
+			if got, want := ent.Code(), test.code; got != want {
+				t.Errorf("readDiffStatusEntry(...).Code() = '%v'; want '%v'", got, want)
+			}
+			if got, want := ent.Name(), test.entName; got != want {
+				t.Errorf("readDiffStatusEntry(...).Name() = %q; want %q", got, want)
+			}
+		})
+	}
+}

@@ -95,7 +95,9 @@ func argsToFiles(ctx context.Context, git *gittool.Tool, args []string) ([]strin
 	for i := range args {
 		statusArgs[i] = ":(literal)" + args[i]
 	}
-	st, err := gittool.Status(ctx, git, statusArgs)
+	st, err := gittool.Status(ctx, git, gittool.StatusOptions{
+		Pathspec: statusArgs,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +118,7 @@ func argsToFiles(ctx context.Context, git *gittool.Tool, args []string) ([]strin
 
 func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([]string, error) {
 	missing, missingStaged, unmerged := 0, 0, 0
-	st, err := gittool.Status(ctx, git, nil)
+	st, err := gittool.Status(ctx, git, gittool.StatusOptions{})
 	if err != nil {
 		return files, err
 	}

@@ -354,7 +354,7 @@ func inferPushRepo(ctx context.Context, git *gittool.Tool, cfg *gittool.Config, 
 // isClean returns true iff all tracked files are unmodified in the
 // working copy.  Untracked and ignored files are not considered.
 func isClean(ctx context.Context, git *gittool.Tool) (bool, error) {
-	st, err := gittool.Status(ctx, git, nil)
+	st, err := gittool.Status(ctx, git, gittool.StatusOptions{})
 	if err != nil {
 		return false, err
 	}

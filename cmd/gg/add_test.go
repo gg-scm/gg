@@ -45,7 +45,7 @@ func TestAdd(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestAdd_DoesNotStageModified(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestAdd_WholeRepo(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "add", "."); err != nil {
 		t.Error(err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -250,7 +250,7 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -354,7 +354,7 @@ func TestAdd_Directory(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "add", "foo"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -421,7 +421,7 @@ func TestAdd_IgnoredFile(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -494,7 +494,7 @@ func TestAdd_IgnoredFileInDirectory(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "add", "foo"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

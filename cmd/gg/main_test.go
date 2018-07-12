@@ -149,6 +149,122 @@ func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte,
 	return out.Bytes(), err
 }
 
+// rel resolves a slash-separated path relative to env.root.
+func (env *testEnv) rel(path string) string {
+	return filepath.Join(env.root, filepath.FromSlash(path))
+}
+
+// initEmptyRepo creates a repository at the slash-separated path
+// relative to env.root.
+func (env *testEnv) initEmptyRepo(ctx context.Context, dir string) error {
+	return env.git.Run(ctx, "init", env.rel(dir))
+}
+
+// initRepoWithHistory creates a repository with some dummy commits but
+// a blank, clean working copy. dir is a slash-separated path relative
+// to env.root.
+func (env *testEnv) initRepoWithHistory(ctx context.Context, dir string) error {
+	repoDir := env.rel(dir)
+	if err := env.git.Run(ctx, "init", repoDir); err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(filepath.Join(repoDir, ".dummy"), nil, 0666); err != nil {
+		return err
+	}
+	repoGit := env.git.WithDir(repoDir)
+	if err := repoGit.Run(ctx, "add", ".dummy"); err != nil {
+		return err
+	}
+	if err := repoGit.Run(ctx, "commit", "-m", "initial import"); err != nil {
+		return err
+	}
+	if err := repoGit.Run(ctx, "rm", ".dummy"); err != nil {
+		return err
+	}
+	if err := repoGit.Run(ctx, "commit", "-m", "removed dummy file"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// readFile reads the file with the given content at the
+// slash-separated path relative to env.root.
+func (env *testEnv) readFile(path string) (string, error) {
+	data, err := ioutil.ReadFile(env.rel(path))
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// newFile creates a file with some non-empty dummy content at the
+// slash-separated path relative to env.root.
+func (env *testEnv) newFile(path string) error {
+	return env.writeFile(path, "Hello, World!\n")
+}
+
+// writeFile creates a file with the given content at the
+// slash-separated path relative to env.root.
+func (env *testEnv) writeFile(path string, content string) error {
+	return ioutil.WriteFile(env.rel(path), []byte(content), 0666)
+}
+
+// mkdir creates a directory at the slash-separated path relative to
+// env.root.
+func (env *testEnv) mkdir(path string) error {
+	return os.Mkdir(env.rel(path), 0777)
+}
+
+// addFiles runs `git add -N` with the slash-separated paths relative to
+// env.root.
+func (env *testEnv) addFiles(ctx context.Context, files ...string) error {
+	// Use the first file's directory as the Git working directory.
+	anchor := env.rel(files[0])
+	info, err := os.Stat(anchor)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		anchor = filepath.Dir(anchor)
+	}
+
+	// Run git add.
+	args := make([]string, 0, 2+len(files))
+	args = append(args, "add", "--")
+	for i := range files {
+		args = append(args, env.rel(files[i]))
+	}
+	return env.git.WithDir(anchor).Run(ctx, args...)
+}
+
+// trackFiles runs `git add -N` with the slash-separated paths relative to
+// env.root.
+func (env *testEnv) trackFiles(ctx context.Context, files ...string) error {
+	// Use the first file's directory as the Git working directory.
+	anchor := env.rel(files[0])
+	info, err := os.Stat(anchor)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		anchor = filepath.Dir(anchor)
+	}
+
+	// Run git add.
+	args := make([]string, 0, 3+len(files))
+	args = append(args, "add", "-N", "--")
+	for i := range files {
+		args = append(args, env.rel(files[i]))
+	}
+	return env.git.WithDir(anchor).Run(ctx, args...)
+}
+
+// newCommit runs `git commit -a` with some dummy commit message at the
+// slash-separated path relative to env.root.
+func (env *testEnv) newCommit(ctx context.Context, dir string) error {
+	return env.git.WithDir(env.rel(dir)).Run(ctx, "commit", "-am", "did stuff")
+}
+
 // dummyRev creates a new revision in a repository that adds the given file.
 // If the branch is not the same as the current branch, that branch is either
 // checked out or created.

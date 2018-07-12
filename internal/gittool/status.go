@@ -24,7 +24,6 @@ import (
 )
 
 // StatusReader is a handle to a running `git status` command.
-// It does not return clean or ignored files.
 type StatusReader struct {
 	p      *Process
 	r      *bufio.Reader
@@ -35,26 +34,32 @@ type StatusReader struct {
 	err     error
 }
 
+// StatusOptions specifies the command-line arguments for `git status`.
+type StatusOptions struct {
+	// IncludeIgnored specifies whether to emit ignored files.
+	IncludeIgnored bool
+	// DisableRenames will force Git to disable rename/copy detection.
+	DisableRenames bool
+	// Pathspec filters the output to the given pathspec.
+	Pathspec []string
+}
+
 // Status starts a `git status` subprocess.
-func Status(ctx context.Context, git *Tool, args []string) (*StatusReader, error) {
-	allArgs := make([]string, 0, 5+len(args))
-	allArgs = append(allArgs, "status", "--porcelain", "-z", "-unormal", "--")
-	allArgs = append(allArgs, args...)
-	return startStatus(ctx, git, allArgs)
-}
-
-// StatusWithIgnored starts a `git status` subprocess with the
-// `--ignored` option set.
-func StatusWithIgnored(ctx context.Context, git *Tool, args []string) (*StatusReader, error) {
-	allArgs := make([]string, 0, 6+len(args))
-	allArgs = append(allArgs, "status", "--porcelain", "-z", "-unormal", "--ignored", "--")
-	allArgs = append(allArgs, args...)
-	return startStatus(ctx, git, allArgs)
-}
-
-func startStatus(ctx context.Context, git *Tool, allArgs []string) (*StatusReader, error) {
+func Status(ctx context.Context, git *Tool, opts StatusOptions) (*StatusReader, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	p, err := git.Start(ctx, allArgs...)
+	args := make([]string, 0, 8+len(opts.Pathspec))
+	if opts.DisableRenames {
+		args = append(args, "-c", "status.renames=false")
+	}
+	args = append(args, "status", "--porcelain", "-z", "-unormal")
+	if opts.IncludeIgnored {
+		args = append(args, "--ignored")
+	}
+	if len(opts.Pathspec) > 0 {
+		args = append(args, "--")
+		args = append(args, opts.Pathspec...)
+	}
+	p, err := git.Start(ctx, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -314,6 +319,238 @@ func (code StatusCode) isValid() bool {
 		}
 	}
 	return false
+}
+
+// DiffStatusReader is a handle to a running `git diff --name-status`
+// command.
+//
+// See https://git-scm.com/docs/git-diff#git-diff---name-status for more
+// details.
+type DiffStatusReader struct {
+	p      *Process
+	r      *bufio.Reader
+	cancel context.CancelFunc
+
+	scanned bool
+	ent     DiffStatusEntry
+	err     error
+}
+
+// DiffStatusOptions specifies the command-line arguments for `git diff --status`.
+type DiffStatusOptions struct {
+	// Commit1 specifies the earlier commit to compare with. If empty,
+	// then DiffStatus compares against the index.
+	Commit1 string
+	// Commit2 specifies the later commit to compare with. If empty, then
+	// DiffStatus compares against the working tree. Callers must not set
+	// Commit2 if Commit1 is empty.
+	Commit2 string
+	// Pathspec filters the output to the given pathspec.
+	Pathspec []string
+	// DisableRenames will force Git to disable rename/copy detection.
+	DisableRenames bool
+}
+
+// DiffStatus compares the working copy with a commit,
+// optionally restricting to the given pathspec.
+func DiffStatus(ctx context.Context, git *Tool, opts DiffStatusOptions) (*DiffStatusReader, error) {
+	if opts.Commit1 == "" && opts.Commit2 != "" {
+		panic("Commit2 set without Commit1 being set")
+	}
+	if strings.HasPrefix(opts.Commit1, "-") {
+		return nil, fmt.Errorf("diff status: commit %q should not start with '-'", opts.Commit1)
+	}
+	if strings.HasPrefix(opts.Commit2, "-") {
+		return nil, fmt.Errorf("diff status: commit %q should not start with '-'", opts.Commit2)
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	args := make([]string, 0, 6+len(opts.Pathspec))
+	args = append(args, "diff", "--name-status", "-z")
+	if opts.DisableRenames {
+		args = append(args, "--no-renames")
+	}
+	if opts.Commit1 != "" {
+		args = append(args, opts.Commit1)
+	}
+	if opts.Commit2 != "" {
+		args = append(args, opts.Commit2)
+	}
+	if len(opts.Pathspec) > 0 {
+		args = append(args, "--")
+		args = append(args, opts.Pathspec...)
+	}
+	p, err := git.Start(ctx, args...)
+	if err != nil {
+		return nil, err
+	}
+	return &DiffStatusReader{
+		p:      p,
+		r:      bufio.NewReader(p),
+		cancel: cancel,
+	}, nil
+}
+
+// Scan reads the next entry in the diff output.
+func (dr *DiffStatusReader) Scan() bool {
+	dr.err = readDiffStatusEntry(&dr.ent, dr.r)
+	if dr.err != nil {
+		return false
+	}
+	dr.scanned = true
+	return true
+}
+
+// Err returns the first non-EOF error encountered during Scan.
+func (dr *DiffStatusReader) Err() error {
+	if dr.err == io.EOF {
+		return nil
+	}
+	return dr.err
+}
+
+// Entry returns the most recent entry parsed by a call to Scan.
+// The pointer may point to data that will be overwritten by a
+// subsequent call to Scan.
+func (dr *DiffStatusReader) Entry() *DiffStatusEntry {
+	if !dr.scanned || dr.err != nil {
+		return nil
+	}
+	return &dr.ent
+}
+
+// Close finishes reading from the Git subprocess and waits for it to
+// terminate. The behavior of calling methods on a DiffStatusReader
+// after Close is undefined.
+//
+// If the subprocess exited due to a signal, Close will not return an
+// error, as it usually means that Close terminated the process. In the
+// case that another signal terminated the subprocess, this usually
+// results in a scan error.
+func (dr *DiffStatusReader) Close() error {
+	dr.cancel()
+	err := dr.p.Wait()
+	*dr = DiffStatusReader{}
+	switch err := err.(type) {
+	case nil:
+		return nil
+	case *exitError:
+		if err.signaled {
+			return nil
+		}
+		return err
+	default:
+		return err
+	}
+}
+
+// A DiffStatusEntry describes the state of a single file in a diff.
+type DiffStatusEntry struct {
+	code DiffStatusCode
+	name string
+}
+
+func readDiffStatusEntry(out *DiffStatusEntry, r io.ByteReader) error {
+	// Read status code.
+	code, err := r.ReadByte()
+	if err == io.EOF {
+		return io.EOF
+	}
+	if err != nil {
+		return fmt.Errorf("read diff entry: %v", err)
+	}
+	out.code = DiffStatusCode(code)
+	hasFrom := out.code == DiffStatusRenamed || out.code == DiffStatusCopied
+
+	// Read NUL.
+	if hasFrom {
+		foundNul := false
+		for i := 0; i < 3; i++ {
+			nul, err := r.ReadByte()
+			if err != nil {
+				return fmt.Errorf("read diff entry: %v", dontExpectEOF(err))
+			}
+			if nul == 0 {
+				foundNul = true
+				break
+			}
+		}
+		if !foundNul {
+			return errors.New("read diff entry: expected '\\x00' after 'R' or 'C', but not found")
+		}
+	} else {
+		nul, err := r.ReadByte()
+		if err != nil {
+			return fmt.Errorf("read diff entry: %v", dontExpectEOF(err))
+		}
+		if nul != 0 {
+			return fmt.Errorf("read diff entry: expected '\\x00', got %q", nul)
+		}
+	}
+
+	// Read name.
+	if hasFrom {
+		// TODO(someday): Persist this value.
+		if _, err := readString(r, 2048); err != nil {
+			return fmt.Errorf("read diff entry: %v", err)
+		}
+	}
+	out.name, err = readString(r, 2048)
+	if err != nil {
+		return fmt.Errorf("read diff entry: %v", err)
+	}
+
+	// Check code validity at very end in order to consume as much as possible.
+	if !out.code.isValid() {
+		return fmt.Errorf("read diff entry: invalid code %v", out.code)
+	}
+	return nil
+}
+
+// Code returns the letter code from the entry.
+func (ent *DiffStatusEntry) Code() DiffStatusCode {
+	return ent.code
+}
+
+// Name returns the path of the file. The path will always be relative
+// to the top of the repository.
+func (ent *DiffStatusEntry) Name() string {
+	return ent.name
+}
+
+// DiffStatusCode is a single-letter code from the `git diff --name-status` format.
+//
+// See https://git-scm.com/docs/git-diff#git-diff---diff-filterACDMRTUXB82308203
+// for a description of each of the codes.
+type DiffStatusCode byte
+
+// Diff status codes.
+const (
+	DiffStatusAdded       DiffStatusCode = 'A'
+	DiffStatusCopied      DiffStatusCode = 'C'
+	DiffStatusDeleted     DiffStatusCode = 'D'
+	DiffStatusModified    DiffStatusCode = 'M'
+	DiffStatusRenamed     DiffStatusCode = 'R'
+	DiffStatusChangedMode DiffStatusCode = 'T'
+	DiffStatusUnmerged    DiffStatusCode = 'U'
+	DiffStatusUnknown     DiffStatusCode = 'X'
+	DiffStatusBroken      DiffStatusCode = 'B'
+)
+
+func (code DiffStatusCode) isValid() bool {
+	return code == DiffStatusAdded ||
+		code == DiffStatusCopied ||
+		code == DiffStatusDeleted ||
+		code == DiffStatusModified ||
+		code == DiffStatusRenamed ||
+		code == DiffStatusChangedMode ||
+		code == DiffStatusUnmerged ||
+		code == DiffStatusUnknown ||
+		code == DiffStatusBroken
+}
+
+// String returns the code letter as a string.
+func (code DiffStatusCode) String() string {
+	return string(code)
 }
 
 func dontExpectEOF(e error) error {

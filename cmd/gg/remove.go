@@ -65,7 +65,9 @@ func verifyPresent(ctx context.Context, git *gittool.Tool, args []string) error 
 	for i := range args {
 		statusArgs[i] = ":(literal)" + args[i]
 	}
-	st, err := gittool.Status(ctx, git, statusArgs)
+	st, err := gittool.Status(ctx, git, gittool.StatusOptions{
+		Pathspec: statusArgs,
+	})
 	if err != nil {
 		return err
 	}
