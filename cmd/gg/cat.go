@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"io"
 
 	"zombiezen.com/go/gg/internal/flag"
 	"zombiezen.com/go/gg/internal/gitobj"
@@ -62,17 +61,5 @@ func catFile(ctx context.Context, cc *cmdContext, rev *gittool.Rev, path string)
 	}
 
 	// Send file to stdout.
-	p, err := cc.git.Start(ctx, "cat-file", "blob", rev.Commit().String()+":"+string(topPath))
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(cc.stdout, p)
-	waitErr := p.Wait()
-	if err != nil {
-		return err
-	}
-	if waitErr != nil {
-		return waitErr
-	}
-	return nil
+	return cc.git.RunInteractive(ctx, "cat-file", "blob", rev.Commit().String()+":"+string(topPath))
 }
