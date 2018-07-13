@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -126,10 +127,11 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		return fmt.Errorf("gg: %v", err)
 	}
 	cc := &cmdContext{
-		dir:    pctx.dir,
-		git:    git,
-		stdout: pctx.stdout,
-		stderr: pctx.stderr,
+		dir:        pctx.dir,
+		git:        git,
+		httpClient: pctx.httpClient,
+		stdout:     pctx.stdout,
+		stderr:     pctx.stderr,
 	}
 	if *versionFlag {
 		if err := showVersion(ctx, cc); isUsage(err) {
@@ -151,7 +153,8 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 type cmdContext struct {
 	dir string
 
-	git *gittool.Tool
+	git        *gittool.Tool
+	httpClient *http.Client
 
 	stdout io.Writer
 	stderr io.Writer
@@ -167,10 +170,11 @@ func (cc *cmdContext) abs(path string) string {
 func (cc *cmdContext) withDir(path string) *cmdContext {
 	path = cc.abs(path)
 	return &cmdContext{
-		dir:    path,
-		git:    cc.git.WithDir(path),
-		stdout: cc.stdout,
-		stderr: cc.stderr,
+		dir:        path,
+		git:        cc.git.WithDir(path),
+		httpClient: cc.httpClient,
+		stdout:     cc.stdout,
+		stderr:     cc.stderr,
 	}
 }
 
@@ -293,6 +297,13 @@ func showVersion(ctx context.Context, cc *cmdContext) error {
 	return cc.git.RunInteractive(ctx, "--version")
 }
 
+func userAgentString() string {
+	if versionInfo == "" {
+		return "zombiezen/gg"
+	}
+	return "zombiezen/gg " + versionInfo
+}
+
 type processContext struct {
 	dir string
 	env []string
@@ -301,7 +312,8 @@ type processContext struct {
 	stdout io.Writer
 	stderr io.Writer
 
-	lookPath func(string) (string, error)
+	httpClient *http.Client
+	lookPath   func(string) (string, error)
 }
 
 func osProcessContext() (*processContext, error) {
@@ -310,12 +322,13 @@ func osProcessContext() (*processContext, error) {
 		return nil, err
 	}
 	return &processContext{
-		dir:      dir,
-		env:      os.Environ(),
-		stdin:    os.Stdin,
-		stdout:   os.Stdout,
-		stderr:   os.Stderr,
-		lookPath: exec.LookPath,
+		dir:        dir,
+		env:        os.Environ(),
+		stdin:      os.Stdin,
+		stdout:     os.Stdout,
+		stderr:     os.Stderr,
+		httpClient: http.DefaultClient,
+		lookPath:   exec.LookPath,
 	}, nil
 }
 

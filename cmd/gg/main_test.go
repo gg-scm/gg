@@ -17,8 +17,10 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,6 +52,10 @@ type testEnv struct {
 
 	// git is a Git tool configured to operate in root.
 	git *gittool.Tool
+
+	// roundTripper is the HTTP transport to use when invoking gg.
+	// It defaults to a stub.
+	roundTripper http.RoundTripper
 
 	// The following are fields managed by testEnv, and should not be
 	// referred to in tests.
@@ -87,11 +93,12 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 		return nil, err
 	}
 	env := &testEnv{
-		topDir: topDir,
-		root:   root,
-		git:    git,
-		stderr: stderr,
-		tb:     tb,
+		topDir:       topDir,
+		root:         root,
+		git:          git,
+		roundTripper: stubRoundTripper{},
+		stderr:       stderr,
+		tb:           tb,
 	}
 	if err := env.writeConfig(nil); err != nil {
 		os.RemoveAll(topDir)
@@ -140,10 +147,14 @@ func (env *testEnv) cleanup() {
 func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte, error) {
 	out := new(bytes.Buffer)
 	pctx := &processContext{
-		dir:    dir,
-		env:    []string{"GIT_CONFIG_NOSYSTEM=1", "HOME=" + env.topDir},
-		stdout: out,
-		stderr: env.stderr,
+		dir:        dir,
+		env:        []string{"GIT_CONFIG_NOSYSTEM=1", "HOME=" + env.topDir},
+		stdout:     out,
+		stderr:     env.stderr,
+		httpClient: &http.Client{Transport: env.roundTripper},
+		lookPath: func(string) (string, error) {
+			return "", errors.New("look path stubbed")
+		},
 	}
 	err := run(ctx, pctx, append([]string{"-git=" + gitPath}, args...))
 	return out.Bytes(), err
@@ -344,4 +355,29 @@ func configEscape(s string) string {
 	}
 	sb.WriteByte('"')
 	return sb.String()
+}
+
+// stubRoundTripper returns a Bad Gateway response for any incoming request.
+type stubRoundTripper struct{}
+
+// RoundTrip returns a Bad Gateway response.
+func (stubRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	if r.Body != nil {
+		r.Body.Close() // RoundTripper must call Close.
+	}
+	body := strings.NewReader("stub")
+	return &http.Response{
+		StatusCode: http.StatusBadGateway,
+		Status:     fmt.Sprintf("%d %s", http.StatusBadGateway, http.StatusText(http.StatusBadGateway)),
+		Proto:      "HTTP/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+		Header: http.Header{
+			http.CanonicalHeaderKey("Content-Type"):   {"text/plain; charset=utf-8"},
+			http.CanonicalHeaderKey("Content-Length"): {fmt.Sprint(body.Len())},
+		},
+		Body:          ioutil.NopCloser(body),
+		ContentLength: int64(body.Len()),
+		Request:       r,
+	}, nil
 }
