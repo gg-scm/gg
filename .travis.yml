@@ -28,6 +28,7 @@ jobs:
         - "\"$HOME/hugo\" -s docs -d out"
       deploy:
         provider: pages
+        fqdn: gg-scm.io
         skip-cleanup: true
         local-dir: docs/out
         github-token: $GITHUB_TOKEN
