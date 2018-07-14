@@ -67,7 +67,7 @@ func TestRevert(t *testing.T) {
 			if err := env.trackFiles(ctx, "staged.txt", "unstaged.txt"); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.newCommit(ctx, "."); err != nil {
+			if _, err := env.newCommit(ctx, "."); err != nil {
 				t.Fatal(err)
 			}
 			if err := env.writeFile("staged.txt", "mumble mumble 1"); err != nil {
@@ -292,7 +292,7 @@ func TestRevert_All(t *testing.T) {
 	if err := env.addFiles(ctx, "staged.txt", "unstaged.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.newCommit(ctx, "."); err != nil {
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 	// Make working tree changes.
@@ -357,13 +357,13 @@ func TestRevert_Rev(t *testing.T) {
 	if err := env.addFiles(ctx, "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.newCommit(ctx, "."); err != nil {
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.writeFile("foo.txt", "super-fresh content"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.newCommit(ctx, "."); err != nil {
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 
@@ -432,7 +432,7 @@ func TestRevert_Missing(t *testing.T) {
 	if err := env.addFiles(ctx, "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.newCommit(ctx, "."); err != nil {
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Remove(env.rel("foo.txt")); err != nil {
@@ -482,7 +482,7 @@ func TestRevert_NoBackup(t *testing.T) {
 	if err := env.addFiles(ctx, "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.newCommit(ctx, "."); err != nil {
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.writeFile("foo.txt", "tears in rain"); err != nil {
@@ -535,7 +535,7 @@ func TestRevert_LocalRename(t *testing.T) {
 			if err := env.addFiles(ctx, "foo.txt"); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.newCommit(ctx, "."); err != nil {
+			if _, err := env.newCommit(ctx, "."); err != nil {
 				t.Fatal(err)
 			}
 			if err := os.Rename(env.rel("foo.txt"), env.rel("renamed.txt")); err != nil {

@@ -261,8 +261,16 @@ func (env *testEnv) trackFiles(ctx context.Context, files ...string) error {
 
 // newCommit runs `git commit -a` with some dummy commit message at the
 // slash-separated path relative to env.root.
-func (env *testEnv) newCommit(ctx context.Context, dir string) error {
-	return env.git.WithDir(env.rel(dir)).Run(ctx, "commit", "-am", "did stuff")
+func (env *testEnv) newCommit(ctx context.Context, dir string) (gitobj.Hash, error) {
+	git := env.git.WithDir(env.rel(dir))
+	if err := git.Run(ctx, "commit", "-am", "did stuff"); err != nil {
+		return gitobj.Hash{}, err
+	}
+	r, err := gittool.ParseRev(ctx, git, "HEAD")
+	if err != nil {
+		return gitobj.Hash{}, err
+	}
+	return r.Commit(), nil
 }
 
 // dummyRev creates a new revision in a repository that adds the given file.

@@ -68,6 +68,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  status        " + statusSynopsis + "\n" +
 		"  update        " + updateSynopsis + "\n" +
 		"\nadvanced commands:\n" +
+		"  backout       " + backoutSynopsis + "\n" +
 		"  evolve        " + evolveSynopsis + "\n" +
 		"  gerrithook    " + gerrithookSynopsis + "\n" +
 		"  histedit      " + histeditSynopsis + "\n" +
@@ -177,6 +178,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 	switch name {
 	case "add":
 		return add(ctx, cc, args)
+	case "backout":
+		return backout(ctx, cc, args)
 	case "branch":
 		return branch(ctx, cc, args)
 	case "cat":
