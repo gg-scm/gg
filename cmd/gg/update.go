@@ -17,8 +17,8 @@ package main
 import (
 	"context"
 
-	"zombiezen.com/go/gg/internal/flag"
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 const updateSynopsis = "update working directory (or switch revisions)"

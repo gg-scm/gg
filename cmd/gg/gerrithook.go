@@ -23,7 +23,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"zombiezen.com/go/gg/internal/flag"
+	"gg-scm.io/pkg/internal/flag"
 )
 
 const gerrithookSynopsis = "install or uninstall Gerrit change ID hook"

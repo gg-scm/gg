@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"zombiezen.com/go/gg/internal/gitobj"
+	"gg-scm.io/pkg/internal/gitobj"
 )
 
 func TestParseRev(t *testing.T) {

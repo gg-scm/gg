@@ -19,7 +19,7 @@ import (
 	"log"
 	"os"
 
-	"zombiezen.com/go/gg/internal/singleclose"
+	"gg-scm.io/pkg/internal/singleclose"
 )
 
 func Example() {

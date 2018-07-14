@@ -19,9 +19,9 @@ import (
 	"errors"
 	"fmt"
 
-	"zombiezen.com/go/gg/internal/flag"
-	"zombiezen.com/go/gg/internal/gittool"
-	"zombiezen.com/go/gg/internal/singleclose"
+	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/singleclose"
 )
 
 const commitSynopsis = "commit the specified files or all outstanding changes"

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module zombiezen.com/go/gg
+module gg-scm.io/pkg
 
 require (
 	github.com/google/go-cmp v0.2.0

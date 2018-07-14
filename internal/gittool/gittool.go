@@ -14,7 +14,7 @@
 
 // Package gittool provides a high-level interface for interacting with
 // a git subprocess.
-package gittool
+package gittool // import "gg-scm.io/pkg/internal/gittool"
 
 import (
 	"bufio"

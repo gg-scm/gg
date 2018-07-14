@@ -33,4 +33,4 @@ buildtime="$(date -u '+%Y-%m-%dT%TZ')" || exit 1
 cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" || exit 1
 commit="${TRAVIS_COMMIT:-$(commitinfo)}" || exit 1
 version="${2:-$(echo "$TRAVIS_TAG" | sed -n -e 's/v\([0-9].*\)/\1/p')}" || exit 1
-vgo build -o "$1" -ldflags="-X main.versionInfo=${version} -X main.buildCommit=${commit} -X main.buildTime=${buildtime}" zombiezen.com/go/gg/cmd/gg
+vgo build -o "$1" -ldflags="-X main.versionInfo=${version} -X main.buildCommit=${commit} -X main.buildTime=${buildtime}" gg-scm.io/pkg/cmd/gg

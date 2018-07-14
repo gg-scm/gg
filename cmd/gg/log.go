@@ -18,7 +18,7 @@ import (
 	"context"
 	"strings"
 
-	"zombiezen.com/go/gg/internal/flag"
+	"gg-scm.io/pkg/internal/flag"
 )
 
 const logSynopsis = "show revision history of entire repository or files"

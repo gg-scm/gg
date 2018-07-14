@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 const removeTestFileName = "foo.txt"

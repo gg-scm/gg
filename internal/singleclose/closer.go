@@ -14,7 +14,7 @@
 
 // Package singleclose provides an implementation of io.Closer that
 // ensures that a Close method is only called once.
-package singleclose
+package singleclose // import "gg-scm.io/pkg/internal/singleclose"
 
 import (
 	"io"

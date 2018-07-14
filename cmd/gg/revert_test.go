@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 func TestRevert(t *testing.T) {

@@ -20,10 +20,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"zombiezen.com/go/gg/internal/flag"
-	"zombiezen.com/go/gg/internal/gitobj"
-	"zombiezen.com/go/gg/internal/gittool"
-	"zombiezen.com/go/gg/internal/singleclose"
+	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/gitobj"
+	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/singleclose"
 )
 
 const revertSynopsis = "restore files to their checkout state"

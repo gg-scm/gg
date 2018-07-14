@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+// gg is Git like Mercurial.
+//
+// Learn more at https://gg-scm.io/
+package main // import "gg-scm.io/pkg/cmd/gg"
 
 import (
 	"bytes"
@@ -25,8 +28,8 @@ import (
 	"runtime"
 	"strings"
 
-	"zombiezen.com/go/gg/internal/flag"
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 func main() {
