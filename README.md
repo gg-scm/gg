@@ -25,9 +25,9 @@ Once you have gg installed in your `PATH`, the [Working Locally][] guide will
 show you how to use the basic commands. The [main site][] also includes workflow
 guides and reference documentation.
 
-[main site]: https://zombiezen.github.io/gg/
+[main site]: https://gg-scm.io/
 [releases]: https://github.com/zombiezen/gg/releases
-[Working Locally]: https://zombiezen.github.io/gg/workflow/local/
+[Working Locally]: https://gg-scm.io/workflow/local/
 
 ## Testimonials
 
