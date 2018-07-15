@@ -1,4 +1,63 @@
 # Build Products
-/cmd/gg/gg
 /dist/
-/docs/public
+/docs/public/
+
+# Go
+## Binaries
+/cmd/gg/gg
+*.exe
+*.exe~
+*.test
+
+## Output of Go coverage tool.
+*.out
+
+## Downloaded dependencies.
+vendor/
+
+# OS-specific temporary files
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+## macOS hidden files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+## macOS files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+## macOS directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Vim
+## Swap
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+## Session
+Session.vim
+
+## Temporary
+.netrwhist
+## Auto-generated tag files
+tags
+## Persistent undo
+[._]*.un~
