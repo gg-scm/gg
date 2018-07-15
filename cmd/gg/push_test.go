@@ -27,6 +27,7 @@ import (
 )
 
 func TestPush(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -53,6 +54,7 @@ func TestPush(t *testing.T) {
 }
 
 func TestPush_Arg(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -91,6 +93,7 @@ func TestPush_Arg(t *testing.T) {
 }
 
 func TestPush_FailUnknownRef(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -127,6 +130,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 }
 
 func TestPush_CreateRef(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -161,6 +165,7 @@ func TestPush_CreateRef(t *testing.T) {
 }
 
 func TestPush_RewindFails(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -195,6 +200,7 @@ func TestPush_RewindFails(t *testing.T) {
 }
 
 func TestPush_RewindForce(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -227,6 +233,7 @@ func TestPush_RewindForce(t *testing.T) {
 }
 
 func TestPush_AncestorInferDst(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -261,6 +268,7 @@ func TestPush_AncestorInferDst(t *testing.T) {
 }
 
 func TestPush_DistinctPushURL(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -308,6 +316,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	// fetch URL but is present in the push URL. See
 	// https://github.com/zombiezen/gg/issues/28 for background.
 
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -354,6 +363,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 }
 
 func TestGerritPushRef(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		branch string
 		opts   *gerritOptions
@@ -443,6 +453,7 @@ func TestGerritPushRef(t *testing.T) {
 }
 
 func TestParseGerritRef(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		ref  gitobj.Ref
 		base gitobj.Ref

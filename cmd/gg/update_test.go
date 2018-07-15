@@ -23,6 +23,7 @@ import (
 )
 
 func TestUpdate_NoArgsFastForward(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -65,6 +66,7 @@ func TestUpdate_NoArgsFastForward(t *testing.T) {
 }
 
 func TestUpdate_SwitchBranch(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -106,6 +108,7 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 }
 
 func TestUpdate_ToCommit(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {

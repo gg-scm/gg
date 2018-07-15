@@ -34,6 +34,7 @@ const (
 )
 
 func TestCommit_NoArgs(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -82,6 +83,7 @@ func TestCommit_NoArgs(t *testing.T) {
 }
 
 func TestCommit_Selective(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -128,6 +130,7 @@ func TestCommit_Selective(t *testing.T) {
 }
 
 func TestCommit_Amend(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -191,6 +194,7 @@ func TestCommit_Amend(t *testing.T) {
 }
 
 func TestCommit_NoChanges(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -222,6 +226,7 @@ func TestCommit_NoChanges(t *testing.T) {
 }
 
 func TestCommit_AmendJustMessage(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -282,6 +287,7 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 func TestCommit_NoArgs_InSubdir(t *testing.T) {
 	// Regression test for https://github.com/zombiezen/gg/issues/10
 
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -336,6 +342,7 @@ func TestCommit_NoArgs_InSubdir(t *testing.T) {
 func TestCommit_Named_InSubdir(t *testing.T) {
 	// Regression test for https://github.com/zombiezen/gg/issues/10
 
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -390,6 +397,7 @@ func TestCommit_Named_InSubdir(t *testing.T) {
 func TestCommit_Merge(t *testing.T) {
 	// Regression test for https://github.com/zombiezen/gg/issues/38
 
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {

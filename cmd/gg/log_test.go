@@ -21,6 +21,7 @@ import (
 )
 
 func TestLog(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {

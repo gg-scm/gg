@@ -28,6 +28,7 @@ import (
 )
 
 func TestStatus(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -60,6 +61,7 @@ func TestStatus(t *testing.T) {
 // TestStatus_RenamedLocally is a regression test for
 // https://github.com/zombiezen/gg/issues/44.
 func TestStatus_RenamedLocally(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -161,6 +163,7 @@ func parseGGStatus(out []byte, e errorer) []ggStatusLine {
 }
 
 func TestParseGGStatus(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		in   string

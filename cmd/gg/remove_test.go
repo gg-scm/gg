@@ -27,6 +27,7 @@ import (
 const removeTestFileName = "foo.txt"
 
 func TestRemove(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -71,6 +72,7 @@ func TestRemove(t *testing.T) {
 }
 
 func TestRemove_AddedFails(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -127,6 +129,7 @@ func TestRemove_AddedFails(t *testing.T) {
 }
 
 func TestRemove_AddedForce(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -169,6 +172,7 @@ func TestRemove_AddedForce(t *testing.T) {
 }
 
 func TestRemove_ModifiedFails(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -222,6 +226,7 @@ func TestRemove_ModifiedFails(t *testing.T) {
 }
 
 func TestRemove_ModifiedForce(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -273,6 +278,7 @@ func TestRemove_ModifiedForce(t *testing.T) {
 }
 
 func TestRemove_MissingFails(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -322,6 +328,7 @@ func TestRemove_MissingFails(t *testing.T) {
 }
 
 func TestRemove_MissingAfter(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -369,6 +376,7 @@ func TestRemove_MissingAfter(t *testing.T) {
 }
 
 func TestRemove_Recursive(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -430,6 +438,7 @@ func TestRemove_Recursive(t *testing.T) {
 }
 
 func TestRemove_RecursiveMissingFails(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -496,6 +505,7 @@ func TestRemove_RecursiveMissingFails(t *testing.T) {
 }
 
 func TestRemove_RecursiveMissingAfter(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {

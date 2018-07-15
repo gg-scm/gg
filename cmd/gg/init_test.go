@@ -22,6 +22,7 @@ import (
 )
 
 func TestInit(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -43,6 +44,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestInit_Arg(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {

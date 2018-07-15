@@ -26,6 +26,7 @@ import (
 )
 
 func TestPull(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -73,6 +74,7 @@ func TestPull(t *testing.T) {
 }
 
 func TestPullWithArgument(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -128,6 +130,7 @@ func TestPullWithArgument(t *testing.T) {
 }
 
 func TestPullUpdate(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -167,6 +170,7 @@ func TestPullUpdate(t *testing.T) {
 }
 
 func TestInferUpstream(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		localBranch string
 		merge       gitobj.Ref

@@ -24,6 +24,7 @@ import (
 )
 
 func TestBranch(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -79,6 +80,7 @@ func TestBranch(t *testing.T) {
 }
 
 func TestBranch_Upstream(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {

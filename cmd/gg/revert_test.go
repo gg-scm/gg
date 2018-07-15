@@ -24,6 +24,7 @@ import (
 )
 
 func TestRevert(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		dir          string
@@ -137,6 +138,7 @@ func TestRevert(t *testing.T) {
 }
 
 func TestRevert_AddedFile(t *testing.T) {
+	t.Parallel()
 	for _, backup := range []bool{true, false} {
 		var name string
 		if backup {
@@ -213,6 +215,7 @@ func TestRevert_AddedFile(t *testing.T) {
 }
 
 func TestRevert_AddedFileBeforeFirstCommit(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -273,6 +276,7 @@ func TestRevert_AddedFileBeforeFirstCommit(t *testing.T) {
 }
 
 func TestRevert_All(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -341,6 +345,7 @@ func TestRevert_All(t *testing.T) {
 }
 
 func TestRevert_Rev(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -416,6 +421,7 @@ func TestRevert_Rev(t *testing.T) {
 }
 
 func TestRevert_Missing(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -466,6 +472,7 @@ func TestRevert_Missing(t *testing.T) {
 }
 
 func TestRevert_NoBackup(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -509,6 +516,7 @@ func TestRevert_LocalRename(t *testing.T) {
 	// versions of Git. This makes sure that revert doesn't do something
 	// naive.
 
+	t.Parallel()
 	tests := []struct {
 		name          string
 		revertFoo     bool

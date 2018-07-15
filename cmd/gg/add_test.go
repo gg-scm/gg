@@ -25,6 +25,7 @@ import (
 )
 
 func TestAdd(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -75,6 +76,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestAdd_DoesNotStageModified(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -138,6 +140,7 @@ func TestAdd_DoesNotStageModified(t *testing.T) {
 }
 
 func TestAdd_WholeRepo(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -188,6 +191,7 @@ func TestAdd_WholeRepo(t *testing.T) {
 }
 
 func TestAdd_ResolveUnmerged(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -280,6 +284,7 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 }
 
 func TestAdd_Directory(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -394,6 +399,7 @@ func TestAdd_Directory(t *testing.T) {
 }
 
 func TestAdd_IgnoredFile(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -456,6 +462,7 @@ func TestAdd_IgnoredFile(t *testing.T) {
 }
 
 func TestAdd_IgnoredFileInDirectory(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {

@@ -35,6 +35,7 @@ import (
 )
 
 func TestNewXDGDirs(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		environ []string

@@ -23,6 +23,7 @@ import (
 )
 
 func TestBackout(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -80,6 +81,7 @@ func TestBackout(t *testing.T) {
 }
 
 func TestBackout_NoCommit(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {

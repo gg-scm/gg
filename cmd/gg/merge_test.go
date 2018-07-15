@@ -26,6 +26,7 @@ import (
 )
 
 func TestMerge(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -87,6 +88,7 @@ func TestMerge(t *testing.T) {
 }
 
 func TestMerge_Conflict(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
