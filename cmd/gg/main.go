@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -128,6 +129,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 	}
 	cc := &cmdContext{
 		dir:        pctx.dir,
+		xdgDirs:    newXDGDirs(pctx.env),
 		git:        git,
 		httpClient: pctx.httpClient,
 		stdout:     pctx.stdout,
@@ -151,7 +153,8 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 }
 
 type cmdContext struct {
-	dir string
+	dir     string
+	xdgDirs *xdgDirs
 
 	git        *gittool.Tool
 	httpClient *http.Client
@@ -168,14 +171,11 @@ func (cc *cmdContext) abs(path string) string {
 }
 
 func (cc *cmdContext) withDir(path string) *cmdContext {
-	path = cc.abs(path)
-	return &cmdContext{
-		dir:        path,
-		git:        cc.git.WithDir(path),
-		httpClient: cc.httpClient,
-		stdout:     cc.stdout,
-		stderr:     cc.stderr,
-	}
+	cc2 := new(cmdContext)
+	*cc2 = *cc
+	cc2.dir = cc.abs(path)
+	cc2.git = cc.git.WithDir(cc2.dir)
+	return cc2
 }
 
 func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, name string, args []string) error {
@@ -304,6 +304,8 @@ func userAgentString() string {
 	return "zombiezen/gg " + versionInfo
 }
 
+// processContext is the state that gg uses to run. It is collected in
+// this struct to avoid obtaining this from globals for simpler testing.
 type processContext struct {
 	dir string
 	env []string
@@ -316,6 +318,7 @@ type processContext struct {
 	lookPath   func(string) (string, error)
 }
 
+// osProcessContext returns the default process context from global variables.
 func osProcessContext() (*processContext, error) {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -330,6 +333,76 @@ func osProcessContext() (*processContext, error) {
 		httpClient: http.DefaultClient,
 		lookPath:   exec.LookPath,
 	}, nil
+}
+
+// getenv is like os.Getenv but reads from the given list of environment
+// variables.
+func getenv(environ []string, name string) string {
+	// Later entries take precedence.
+	for i := len(environ) - 1; i >= 0; i-- {
+		e := environ[i]
+		if strings.HasPrefix(e, name) && strings.HasPrefix(e[len(name):], "=") {
+			return e[len(name)+1:]
+		}
+	}
+	return ""
+}
+
+// xdgDirs implements the Free Desktop Base Directory specification for
+// locating directories.
+//
+// The specification is at
+// http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
+type xdgDirs struct {
+	configHome string
+	configDirs []string
+}
+
+// newXDGDirs reads directory locations from the given environment variables.
+func newXDGDirs(environ []string) *xdgDirs {
+	x := &xdgDirs{
+		configHome: getenv(environ, "XDG_CONFIG_HOME"),
+		configDirs: filepath.SplitList(getenv(environ, "XDG_CONFIG_DIRS")),
+	}
+	if x.configHome == "" {
+		if home := getenv(environ, "HOME"); home != "" {
+			x.configHome = filepath.Join(home, ".config")
+		}
+	}
+	if len(x.configDirs) == 0 {
+		x.configDirs = []string{"/etc/xdg"}
+	}
+	return x
+}
+
+// readConfig reads the file at the given slash-separated path relative
+// to the gg config directory.
+func (x *xdgDirs) readConfig(name string) ([]byte, error) {
+	relpath := filepath.Join("gg", filepath.FromSlash(name))
+	for _, dir := range x.configPaths() {
+		data, err := ioutil.ReadFile(filepath.Join(dir, relpath))
+		if err == nil {
+			return data, nil
+		}
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+	}
+	return nil, &os.PathError{
+		Op:   "open",
+		Path: filepath.Join("$XDG_CONFIG_HOME", relpath),
+		Err:  os.ErrNotExist,
+	}
+}
+
+// configPaths returns the list of directories to search for
+// configuration files in descending order of precedence. The caller
+// must not modify the returned slice.
+func (x *xdgDirs) configPaths() []string {
+	if x.configHome == "" {
+		return x.configDirs
+	}
+	return append([]string{x.configHome}, x.configDirs...)
 }
 
 type usageError string

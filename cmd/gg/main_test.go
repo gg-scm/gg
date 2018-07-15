@@ -29,6 +29,8 @@ import (
 
 	"gg-scm.io/pkg/internal/gitobj"
 	"gg-scm.io/pkg/internal/gittool"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 var (
@@ -43,6 +45,67 @@ func TestMain(m *testing.M) {
 	cpPath, cpPathError = exec.LookPath("cp")
 	gitPath, gitPathError = exec.LookPath("git")
 	os.Exit(m.Run())
+}
+
+func TestNewXDGDirs(t *testing.T) {
+	tests := []struct {
+		name    string
+		environ []string
+		want    xdgDirs
+	}{
+		{
+			name: "Empty",
+			want: xdgDirs{
+				configDirs: []string{"/etc/xdg"},
+			},
+		},
+		{
+			name:    "JustHome",
+			environ: []string{"HOME=/home/foo"},
+			want: xdgDirs{
+				configHome: filepath.Join("/home/foo", ".config"),
+				configDirs: []string{"/etc/xdg"},
+			},
+		},
+		{
+			name:    "ConfigHome",
+			environ: []string{"XDG_CONFIG_HOME=/on/the/range"},
+			want: xdgDirs{
+				configHome: "/on/the/range",
+				configDirs: []string{"/etc/xdg"},
+			},
+		},
+		{
+			name:    "OneConfigPath",
+			environ: []string{"XDG_CONFIG_DIRS=/on/the/range"},
+			want: xdgDirs{
+				configDirs: []string{"/on/the/range"},
+			},
+		},
+		{
+			name: "TwoConfigPaths",
+			environ: []string{
+				"XDG_CONFIG_DIRS=" + strings.Join([]string{
+					"/on/the/range",
+					"/discouraging/words",
+				}, string(filepath.ListSeparator)),
+			},
+			want: xdgDirs{
+				configDirs: []string{"/on/the/range", "/discouraging/words"},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			x := newXDGDirs(test.environ)
+			diff := cmp.Diff(&test.want, x,
+				cmp.AllowUnexported(xdgDirs{}),
+				cmpopts.EquateEmpty())
+			if diff != "" {
+				t.Errorf("newXDGDirs(%q) = (-want +got):\n%s", test.environ, diff)
+			}
+		})
+	}
 }
 
 type testEnv struct {
@@ -83,9 +146,15 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	if err := os.Mkdir(root, 0777); err != nil {
 		os.RemoveAll(topDir)
 	}
+	xdgConfigDir := filepath.Join(topDir, "xdgconfig")
 	stderr := new(bytes.Buffer)
 	git, err := gittool.New(gitPath, root, &gittool.Options{
-		Env:    append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "HOME="+topDir),
+		Env: append(os.Environ(),
+			"GIT_CONFIG_NOSYSTEM=1",
+			"HOME="+topDir,
+			"XDG_CONFIG_HOME="+xdgConfigDir,
+			"XDG_CONFIG_DIRS="+xdgConfigDir,
+		),
 		Stderr: stderr,
 	})
 	if err != nil {
@@ -146,9 +215,15 @@ func (env *testEnv) cleanup() {
 
 func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte, error) {
 	out := new(bytes.Buffer)
+	xdgConfigDir := filepath.Join(env.topDir, "xdgconfig")
 	pctx := &processContext{
-		dir:        dir,
-		env:        []string{"GIT_CONFIG_NOSYSTEM=1", "HOME=" + env.topDir},
+		dir: dir,
+		env: []string{
+			"GIT_CONFIG_NOSYSTEM=1",
+			"HOME=" + env.topDir,
+			"XDG_CONFIG_HOME=" + xdgConfigDir,
+			"XDG_CONFIG_DIRS=" + xdgConfigDir,
+		},
 		stdout:     out,
 		stderr:     env.stderr,
 		httpClient: &http.Client{Transport: env.roundTripper},
