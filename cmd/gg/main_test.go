@@ -25,6 +25,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"gg-scm.io/pkg/internal/gitobj"
@@ -32,20 +33,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
-
-var (
-	cpPath      string
-	cpPathError error
-
-	gitPath      string
-	gitPathError error
-)
-
-func TestMain(m *testing.M) {
-	cpPath, cpPathError = exec.LookPath("cp")
-	gitPath, gitPathError = exec.LookPath("git")
-	os.Exit(m.Run())
-}
 
 func TestNewXDGDirs(t *testing.T) {
 	tests := []struct {
@@ -131,10 +118,19 @@ type testEnv struct {
 	editFile int
 }
 
+var (
+	gitPathOnce  sync.Once
+	gitPath      string
+	gitPathError error
+)
+
 func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	if testing.Short() {
 		tb.Skipf("skipping integration test due to -short")
 	}
+	gitPathOnce.Do(func() {
+		gitPath, gitPathError = exec.LookPath("git")
+	})
 	if gitPathError != nil {
 		tb.Skipf("could not find git, skipping (error: %v)", gitPathError)
 	}
@@ -189,10 +185,19 @@ func (env *testEnv) writeConfig(config []byte) error {
 	return nil
 }
 
+var (
+	cpPathOnce  sync.Once
+	cpPath      string
+	cpPathError error
+)
+
 // editorCmd returns a shell command that will write the given bytes to
 // an edited file, suitable for the content of the core.editor
 // configuration setting.
 func (env *testEnv) editorCmd(content []byte) (string, error) {
+	cpPathOnce.Do(func() {
+		cpPath, cpPathError = exec.LookPath("cp")
+	})
 	if cpPathError != nil {
 		return "", fmt.Errorf("editor command: cp not found: %v", cpPathError)
 	}
@@ -227,11 +232,14 @@ func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte,
 		stdout:     out,
 		stderr:     env.stderr,
 		httpClient: &http.Client{Transport: env.roundTripper},
-		lookPath: func(string) (string, error) {
+		lookPath: func(name string) (string, error) {
+			if name == "git" {
+				return gitPath, gitPathError
+			}
 			return "", errors.New("look path stubbed")
 		},
 	}
-	err := run(ctx, pctx, append([]string{"-git=" + gitPath}, args...))
+	err := run(ctx, pctx, args)
 	return out.Bytes(), err
 }
 
