@@ -129,9 +129,21 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		return fmt.Errorf("gg: %v", err)
 	}
 	cc := &cmdContext{
-		dir:        pctx.dir,
-		xdgDirs:    newXDGDirs(pctx.env),
-		git:        git,
+		dir:     pctx.dir,
+		xdgDirs: newXDGDirs(pctx.env),
+		git:     git,
+		editor: &editor{
+			git:      git,
+			tempRoot: pctx.tempDir,
+			env:      pctx.env,
+			stdin:    pctx.stdin,
+			stdout:   pctx.stdout,
+			stderr:   pctx.stderr,
+
+			log: func(e error) {
+				fmt.Fprintln(pctx.stderr, "gg:", e)
+			},
+		},
 		httpClient: pctx.httpClient,
 		stdout:     pctx.stdout,
 		stderr:     pctx.stderr,
@@ -158,6 +170,7 @@ type cmdContext struct {
 	xdgDirs *xdgDirs
 
 	git        *gittool.Tool
+	editor     *editor
 	httpClient *http.Client
 
 	stdout io.Writer
@@ -310,8 +323,9 @@ func userAgentString() string {
 // processContext is the state that gg uses to run. It is collected in
 // this struct to avoid obtaining this from globals for simpler testing.
 type processContext struct {
-	dir string
-	env []string
+	dir     string
+	env     []string
+	tempDir string
 
 	stdin  io.Reader
 	stdout io.Writer
@@ -329,6 +343,7 @@ func osProcessContext() (*processContext, error) {
 	}
 	return &processContext{
 		dir:        dir,
+		tempDir:    os.TempDir(),
 		env:        os.Environ(),
 		stdin:      os.Stdin,
 		stdout:     os.Stdout,

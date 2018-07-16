@@ -35,7 +35,7 @@ import (
 const requestPullSynopsis = "create a GitHub pull request"
 
 func requestPull(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg requestpull [-n] [BRANCH]", requestPullSynopsis+`
+	f := flag.NewFlagSet(true, "gg requestpull [-n] [-e=0] [BRANCH]", requestPullSynopsis+`
 
 aliases: pr
 
@@ -44,6 +44,11 @@ aliases: pr
 	branch's remote push information and the destination will be inferred
 	from upstream fetch information. This command does not push any new
 	commits; it just creates a pull request.
+
+	Before sending the pull request, gg will open an editor with a summary
+	of the commits it knows about. The first line will be the pull request
+	title, and any subsequent lines will be used as the body. You can exit
+	your editor without modifications to accept the default summary.
 
 	For non-dry runs, you must create a [personal access token][] at
 	https://github.com/settings/tokens/new and save it to
@@ -54,6 +59,8 @@ aliases: pr
 	create pull requests in any repositories you have access to.
 
 [personal access token]: https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/`)
+	edit := f.Bool("e", true, "invoke editor on pull request message")
+	f.Alias("e", "edit")
 	dryRun := f.Bool("n", false, "prints the pull request instead of creating it")
 	f.Alias("n", "dry-run")
 	maintainerEdits := f.Bool("maintainer-edits", true, "allow maintainers to edit this branch")
@@ -153,7 +160,25 @@ aliases: pr
 		}
 		return nil
 	}
-	// TODO(soon): Open editor to edit message.
+	if *edit {
+		editorInit := new(bytes.Buffer)
+		editorInit.WriteString(title)
+		if body != "" {
+			editorInit.WriteString("\n\n")
+			editorInit.WriteString(body)
+		}
+		editorInit.WriteString("\n# Please enter the pull request message. Lines starting with '#' will\n" +
+			"# be ignored, and an empty message aborts the pull request. The first\n" +
+			"# line will be used as the title and must not be empty.\n")
+		newMsg, err := cc.editor.open(ctx, "PR_EDITMSG", editorInit.Bytes())
+		if err != nil {
+			return err
+		}
+		title, body, err = parseEditedPullRequestMessage(newMsg)
+		if err != nil {
+			return err
+		}
+	}
 	prURL, err := createPullRequest(ctx, cc.httpClient, pullRequestParams{
 		authToken:  string(token),
 		baseOwner:  baseOwner,
@@ -228,6 +253,37 @@ func inferPullRequestMessage(ctx context.Context, git *gittool.Tool, base, head 
 	}
 	body = strings.TrimSpace(bodyBuilder.String())
 	return title, body, nil
+}
+
+func parseEditedPullRequestMessage(b []byte) (title, body string, _ error) {
+	// Split into lines.
+	lines := bytes.Split(b, []byte{'\n'})
+	// Strip comment lines.
+	n := 0
+	for i := range lines {
+		if !bytes.HasPrefix(lines[i], []byte{'#'}) {
+			lines[n] = lines[i]
+			n++
+		}
+	}
+	lines = lines[:n]
+	// Abort on empty title.
+	if len(lines) == 0 {
+		return "", "", errors.New("pull request message is empty")
+	}
+	title = string(bytes.TrimSpace(lines[0]))
+	if title == "" {
+		return "", "", errors.New("pull request title is empty")
+	}
+	// Remove leading and trailing blank lines from body.
+	lines = lines[1:]
+	for len(lines) > 0 && len(bytes.TrimSpace(lines[0])) == 0 {
+		lines = lines[1:]
+	}
+	for len(lines) > 0 && len(bytes.TrimSpace(lines[len(lines)-1])) == 0 {
+		lines = lines[:len(lines)-1]
+	}
+	return title, string(bytes.Join(lines, []byte{'\n'})), nil
 }
 
 type pullRequestParams struct {

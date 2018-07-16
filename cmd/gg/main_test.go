@@ -142,6 +142,12 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	root := filepath.Join(topDir, "scratch")
 	if err := os.Mkdir(root, 0777); err != nil {
 		os.RemoveAll(topDir)
+		return nil, err
+	}
+	tempDir := filepath.Join(topDir, "temp")
+	if err := os.Mkdir(tempDir, 0777); err != nil {
+		os.RemoveAll(topDir)
+		return nil, err
 	}
 	xdgConfigDir := filepath.Join(topDir, "xdgconfig")
 	stderr := new(bytes.Buffer)
@@ -243,6 +249,7 @@ func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte,
 			"XDG_CONFIG_HOME=" + xdgConfigDir,
 			"XDG_CONFIG_DIRS=" + xdgConfigDir,
 		},
+		tempDir:    filepath.Join(env.topDir, "temp"),
 		stdout:     out,
 		stderr:     env.stderr,
 		httpClient: &http.Client{Transport: env.roundTripper},

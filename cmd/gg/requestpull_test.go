@@ -140,7 +140,7 @@ func TestRequestPull(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			args := append([]string{"requestpull"}, test.args...)
+			args := append([]string{"requestpull", "--edit=0"}, test.args...)
 			if _, err := env.gg(ctx, localDir, args...); err != nil {
 				t.Fatal(err)
 			}
@@ -174,6 +174,175 @@ func TestRequestPull(t *testing.T) {
 			}
 			if got, want := prs[0].maintainerCanModify, true; got != want {
 				t.Errorf("Maintainer can modify = %t; want %t", got, want)
+			}
+		})
+	}
+}
+
+func TestRequestPull_Editor(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	const authToken = "xyzzy12345"
+	if err := env.writeGitHubAuth([]byte(authToken + "\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.initRepoWithHistory(ctx, "origin"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "clone", "--quiet", "origin", "local"); err != nil {
+		t.Fatal(err)
+	}
+	localDir := env.rel("local")
+	if err := env.git.WithDir(localDir).Run(ctx, "remote", "set-url", "origin", "https://github.com/example/foo.git"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.WithDir(localDir).Run(ctx, "checkout", "--quiet", "--track", "-b", "feature", "origin/master"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.newFile("local/blah.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "local/blah.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.newCommit(ctx, "local"); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name          string
+		editorContent string
+		title         string
+		body          string
+		fail          bool
+	}{
+		{
+			name:          "Empty",
+			editorContent: "",
+			fail:          true,
+		},
+		{
+			name:          "OnlyWhiteSpace",
+			editorContent: "      \n  \n",
+			fail:          true,
+		},
+		{
+			name:          "TitleEmpty",
+			editorContent: "\nMore content",
+			fail:          true,
+		},
+		{
+			name:          "TitleOnlySpace",
+			editorContent: "    \nMore content",
+			fail:          true,
+		},
+		{
+			name:          "OneLineNoEOL",
+			editorContent: "Hello, World",
+			title:         "Hello, World",
+		},
+		{
+			name:          "OneLine",
+			editorContent: "Hello, World\n",
+			title:         "Hello, World",
+		},
+		{
+			name:          "TwoLines",
+			editorContent: "Hello, World\nThis is TMI",
+			title:         "Hello, World",
+			body:          "This is TMI",
+		},
+		{
+			name:          "TwoLinesWithBlankSep",
+			editorContent: "Hello, World\n\nThis is TMI",
+			title:         "Hello, World",
+			body:          "This is TMI",
+		},
+		{
+			name:          "ThreeLines",
+			editorContent: "Hello, World\nThis is TMI\nAnd even more\n",
+			title:         "Hello, World",
+			body:          "This is TMI\nAnd even more",
+		},
+		{
+			name:          "Indented",
+			editorContent: "Hello, World\n\n\n\tThis is TMI\n\tAnd even more\n",
+			title:         "Hello, World",
+			body:          "\tThis is TMI\n\tAnd even more",
+		},
+		{
+			name:          "Comment",
+			editorContent: "Hello, World\n# First line is the title, rest is body.\n",
+			title:         "Hello, World",
+		},
+		{
+			name:          "OnlyComments",
+			editorContent: "# First line is the title, rest is body.\n",
+			fail:          true,
+		},
+		{
+			name:          "CommentFirstLine",
+			editorContent: "# First line is the title, rest is body.\nHello, World",
+			title:         "Hello, World",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			api := &fakeGitHubPullRequestAPI{
+				logger:         t,
+				errorer:        t,
+				permittedToken: authToken,
+			}
+			fakeGitHub := httptest.NewServer(api)
+			defer fakeGitHub.Close()
+			fakeGitHubTransport := &http.Transport{
+				DialTLS: func(network, addr string) (net.Conn, error) {
+					hostport := strings.TrimPrefix(fakeGitHub.URL, "http://")
+					return net.Dial("tcp", hostport)
+				},
+			}
+			defer fakeGitHubTransport.CloseIdleConnections()
+			env.roundTripper = fakeGitHubTransport
+			cmd, err := env.editorCmd([]byte(test.editorContent))
+			if err != nil {
+				t.Fatal(err)
+			}
+			config := fmt.Sprintf("[core]\neditor = %s\n", configEscape(cmd))
+			if err := env.writeConfig([]byte(config)); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := env.gg(ctx, localDir, "requestpull", "--edit"); err != nil && !test.fail {
+				t.Fatal(err)
+			} else if err == nil && test.fail {
+				t.Error()
+			}
+			api.mu.Lock()
+			prs := api.prs
+			api.prs = nil
+			api.mu.Unlock()
+			if len(prs) == 0 {
+				if !test.fail {
+					t.Error("No PRs created")
+				}
+				return
+			}
+			if test.fail {
+				t.Fatalf("Created %d PRs; want 0", len(prs))
+			}
+			if len(prs) > 1 {
+				t.Errorf("Created %d PRs; want 1. Only looking at first.", len(prs))
+			}
+			if got, want := prs[0].title, test.title; got != want {
+				t.Errorf("Title = %q; want %q", got, want)
+			}
+			if got, want := prs[0].body, test.body; got != want {
+				t.Errorf("Body = %q; want %q", got, want)
 			}
 		})
 	}

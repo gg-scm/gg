@@ -4,9 +4,9 @@
     ],
     "cmd_class": "basic",
     "date": "2018-07-16 08:42:42-07:00",
-    "lastmod": "2018-07-16 08:55:07-07:00",
+    "lastmod": "2018-07-16 13:40:10-07:00",
     "title": "gg requestpull",
-    "usage": "gg requestpull [-n] [BRANCH]"
+    "usage": "gg requestpull [-n] [-e=0] [BRANCH]"
 }
 
 create a GitHub pull request
@@ -18,6 +18,11 @@ one currently checked out). The source will be inferred from the
 branch's remote push information and the destination will be inferred
 from upstream fetch information. This command does not push any new
 commits; it just creates a pull request.
+
+Before sending the pull request, gg will open an editor with a summary
+of the commits it knows about. The first line will be the pull request
+title, and any subsequent lines will be used as the body. You can exit
+your editor without modifications to accept the default summary.
 
 For non-dry runs, you must create a [personal access token][] at
 https://github.com/settings/tokens/new and save it to
@@ -32,7 +37,12 @@ create pull requests in any repositories you have access to.
 ## Options
 
 <dl class="flag_list">
+	<dt>-e</dt>
+	<dt>-edit</dt>
+	<dd>invoke editor on pull request message</dd>
 	<dt>-n</dt>
 	<dt>-dry-run</dt>
 	<dd>prints the pull request instead of creating it</dd>
+	<dt>-maintainer-edits</dt>
+	<dd>allow maintainers to edit this branch</dd>
 </dl>
