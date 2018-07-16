@@ -35,7 +35,7 @@ import (
 const requestPullSynopsis = "create a GitHub pull request"
 
 func requestPull(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg requestpull [-n] [-e=0] [BRANCH]", requestPullSynopsis+`
+	f := flag.NewFlagSet(true, "gg requestpull [-n] [-e=0] [--title=MSG [--body=MSG]] [BRANCH]", requestPullSynopsis+`
 
 aliases: pr
 
@@ -59,11 +59,13 @@ aliases: pr
 	create pull requests in any repositories you have access to.
 
 [personal access token]: https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/`)
-	edit := f.Bool("e", true, "invoke editor on pull request message")
+	bodyFlag := f.String("body", "", "pull request `description` (requires --title)")
+	edit := f.Bool("e", true, "invoke editor on pull request message (ignored if --title is specified)")
 	f.Alias("e", "edit")
 	dryRun := f.Bool("n", false, "prints the pull request instead of creating it")
 	f.Alias("n", "dry-run")
 	maintainerEdits := f.Bool("maintainer-edits", true, "allow maintainers to edit this branch")
+	titleFlag := f.String("title", "", "pull request title")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -72,6 +74,10 @@ aliases: pr
 	}
 	if f.NArg() > 1 {
 		return usagef("only one branch allowed")
+	}
+	*titleFlag = strings.TrimSpace(*titleFlag)
+	if *bodyFlag != "" && *titleFlag == "" {
+		return usagef("cannot specify --body without specifying --title")
 	}
 	cfg, err := gittool.ReadConfig(ctx, cc.git)
 	if err != nil {
@@ -141,10 +147,14 @@ aliases: pr
 		return fmt.Errorf("%s is not a GitHub repository", headURL)
 	}
 
-	// Create pull request.
+	// Create pull request. Run message inference no matter what, since it
+	// has the side effect of detecting no change.
 	title, body, err := inferPullRequestMessage(ctx, cc.git, branch+"@{upstream}", branch)
 	if err != nil {
 		return err
+	}
+	if *titleFlag != "" {
+		title, body = *titleFlag, *bodyFlag
 	}
 	if *dryRun {
 		_, err := fmt.Fprintf(cc.stdout, "%s/%s: %s\nMerge into %s:%s from %s:%s\n",
@@ -160,7 +170,7 @@ aliases: pr
 		}
 		return nil
 	}
-	if *edit {
+	if *edit && *titleFlag == "" {
 		editorInit := new(bytes.Buffer)
 		editorInit.WriteString(title)
 		if body != "" {

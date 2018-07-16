@@ -39,30 +39,62 @@ func TestRequestPull(t *testing.T) {
 
 		headOwner string
 		headRef   string
+		title     string
+		body      string
 	}{
 		{
 			name:        "Shared",
 			branch:      "shared",
 			upstreamURL: "https://github.com/example/foo.git",
-			headOwner:   "example",
-			headRef:     "shared",
+
+			headOwner: "example",
+			headRef:   "shared",
+			title:     "Commit title",
+			body:      "Commit description",
 		},
 		{
 			name:        "Fork",
 			branch:      "myfork",
 			upstreamURL: "https://github.com/example/foo.git",
 			forkURL:     "https://github.com/exampleuser/foo.git",
-			headOwner:   "exampleuser",
-			headRef:     "myfork",
+
+			headOwner: "exampleuser",
+			headRef:   "myfork",
+			title:     "Commit title",
+			body:      "Commit description",
 		},
 		{
 			name:        "ForkFromOtherBranch",
 			branch:      "shared",
-			args:        []string{"myfork"},
 			upstreamURL: "https://github.com/example/foo.git",
 			forkURL:     "https://github.com/exampleuser/foo.git",
-			headOwner:   "exampleuser",
-			headRef:     "myfork",
+			args:        []string{"myfork"},
+
+			headOwner: "exampleuser",
+			headRef:   "myfork",
+			title:     "Commit title",
+			body:      "Commit description",
+		},
+		{
+			name:        "SetTitle",
+			branch:      "shared",
+			upstreamURL: "https://github.com/example/foo.git",
+			args:        []string{"--title=Title from CLI"},
+
+			headOwner: "example",
+			headRef:   "shared",
+			title:     "Title from CLI",
+		},
+		{
+			name:        "SetTitleAndBody",
+			branch:      "shared",
+			upstreamURL: "https://github.com/example/foo.git",
+			args:        []string{"--title=Title from CLI", "--body=Body from CLI"},
+
+			headOwner: "example",
+			headRef:   "shared",
+			title:     "Title from CLI",
+			body:      "Body from CLI",
 		},
 	}
 	for _, test := range tests {
@@ -132,7 +164,7 @@ func TestRequestPull(t *testing.T) {
 				if err := env.addFiles(ctx, "local/blah.txt"); err != nil {
 					t.Fatal(err)
 				}
-				if err := env.git.WithDir(localDir).Run(ctx, "commit", "-m", "This is the title\n\nThis is the body."); err != nil {
+				if err := env.git.WithDir(localDir).Run(ctx, "commit", "-m", "Commit title\n\nCommit description"); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -166,16 +198,81 @@ func TestRequestPull(t *testing.T) {
 			if got, want := prs[0].headRef, test.headRef; got != want {
 				t.Errorf("Head ref = %q; want %q", got, want)
 			}
-			if got, want := prs[0].title, "This is the title"; got != want {
+			if got, want := prs[0].title, test.title; got != want {
 				t.Errorf("Title = %q; want %q", got, want)
 			}
-			if got, want := prs[0].body, "This is the body."; got != want {
+			if got, want := prs[0].body, test.body; got != want {
 				t.Errorf("Body = %q; want %q", got, want)
 			}
 			if got, want := prs[0].maintainerCanModify, true; got != want {
 				t.Errorf("Maintainer can modify = %t; want %t", got, want)
 			}
 		})
+	}
+}
+
+func TestRequestPull_BodyWithoutTitleUsageError(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	const authToken = "xyzzy12345"
+	if err := env.writeGitHubAuth([]byte(authToken + "\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.initRepoWithHistory(ctx, "origin"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "clone", "--quiet", "origin", "local"); err != nil {
+		t.Fatal(err)
+	}
+	localDir := env.rel("local")
+	if err := env.git.WithDir(localDir).Run(ctx, "remote", "set-url", "origin", "https://github.com/example/foo.git"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.WithDir(localDir).Run(ctx, "checkout", "--quiet", "--track", "-b", "feature", "origin/master"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.newFile("local/blah.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "local/blah.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.newCommit(ctx, "local"); err != nil {
+		t.Fatal(err)
+	}
+
+	api := &fakeGitHubPullRequestAPI{
+		logger:         t,
+		errorer:        t,
+		permittedToken: authToken,
+	}
+	fakeGitHub := httptest.NewServer(api)
+	defer fakeGitHub.Close()
+	fakeGitHubTransport := &http.Transport{
+		DialTLS: func(network, addr string) (net.Conn, error) {
+			hostport := strings.TrimPrefix(fakeGitHub.URL, "http://")
+			return net.Dial("tcp", hostport)
+		},
+	}
+	defer fakeGitHubTransport.CloseIdleConnections()
+	env.roundTripper = fakeGitHubTransport
+
+	if _, err := env.gg(ctx, localDir, "requestpull", "--body=ohai"); err == nil {
+		t.Error("gg did not return error")
+	} else if !isUsage(err) {
+		t.Errorf("Error = %v; want usage", err)
+	}
+	api.mu.Lock()
+	prs := api.prs
+	api.prs = nil
+	api.mu.Unlock()
+	if len(prs) > 0 {
+		t.Errorf("Created %d PRs; want 0", len(prs))
 	}
 }
 
