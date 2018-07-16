@@ -6,7 +6,7 @@
 </div>
 {{- end}}
 
-{{with where .Data.Pages.ByLinkTitle "Params.cmd_class" "basic"}}
+{{with where .Data.Pages.ByTitle "Params.cmd_class" "basic"}}
 <h2>Basic Commands</h2>
 <dl class="command_list">
 {{- range .}}
@@ -15,7 +15,7 @@
 </dl>
 {{end}}
 
-{{with where .Data.Pages.ByLinkTitle "Params.cmd_class" "advanced"}}
+{{with where .Data.Pages.ByTitle "Params.cmd_class" "advanced"}}
 <h2>Advanced Commands</h2>
 <dl class="command_list">
 {{- range .}}
