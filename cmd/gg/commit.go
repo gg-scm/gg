@@ -68,6 +68,9 @@ aliases: ci
 		if err != nil {
 			return err
 		}
+		if len(files) == 0 {
+			return errors.New("arguments did not match any modified files")
+		}
 		commitArgs = append(commitArgs, "--")
 		commitArgs = append(commitArgs, files...)
 	} else if exists, err := cc.git.Query(ctx, "cat-file", "-e", "MERGE_HEAD"); err == nil && exists {
