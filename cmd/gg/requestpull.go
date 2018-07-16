@@ -180,6 +180,8 @@ aliases: pr
 		editorInit.WriteString("\n# Please enter the pull request message. Lines starting with '#' will\n" +
 			"# be ignored, and an empty message aborts the pull request. The first\n" +
 			"# line will be used as the title and must not be empty.\n")
+		fmt.Fprintf(editorInit, "# %s/%s: merge into %s:%s from %s:%s\n",
+			baseOwner, baseRepo, baseOwner, baseBranch, headOwner, branch)
 		newMsg, err := cc.editor.open(ctx, "PR_EDITMSG", editorInit.Bytes())
 		if err != nil {
 			return err
