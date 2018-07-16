@@ -186,6 +186,19 @@ func (env *testEnv) writeConfig(config []byte) error {
 	return nil
 }
 
+// writeGitHubAuth writes a new file at $XDG_CONFIG_DIR/gg/github_token.
+func (env *testEnv) writeGitHubAuth(tokenFile []byte) error {
+	configDir := filepath.Join(env.topDir, "xdgconfig", "gg")
+	if err := os.MkdirAll(configDir, 0777); err != nil {
+		return fmt.Errorf("write GitHub auth: %v", err)
+	}
+	path := filepath.Join(configDir, "github_token")
+	if err := ioutil.WriteFile(path, tokenFile, 0666); err != nil {
+		return fmt.Errorf("write GitHub auth: %v", err)
+	}
+	return nil
+}
+
 var (
 	cpPathOnce  sync.Once
 	cpPath      string

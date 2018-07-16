@@ -66,6 +66,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  pull          " + pullSynopsis + "\n" +
 		"  push          " + pushSynopsis + "\n" +
 		"  remove        " + removeSynopsis + "\n" +
+		"  requestpull   " + requestPullSynopsis + "\n" +
 		"  revert        " + revertSynopsis + "\n" +
 		"  status        " + statusSynopsis + "\n" +
 		"  update        " + updateSynopsis + "\n" +
@@ -216,6 +217,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return remove(ctx, cc, args)
 	case "rebase":
 		return rebase(ctx, cc, args)
+	case "requestpull", "pr":
+		return requestPull(ctx, cc, args)
 	case "revert":
 		return revert(ctx, cc, args)
 	case "status", "st", "check":
