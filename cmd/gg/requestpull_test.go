@@ -55,6 +55,15 @@ func TestRequestPull(t *testing.T) {
 			headOwner:   "exampleuser",
 			headRef:     "myfork",
 		},
+		{
+			name:        "ForkFromOtherBranch",
+			branch:      "shared",
+			args:        []string{"myfork"},
+			upstreamURL: "https://github.com/example/foo.git",
+			forkURL:     "https://github.com/exampleuser/foo.git",
+			headOwner:   "exampleuser",
+			headRef:     "myfork",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -113,16 +122,21 @@ func TestRequestPull(t *testing.T) {
 					}
 				}()
 			}
+			for _, b := range []string{"shared", "myfork"} {
+				if err := env.git.WithDir(localDir).Run(ctx, "checkout", "--quiet", b); err != nil {
+					t.Fatal(err)
+				}
+				if err := env.newFile("local/blah.txt"); err != nil {
+					t.Fatal(err)
+				}
+				if err := env.addFiles(ctx, "local/blah.txt"); err != nil {
+					t.Fatal(err)
+				}
+				if err := env.git.WithDir(localDir).Run(ctx, "commit", "-m", "This is the title\n\nThis is the body."); err != nil {
+					t.Fatal(err)
+				}
+			}
 			if err := env.git.WithDir(localDir).Run(ctx, "checkout", "--quiet", test.branch); err != nil {
-				t.Fatal(err)
-			}
-			if err := env.newFile("local/blah.txt"); err != nil {
-				t.Fatal(err)
-			}
-			if err := env.addFiles(ctx, "local/blah.txt"); err != nil {
-				t.Fatal(err)
-			}
-			if err := env.git.WithDir(localDir).Run(ctx, "commit", "-m", "This is the title\n\nThis is the body."); err != nil {
 				t.Fatal(err)
 			}
 
