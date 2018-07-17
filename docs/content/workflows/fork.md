@@ -1,6 +1,7 @@
 ---
 title: Fork and Pull
-date: 2018-06-21T13:29:21-07:00
+date: 2018-06-21 13:29:21 -07:00
+lastmod: 2018-07-16 22:22:24 -07:00
 weight: 2
 ---
 
@@ -44,7 +45,14 @@ branch to your fork with the same branch name.
 gg branch myfeature
 # hack hack hack
 gg commit -m "Added a feature"
-gg push
+gg push --create
+```
+
+If you're on GitHub, you can use `gg requestpull` (commonly abbreviated to `gg
+pr`) to create a pull request from the command line.
+
+```shell
+gg pr
 ```
 
 To make changes after code review, simply push more commits to your branch and
@@ -55,6 +63,9 @@ run `gg push` again.
 gg commit -m "Addressed code review comments"
 gg push
 ```
+
+(Your pull request will automatically be updated; there's no need to create it
+again.)
 
 ### Syncing Your Work with the Upstream Branch
 
@@ -96,7 +107,7 @@ gg commit
 Or to rebase your commits onto the downloaded changes:
 
 ```shell
-gg rebase -base=FETCH_HEAD -dst=FETCH_HEAD
+gg rebase --base=FETCH_HEAD --dst=FETCH_HEAD
 ```
 
 ### Switching Among Changes

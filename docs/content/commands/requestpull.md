@@ -4,7 +4,7 @@
     ],
     "cmd_class": "basic",
     "date": "2018-07-16 08:42:42-07:00",
-    "lastmod": "2018-07-16 14:02:08-07:00",
+    "lastmod": "2018-07-16 22:25:30-07:00",
     "title": "gg requestpull",
     "usage": "gg requestpull [-n] [-e=0] [--title=MSG [--body=MSG]] [BRANCH]"
 }
@@ -47,6 +47,9 @@ create pull requests in any repositories you have access to.
 	<dd>prints the pull request instead of creating it</dd>
 	<dt>-maintainer-edits</dt>
 	<dd>allow maintainers to edit this branch</dd>
+	<dt>-R user</dt>
+	<dt>-reviewer user</dt>
+	<dd>GitHub usernames of reviewers to add</dd>
 	<dt>-title string</dt>
 	<dd>pull request title</dd>
 </dl>
