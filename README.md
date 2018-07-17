@@ -17,7 +17,7 @@ my everyday use. It can be thought of as an alternate [porcelain][] for Git.
 Download the latest [release][releases] from GitHub.  Binaries are available for
 Linux and macOS.
 
-To use the version at `HEAD`, run `go get zombiezen.com/go/gg/cmd/gg`.
+To use the version at `HEAD`, follow the instructions in `CONTRIBUTING.md`.
 
 You must have a moderately recent copy of Git in your `PATH` to run gg. gg is
 tested against Git 2.7.4 and newer. Older versions may work, but are not
