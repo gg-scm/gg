@@ -1,5 +1,51 @@
 # Release Notes
 
+## 0.6.0
+
+### Features
+
+-   New website with docs! Take a look at [gg-scm.io](https://gg-scm.io/).
+    The site includes workflow guides and the command reference.
+    ([#23](https://github.com/zombiezen/gg/issues/23),
+    [#40](https://github.com/zombiezen/gg/issues/40))
+-   The new [`requestpull` command](https://gg-scm.io/cmd/requestpull/) creates
+    GitHub pull requests from the command line.
+    ([#52](https://github.com/zombiezen/gg/issues/52))
+-   `revert` now creates backup files when reverting modified files. See the
+    [`revert` docs](https://gg-scm.io/cmd/revert/) for more details.
+    ([#39](https://github.com/zombiezen/gg/issues/39))
+-   The new [`backout` command](https://gg-scm.io/cmd/backout/) creates commits
+    that "undo" the effect of previous commits.
+    ([#46](https://github.com/zombiezen/gg/issues/46))
+-   The new [`cat` command](https://gg-scm.io/cmd/cat/) allows viewing files
+    from old commits. ([#45](https://github.com/zombiezen/gg/issues/45))
+-   Ignored files can be tracked by naming them explicitly using `add`.
+    ([#51](https://github.com/zombiezen/gg/issues/51))
+
+### Bug Fixes
+
+-   `status` no longer crashes on newer versions of Git that detect renames in
+    the working copy. ([#44](https://github.com/zombiezen/gg/issues/44))
+-   `revert` now correctly operates on added files
+    ([#54](https://github.com/zombiezen/gg/issues/54),
+    [#55](https://github.com/zombiezen/gg/issues/55))
+-   `add` is now more robust when passed a directory.
+    ([#35](https://github.com/zombiezen/gg/issues/35))
+-   Git subprocesses are now sent `SIGTERM` if gg is sent any interrupt or
+    termination signals. ([#64](https://github.com/zombiezen/gg/issues/64))
+
+### Known Issues
+
+There are a few known issues in 0.6 with their workarounds:
+
+-   `revert` does not produce errors if you pass it unknown files.
+    ([#58](https://github.com/zombiezen/gg/issues/58)). This may be confusing,
+    but does not negatively affect your data.
+-   Git 2.11 (the default version used on Debian) emits malformed output on
+    working copy renames which causes gg to crash.
+    ([#60](https://github.com/zombiezen/gg/issues/60)) The workaround here is to
+    install a newer version of Git.
+
 ## 0.5.1
 
 ### Bug Fixes

@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"zombiezen.com/go/gg/internal/flag"
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 const removeSynopsis = "remove the specified files on the next commit"
@@ -65,7 +65,9 @@ func verifyPresent(ctx context.Context, git *gittool.Tool, args []string) error 
 	for i := range args {
 		statusArgs[i] = ":(literal)" + args[i]
 	}
-	st, err := gittool.Status(ctx, git, statusArgs)
+	st, err := gittool.Status(ctx, git, gittool.StatusOptions{
+		Pathspec: statusArgs,
+	})
 	if err != nil {
 		return err
 	}

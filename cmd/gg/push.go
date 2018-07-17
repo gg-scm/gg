@@ -22,10 +22,10 @@ import (
 	"fmt"
 	"strings"
 
-	"zombiezen.com/go/gg/internal/flag"
-	"zombiezen.com/go/gg/internal/gitobj"
-	"zombiezen.com/go/gg/internal/gittool"
-	"zombiezen.com/go/gg/internal/singleclose"
+	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/gitobj"
+	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/singleclose"
 )
 
 const pushSynopsis = "push changes to the specified destination"
@@ -354,7 +354,7 @@ func inferPushRepo(ctx context.Context, git *gittool.Tool, cfg *gittool.Config, 
 // isClean returns true iff all tracked files are unmodified in the
 // working copy.  Untracked and ignored files are not considered.
 func isClean(ctx context.Context, git *gittool.Tool) (bool, error) {
-	st, err := gittool.Status(ctx, git, nil)
+	st, err := gittool.Status(ctx, git, gittool.StatusOptions{})
 	if err != nil {
 		return false, err
 	}

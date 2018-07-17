@@ -21,12 +21,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 const removeTestFileName = "foo.txt"
 
 func TestRemove(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -41,7 +42,7 @@ func TestRemove(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "rm", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,6 +72,7 @@ func TestRemove(t *testing.T) {
 }
 
 func TestRemove_AddedFails(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -97,7 +99,7 @@ func TestRemove_AddedFails(t *testing.T) {
 	} else if isUsage(err) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,6 +129,7 @@ func TestRemove_AddedFails(t *testing.T) {
 }
 
 func TestRemove_AddedForce(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -151,7 +154,7 @@ func TestRemove_AddedForce(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "rm", "-f", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,6 +172,7 @@ func TestRemove_AddedForce(t *testing.T) {
 }
 
 func TestRemove_ModifiedFails(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -192,7 +196,7 @@ func TestRemove_ModifiedFails(t *testing.T) {
 	} else if isUsage(err) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,6 +226,7 @@ func TestRemove_ModifiedFails(t *testing.T) {
 }
 
 func TestRemove_ModifiedForce(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -243,7 +248,7 @@ func TestRemove_ModifiedForce(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "rm", "-f", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,6 +278,7 @@ func TestRemove_ModifiedForce(t *testing.T) {
 }
 
 func TestRemove_MissingFails(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -292,7 +298,7 @@ func TestRemove_MissingFails(t *testing.T) {
 	} else if isUsage(err) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -322,6 +328,7 @@ func TestRemove_MissingFails(t *testing.T) {
 }
 
 func TestRemove_MissingAfter(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -339,7 +346,7 @@ func TestRemove_MissingAfter(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "rm", "-after", removeTestFileName); err != nil {
 		t.Fatal(err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -369,6 +376,7 @@ func TestRemove_MissingAfter(t *testing.T) {
 }
 
 func TestRemove_Recursive(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -400,7 +408,7 @@ func TestRemove_Recursive(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "rm", "-r", "foo"); err != nil {
 		t.Error(err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -430,6 +438,7 @@ func TestRemove_Recursive(t *testing.T) {
 }
 
 func TestRemove_RecursiveMissingFails(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -466,7 +475,7 @@ func TestRemove_RecursiveMissingFails(t *testing.T) {
 	} else if isUsage(err) {
 		t.Errorf("`gg rm -r` error: %v; want failure, not usage", err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -496,6 +505,7 @@ func TestRemove_RecursiveMissingFails(t *testing.T) {
 }
 
 func TestRemove_RecursiveMissingAfter(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -530,7 +540,7 @@ func TestRemove_RecursiveMissingAfter(t *testing.T) {
 	if _, err := env.gg(ctx, env.root, "rm", "-r", "-after", "foo"); err != nil {
 		t.Error(err)
 	}
-	st, err := gittool.Status(ctx, env.git, nil)
+	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

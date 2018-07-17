@@ -23,8 +23,8 @@ import (
 	"strings"
 	"testing"
 
-	"zombiezen.com/go/gg/internal/gitobj"
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/gitobj"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 const (
@@ -34,6 +34,7 @@ const (
 )
 
 func TestCommit_NoArgs(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -82,6 +83,7 @@ func TestCommit_NoArgs(t *testing.T) {
 }
 
 func TestCommit_Selective(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -127,7 +129,46 @@ func TestCommit_Selective(t *testing.T) {
 	}
 }
 
+func TestCommit_SelectiveWrongFile(t *testing.T) {
+	// Regression test for https://github.com/zombiezen/gg/issues/63
+
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.initRepoWithHistory(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	r, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.newFile("foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := env.gg(ctx, env.root, "commit", "-m", "bad", "bar.txt"); err == nil {
+		t.Error("gg did not return error")
+	} else if isUsage(err) {
+		t.Fatal(err)
+	}
+	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if curr.Commit() != r.Commit() {
+		t.Error("Created a new commit; wanted no-op")
+	}
+}
+
 func TestCommit_Amend(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -191,6 +232,7 @@ func TestCommit_Amend(t *testing.T) {
 }
 
 func TestCommit_NoChanges(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -222,6 +264,7 @@ func TestCommit_NoChanges(t *testing.T) {
 }
 
 func TestCommit_AmendJustMessage(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -282,6 +325,7 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 func TestCommit_NoArgs_InSubdir(t *testing.T) {
 	// Regression test for https://github.com/zombiezen/gg/issues/10
 
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -336,6 +380,7 @@ func TestCommit_NoArgs_InSubdir(t *testing.T) {
 func TestCommit_Named_InSubdir(t *testing.T) {
 	// Regression test for https://github.com/zombiezen/gg/issues/10
 
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -390,6 +435,7 @@ func TestCommit_Named_InSubdir(t *testing.T) {
 func TestCommit_Merge(t *testing.T) {
 	// Regression test for https://github.com/zombiezen/gg/issues/38
 
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {

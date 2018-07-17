@@ -22,11 +22,12 @@ import (
 	"strings"
 	"testing"
 
-	"zombiezen.com/go/gg/internal/gitobj"
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/gitobj"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 func TestRebase(t *testing.T) {
+	t.Parallel()
 	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
 		ctx := context.Background()
 		env, err := newTestEnv(ctx, t)
@@ -108,6 +109,7 @@ func TestRebase(t *testing.T) {
 }
 
 func TestRebase_Src(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -171,6 +173,7 @@ func TestRebase_Src(t *testing.T) {
 }
 
 func TestRebase_SrcUnrelated(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -229,6 +232,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 }
 
 func TestRebase_Base(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -304,6 +308,7 @@ func TestRebase_Base(t *testing.T) {
 func TestRebase_ResetUpstream(t *testing.T) {
 	// Regression test for https://github.com/zombiezen/gg/issues/41
 
+	t.Parallel()
 	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
 		ctx := context.Background()
 		env, err := newTestEnv(ctx, t)
@@ -371,6 +376,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 }
 
 func TestHistedit(t *testing.T) {
+	t.Parallel()
 	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
 		ctx := context.Background()
 		env, err := newTestEnv(ctx, t)
@@ -451,6 +457,7 @@ func TestHistedit(t *testing.T) {
 }
 
 func TestHistedit_ContinueWithModifications(t *testing.T) {
+	t.Parallel()
 	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
 		ctx := context.Background()
 		env, err := newTestEnv(ctx, t)
@@ -563,6 +570,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 }
 
 func TestHistedit_ContinueNoModifications(t *testing.T) {
+	t.Parallel()
 	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
 		ctx := context.Background()
 		env, err := newTestEnv(ctx, t)
@@ -677,6 +685,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 }
 
 func TestShellEscape(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		in, out string
 	}{

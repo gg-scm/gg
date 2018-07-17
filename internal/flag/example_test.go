@@ -17,7 +17,7 @@ package flag_test
 import (
 	"fmt"
 
-	"zombiezen.com/go/gg/internal/flag"
+	"gg-scm.io/pkg/internal/flag"
 )
 
 func Example() {

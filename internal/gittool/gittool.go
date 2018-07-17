@@ -14,7 +14,7 @@
 
 // Package gittool provides a high-level interface for interacting with
 // a git subprocess.
-package gittool
+package gittool // import "gg-scm.io/pkg/internal/gittool"
 
 import (
 	"bufio"
@@ -28,6 +28,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 // Tool is an installed copy of git.
@@ -100,8 +102,8 @@ func New(path string, wd string, opts *Options) (*Tool, error) {
 	return t, nil
 }
 
-func (t *Tool) cmd(ctx context.Context, args []string) *exec.Cmd {
-	c := exec.CommandContext(ctx, t.exe, args...)
+func (t *Tool) cmd(args []string) *exec.Cmd {
+	c := exec.Command(t.exe, args...)
 	c.Env = t.env
 	c.Stderr = t.stderr
 	c.Dir = t.dir
@@ -129,7 +131,7 @@ func (t *Tool) Run(ctx context.Context, args ...string) error {
 	if t.log != nil {
 		t.log(ctx, args)
 	}
-	if err := t.cmd(ctx, args).Run(); err != nil {
+	if err := sigterm.Run(ctx, t.cmd(args)); err != nil {
 		return wrapError(errorSubject(args), err)
 	}
 	return nil
@@ -145,13 +147,13 @@ func (t *Tool) Query(ctx context.Context, args ...string) (bool, error) {
 	if t.log != nil {
 		t.log(ctx, args)
 	}
-	c := t.cmd(ctx, args)
+	c := t.cmd(args)
 	stderr := new(bytes.Buffer)
 	c.Stderr = stderr
-	if err := c.Run(); err != nil {
+	if err := sigterm.Run(ctx, c); err != nil {
 		exitErr, ok := err.(*exec.ExitError)
 		if !ok {
-			return false, err
+			return false, wrapError(errorSubject(args), err)
 		}
 		if exitStatus(exitErr.ProcessState) == 1 {
 			return false, nil
@@ -174,13 +176,13 @@ func (t *Tool) Query(ctx context.Context, args ...string) (bool, error) {
 // to finish.  All standard streams will be attached to the
 // corresponding streams specified in the tool's options.
 func (t *Tool) RunInteractive(ctx context.Context, args ...string) error {
-	c := t.cmd(ctx, args)
+	c := t.cmd(args)
 	c.Stdin = t.stdin
 	c.Stdout = t.stdout
 	if t.log != nil {
 		t.log(ctx, args)
 	}
-	if err := c.Run(); err != nil {
+	if err := sigterm.Run(ctx, c); err != nil {
 		return wrapError(errorSubject(args), err)
 	}
 	return nil
@@ -236,7 +238,7 @@ func (t *Tool) RunOneLiner(ctx context.Context, delim byte, args ...string) ([]b
 // stderr will be sent to the writer specified in the tool's options.
 // stdin will be connected to the null device.
 func (t *Tool) Start(ctx context.Context, args ...string) (*Process, error) {
-	c := t.cmd(ctx, args)
+	c := t.cmd(args)
 	rc, err := c.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("run %s: %v", errorSubject(args), err)
@@ -244,11 +246,12 @@ func (t *Tool) Start(ctx context.Context, args ...string) (*Process, error) {
 	if t.log != nil {
 		t.log(ctx, args)
 	}
-	if err := c.Start(); err != nil {
+	wait, err := sigterm.Start(ctx, c)
+	if err != nil {
 		return nil, fmt.Errorf("run %s: %v", errorSubject(args), err)
 	}
 	return &Process{
-		cmd:     c,
+		wait:    wait,
 		pipe:    rc,
 		subject: errorSubject(args),
 	}, nil
@@ -276,7 +279,7 @@ func WorkTree(ctx context.Context, git *Tool) (string, error) {
 
 // Process is a running git subprocess that can be read from.
 type Process struct {
-	cmd     *exec.Cmd
+	wait    func() error
 	pipe    io.ReadCloser
 	subject string
 }
@@ -291,7 +294,7 @@ func (p *Process) Read(b []byte) (int, error) {
 func (p *Process) Wait() error {
 	io.Copy(ioutil.Discard, p.pipe)
 	p.pipe.Close()
-	if err := p.cmd.Wait(); err != nil {
+	if err := p.wait(); err != nil {
 		return wrapError(p.subject, err)
 	}
 	return nil

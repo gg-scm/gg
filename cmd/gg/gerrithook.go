@@ -23,7 +23,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"zombiezen.com/go/gg/internal/flag"
+	"gg-scm.io/pkg/internal/flag"
 )
 
 const gerrithookSynopsis = "install or uninstall Gerrit change ID hook"
@@ -69,7 +69,8 @@ func installGerritHook(ctx context.Context, cc *cmdContext, url string) error {
 	if err != nil {
 		return fmt.Errorf("install gerrit hook: %v", err)
 	}
-	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+	req.Header.Set("User-Agent", userAgentString())
+	resp, err := cc.httpClient.Do(req.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("install gerrit hook: %s returned %v", url, err)
 	}

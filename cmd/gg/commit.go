@@ -19,9 +19,9 @@ import (
 	"errors"
 	"fmt"
 
-	"zombiezen.com/go/gg/internal/flag"
-	"zombiezen.com/go/gg/internal/gittool"
-	"zombiezen.com/go/gg/internal/singleclose"
+	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/singleclose"
 )
 
 const commitSynopsis = "commit the specified files or all outstanding changes"
@@ -68,6 +68,9 @@ aliases: ci
 		if err != nil {
 			return err
 		}
+		if len(files) == 0 {
+			return errors.New("arguments did not match any modified files")
+		}
 		commitArgs = append(commitArgs, "--")
 		commitArgs = append(commitArgs, files...)
 	} else if exists, err := cc.git.Query(ctx, "cat-file", "-e", "MERGE_HEAD"); err == nil && exists {
@@ -95,7 +98,9 @@ func argsToFiles(ctx context.Context, git *gittool.Tool, args []string) ([]strin
 	for i := range args {
 		statusArgs[i] = ":(literal)" + args[i]
 	}
-	st, err := gittool.Status(ctx, git, statusArgs)
+	st, err := gittool.Status(ctx, git, gittool.StatusOptions{
+		Pathspec: statusArgs,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +121,7 @@ func argsToFiles(ctx context.Context, git *gittool.Tool, args []string) ([]strin
 
 func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([]string, error) {
 	missing, missingStaged, unmerged := 0, 0, 0
-	st, err := gittool.Status(ctx, git, nil)
+	st, err := gittool.Status(ctx, git, gittool.StatusOptions{})
 	if err != nil {
 		return files, err
 	}

@@ -19,11 +19,12 @@ import (
 	"context"
 	"testing"
 
-	"zombiezen.com/go/gg/internal/gitobj"
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/gitobj"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 func TestEvolve_FirstChangeSubmitted(t *testing.T) {
+	t.Parallel()
 	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
 		ctx := context.Background()
 		env, err := newTestEnv(ctx, t)
@@ -103,6 +104,7 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 }
 
 func TestEvolve_Unrelated(t *testing.T) {
+	t.Parallel()
 	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
 		ctx := context.Background()
 		env, err := newTestEnv(ctx, t)
@@ -190,6 +192,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 }
 
 func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
+	t.Parallel()
 	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
 		ctx := context.Background()
 		env, err := newTestEnv(ctx, t)
@@ -275,6 +278,7 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 }
 
 func TestEvolve_AbortIfReordersLocal(t *testing.T) {
+	t.Parallel()
 	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
 		ctx := context.Background()
 		env, err := newTestEnv(ctx, t)
@@ -346,6 +350,7 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 }
 
 func TestFindChangeID(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		commitMsg string
 		want      string

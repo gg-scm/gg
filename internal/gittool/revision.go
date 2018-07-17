@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"zombiezen.com/go/gg/internal/gitobj"
+	"gg-scm.io/pkg/internal/gitobj"
 )
 
 // Rev is a parsed reference to a single commit.

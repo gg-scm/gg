@@ -1,4 +1,4 @@
-baseURL = "https://zombiezen.github.io/gg"
+baseURL = "https://gg-scm.io/"
 languageCode = "en-us"
 title = "gg"
 disableKinds = ["taxonomy", "taxonomyTerm"]

@@ -20,13 +20,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"zombiezen.com/go/gg/internal/gitobj"
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/gitobj"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 const cloneFileMsg = "Hello, World!\n"
 
 func TestClone(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -76,6 +77,7 @@ func TestClone(t *testing.T) {
 }
 
 func TestClone_Branch(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {

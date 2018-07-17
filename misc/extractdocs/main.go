@@ -39,8 +39,8 @@ import (
 )
 
 const (
-	cmdImportPath  = "zombiezen.com/go/gg/cmd/gg"
-	flagImportPath = "zombiezen.com/go/gg/internal/flag"
+	cmdImportPath  = "gg-scm.io/pkg/cmd/gg"
+	flagImportPath = "gg-scm.io/pkg/internal/flag"
 )
 
 func main() {

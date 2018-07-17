@@ -20,9 +20,9 @@ import (
 	"errors"
 	"fmt"
 
-	"zombiezen.com/go/gg/internal/flag"
-	"zombiezen.com/go/gg/internal/gitobj"
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/gitobj"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 const pullSynopsis = "pull changes from the specified source"

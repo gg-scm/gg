@@ -14,7 +14,7 @@ my everyday use. It can be thought of as an alternate [porcelain][] for Git.
 
 ## Getting Started
 
-Download the latest [release][releases] from GitHub.  Binaries are available for
+Download the [latest release][] from GitHub.  Binaries are available for
 Linux and macOS.
 
 To build from source, follow the instructions in [CONTRIBUTING.md][build-source].

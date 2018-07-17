@@ -19,10 +19,10 @@ import (
 	"errors"
 	"fmt"
 
-	"zombiezen.com/go/gg/internal/flag"
-	"zombiezen.com/go/gg/internal/gittool"
-	"zombiezen.com/go/gg/internal/singleclose"
-	"zombiezen.com/go/gg/internal/terminal"
+	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/singleclose"
+	"gg-scm.io/pkg/internal/terminal"
 )
 
 const statusSynopsis = "show changed files in the working directory"
@@ -78,7 +78,9 @@ aliases: st, check`)
 			fmt.Fprintln(cc.stderr, "gg:", err)
 		}
 	}
-	st, err := gittool.Status(ctx, cc.git, f.Args())
+	st, err := gittool.Status(ctx, cc.git, gittool.StatusOptions{
+		Pathspec: f.Args(),
+	})
 	if err != nil {
 		return err
 	}

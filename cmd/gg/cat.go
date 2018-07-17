@@ -16,10 +16,10 @@ package main
 
 import (
 	"context"
-	"io"
 
-	"zombiezen.com/go/gg/internal/flag"
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/gitobj"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 const catSynopsis = "output the current or given revision of files"
@@ -29,7 +29,7 @@ func cat(ctx context.Context, cc *cmdContext, args []string) error {
 
 	Print the specified files as they were at the given revision. If no
 	revision is given, HEAD is used.`)
-	r := f.String("r", "HEAD", "print the `rev`ision")
+	r := f.String("r", gitobj.Head.String(), "print the `rev`ision")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -61,17 +61,5 @@ func catFile(ctx context.Context, cc *cmdContext, rev *gittool.Rev, path string)
 	}
 
 	// Send file to stdout.
-	p, err := cc.git.Start(ctx, "cat-file", "blob", rev.Commit().String()+":"+string(topPath))
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(cc.stdout, p)
-	waitErr := p.Wait()
-	if err != nil {
-		return err
-	}
-	if waitErr != nil {
-		return waitErr
-	}
-	return nil
+	return cc.git.RunInteractive(ctx, "cat-file", "blob", rev.Commit().String()+":"+string(topPath))
 }

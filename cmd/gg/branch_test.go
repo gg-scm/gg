@@ -20,10 +20,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"zombiezen.com/go/gg/internal/gittool"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 func TestBranch(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -79,6 +80,7 @@ func TestBranch(t *testing.T) {
 }
 
 func TestBranch_Upstream(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {

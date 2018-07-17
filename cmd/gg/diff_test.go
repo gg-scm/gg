@@ -23,6 +23,7 @@ import (
 )
 
 func TestDiff(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -65,6 +66,7 @@ func TestDiff(t *testing.T) {
 }
 
 func TestDiff_NoChange(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -98,6 +100,7 @@ func TestDiff_NoChange(t *testing.T) {
 }
 
 func TestDiff_AfterInit(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {
@@ -118,6 +121,7 @@ func TestDiff_AfterInit(t *testing.T) {
 }
 
 func TestDiff_BeforeFirstCommit(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	env, err := newTestEnv(ctx, t)
 	if err != nil {

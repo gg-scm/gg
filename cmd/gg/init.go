@@ -17,7 +17,7 @@ package main
 import (
 	"context"
 
-	"zombiezen.com/go/gg/internal/flag"
+	"gg-scm.io/pkg/internal/flag"
 )
 
 const initSynopsis = "create a new repository in the given directory"

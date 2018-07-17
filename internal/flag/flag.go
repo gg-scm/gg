@@ -15,7 +15,7 @@
 // Package flag provides a command-line flag parser. Unlike the Go
 // standard library flag package, it permits flags to be interspersed
 // with arguments.
-package flag
+package flag // import "gg-scm.io/pkg/internal/flag"
 
 import (
 	"bytes"
