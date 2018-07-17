@@ -14,7 +14,7 @@ my everyday use. It can be thought of as an alternate [porcelain][] for Git.
 
 ## Getting Started
 
-Download the latest [release][releases] from GitHub.  Binaries are available for
+Download the [latest release][] from GitHub.  Binaries are available for
 Linux and macOS.
 
 You must have a moderately recent copy of Git in your `PATH` to run gg. gg is
@@ -26,7 +26,7 @@ show you how to use the basic commands. The [main site][] also includes workflow
 guides and reference documentation.
 
 [main site]: https://gg-scm.io/
-[releases]: https://github.com/zombiezen/gg/releases
+[latest release]: https://github.com/zombiezen/gg/releases/latest
 [Working Locally]: https://gg-scm.io/workflow/local/
 
 ## Testimonials
