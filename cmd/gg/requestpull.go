@@ -65,6 +65,8 @@ aliases: pr
 	dryRun := f.Bool("n", false, "prints the pull request instead of creating it")
 	f.Alias("n", "dry-run")
 	maintainerEdits := f.Bool("maintainer-edits", true, "allow maintainers to edit this branch")
+	reviewers := f.MultiString("R", "GitHub `user`names of reviewers to add")
+	f.Alias("R", "reviewer")
 	titleFlag := f.String("title", "", "pull request title")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
@@ -191,7 +193,7 @@ aliases: pr
 			return err
 		}
 	}
-	prURL, err := createPullRequest(ctx, cc.httpClient, pullRequestParams{
+	prNum, prURL, err := createPullRequest(ctx, cc.httpClient, pullRequestParams{
 		authToken:  string(token),
 		baseOwner:  baseOwner,
 		baseRepo:   baseRepo,
@@ -208,6 +210,18 @@ aliases: pr
 	_, err = fmt.Fprintf(cc.stdout, "Created pull request at %s\n", prURL)
 	if err != nil {
 		return err
+	}
+	if len(*reviewers) > 0 {
+		err := addPullRequestReviewers(ctx, cc.httpClient, pullRequestReviewParams{
+			authToken: string(token),
+			owner:     baseOwner,
+			repo:      baseRepo,
+			prNum:     prNum,
+			users:     *reviewers,
+		})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -314,28 +328,28 @@ type pullRequestParams struct {
 	disableMaintainerEdits bool
 }
 
-func createPullRequest(ctx context.Context, client *http.Client, params pullRequestParams) (prURL string, _ error) {
+func createPullRequest(ctx context.Context, client *http.Client, params pullRequestParams) (prNum uint64, prURL string, _ error) {
 	if params.authToken == "" {
-		return "", errors.New("create pull request: missing authentication token")
+		return 0, "", errors.New("create pull request: missing authentication token")
 	}
 	if params.baseOwner == "" || params.baseRepo == "" {
-		return "", errors.New("create pull request: missing base owner or repository name")
+		return 0, "", errors.New("create pull request: missing base owner or repository name")
 	}
 	if params.baseBranch == "" {
-		return "", errors.New("create pull request: missing base branch")
+		return 0, "", errors.New("create pull request: missing base branch")
 	}
 	if params.headOwner == "" || params.headBranch == "" {
-		return "", errors.New("create pull request: missing head branch or owner")
+		return 0, "", errors.New("create pull request: missing head branch or owner")
 	}
 	if params.title == "" {
-		return "", errors.New("create pull request: missing title")
+		return 0, "", errors.New("create pull request: missing title")
 	}
 
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls",
 		url.PathEscape(params.baseOwner), url.PathEscape(params.baseRepo))
 	req, err := http.NewRequest("POST", apiURL, nil)
 	if err != nil {
-		return "", fmt.Errorf("create pull request: %v", err)
+		return 0, "", fmt.Errorf("create pull request: %v", err)
 	}
 	req.Header.Set("User-Agent", userAgentString())
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
@@ -355,20 +369,70 @@ func createPullRequest(ctx context.Context, client *http.Client, params pullRequ
 
 	resp, err := client.Do(req.WithContext(ctx))
 	if err != nil {
-		return "", fmt.Errorf("create pull request for %s/%s: %v", params.baseOwner, params.baseRepo, err)
+		return 0, "", fmt.Errorf("create pull request for %s/%s: %v", params.baseOwner, params.baseRepo, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		err := parseGitHubErrorResponse(resp)
-		return "", fmt.Errorf("create pull request for %s/%s: %v", params.baseOwner, params.baseRepo, err)
+		return 0, "", fmt.Errorf("create pull request for %s/%s: %v", params.baseOwner, params.baseRepo, err)
 	}
 	var respDoc struct {
+		Number  uint64
 		HTMLURL string `json:"html_url"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&respDoc); err != nil {
-		return "", fmt.Errorf("create pull request for %s/%s: parsing response: %v", params.baseOwner, params.baseRepo, err)
+		return 0, "", fmt.Errorf("create pull request for %s/%s: parsing response: %v", params.baseOwner, params.baseRepo, err)
 	}
-	return respDoc.HTMLURL, nil
+	return respDoc.Number, respDoc.HTMLURL, nil
+}
+
+type pullRequestReviewParams struct {
+	authToken string
+
+	owner string
+	repo  string
+	prNum uint64
+	users []string
+}
+
+func addPullRequestReviewers(ctx context.Context, client *http.Client, params pullRequestReviewParams) error {
+	if params.authToken == "" {
+		return errors.New("add pull request reviewers: missing authentication token")
+	}
+	if params.owner == "" || params.repo == "" {
+		return errors.New("add pull request reviewers: missing repository owner or name")
+	}
+	if len(params.users) == 0 {
+		return errors.New("add pull request reviewers: no reviewers to add")
+	}
+
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls/%d/requested_reviewers",
+		url.PathEscape(params.owner), url.PathEscape(params.repo), params.prNum)
+	req, err := http.NewRequest("POST", apiURL, nil)
+	if err != nil {
+		return fmt.Errorf("add pull request reviewers to %s/%s/pulls/%d: %v", params.owner, params.repo, params.prNum, err)
+	}
+	req.Header.Set("User-Agent", userAgentString())
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Authorization", "token "+params.authToken)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	reqBody := map[string]interface{}{
+		"reviewers": params.users,
+	}
+	reqBodyJSON, err := json.Marshal(reqBody)
+	req.Body = ioutil.NopCloser(bytes.NewReader(reqBodyJSON))
+	req.Header.Set("Content-Length", fmt.Sprint(len(reqBodyJSON)))
+
+	resp, err := client.Do(req.WithContext(ctx))
+	if err != nil {
+		return fmt.Errorf("add pull request reviewers to %s/%s/pulls/%d: %v", params.owner, params.repo, params.prNum, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		err := parseGitHubErrorResponse(resp)
+		return fmt.Errorf("add pull request reviewers to %s/%s/pulls/%d: %v", params.owner, params.repo, params.prNum, err)
+	}
+	return nil
 }
 
 func parseGitHubErrorResponse(resp *http.Response) error {
