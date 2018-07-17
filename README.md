@@ -28,9 +28,9 @@ show you how to use the basic commands. The [main site][] also includes workflow
 guides and reference documentation.
 
 [build-source]: CONTRIBUTING.md#building-from-source
-[main site]: https://zombiezen.github.io/gg/
-[releases]: https://github.com/zombiezen/gg/releases
-[Working Locally]: https://zombiezen.github.io/gg/workflow/local/
+[main site]: https://gg-scm.io/
+[latest release]: https://github.com/zombiezen/gg/releases/latest
+[Working Locally]: https://gg-scm.io/workflow/local/
 
 ## Testimonials
 
