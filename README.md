@@ -17,6 +17,8 @@ my everyday use. It can be thought of as an alternate [porcelain][] for Git.
 Download the [latest release][] from GitHub.  Binaries are available for
 Linux and macOS.
 
+To build from source, follow the instructions in [CONTRIBUTING.md][build-source].
+
 You must have a moderately recent copy of Git in your `PATH` to run gg. gg is
 tested against Git 2.7.4 and newer. Older versions may work, but are not
 supported.
@@ -25,6 +27,7 @@ Once you have gg installed in your `PATH`, the [Working Locally][] guide will
 show you how to use the basic commands. The [main site][] also includes workflow
 guides and reference documentation.
 
+[build-source]: CONTRIBUTING.md#building-from-source
 [main site]: https://gg-scm.io/
 [latest release]: https://github.com/zombiezen/gg/releases/latest
 [Working Locally]: https://gg-scm.io/workflow/local/
