@@ -34,6 +34,18 @@
 -   Git subprocesses are now sent `SIGTERM` if gg is sent any interrupt or
     termination signals. ([#64](https://github.com/zombiezen/gg/issues/64))
 
+### Known Issues
+
+There are a few known issues in 0.6 with their workarounds:
+
+-   `revert` does not produce errors if you pass it unknown files.
+    ([#58](https://github.com/zombiezen/gg/issues/58)). This may be confusing,
+    but does not negatively affect your data.
+-   Git 2.11 (the default version used on Debian) emits malformed output on
+    working copy renames which causes gg to crash.
+    ([#60](https://github.com/zombiezen/gg/issues/60)) The workaround here is to
+    install a newer version of Git.
+
 ## 0.5.1
 
 ### Bug Fixes
