@@ -23,9 +23,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestRequestPull(t *testing.T) {
@@ -41,6 +45,7 @@ func TestRequestPull(t *testing.T) {
 		headRef   string
 		title     string
 		body      string
+		reviewers []string
 	}{
 		{
 			name:        "Shared",
@@ -95,6 +100,30 @@ func TestRequestPull(t *testing.T) {
 			headRef:   "shared",
 			title:     "Title from CLI",
 			body:      "Body from CLI",
+		},
+		{
+			name:        "OneReviewer",
+			branch:      "shared",
+			upstreamURL: "https://github.com/example/foo.git",
+			args:        []string{"--reviewer", "zombiezen"},
+
+			headOwner: "example",
+			headRef:   "shared",
+			title:     "Commit title",
+			body:      "Commit description",
+			reviewers: []string{"zombiezen"},
+		},
+		{
+			name:        "TwoReviewers",
+			branch:      "shared",
+			upstreamURL: "https://github.com/example/foo.git",
+			args:        []string{"--reviewer", "zombiezen", "--reviewer", "octocat"},
+
+			headOwner: "example",
+			headRef:   "shared",
+			title:     "Commit title",
+			body:      "Commit description",
+			reviewers: []string{"octocat", "zombiezen"},
 		},
 	}
 	for _, test := range tests {
@@ -206,6 +235,12 @@ func TestRequestPull(t *testing.T) {
 			}
 			if got, want := prs[0].maintainerCanModify, true; got != want {
 				t.Errorf("Maintainer can modify = %t; want %t", got, want)
+			}
+			sortStrings := cmpopts.SortSlices(func(s1, s2 string) bool {
+				return s1 < s2
+			})
+			if got, want := prs[0].reviewers, test.reviewers; !cmp.Equal(got, want, sortStrings, cmpopts.EquateEmpty()) {
+				t.Errorf("Reviewers list = %q; want %q", got, want)
 			}
 		})
 	}
@@ -454,8 +489,9 @@ type fakePullRequest struct {
 	headOwner string
 	headRef   string
 
-	title string
-	body  string
+	title     string
+	body      string
+	reviewers []string
 
 	maintainerCanModify bool
 }
@@ -470,23 +506,35 @@ type fakeGitHubPullRequestAPI struct {
 }
 
 func (api *fakeGitHubPullRequestAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Host == "api.github.com" {
+		if got, want := r.Header.Get("Authorization"), "token "+api.permittedToken; got != want {
+			api.errorer.Errorf("Authorization header = %q; want %q", got, want)
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			http.Error(w, `{"message":"Bad auth token"}`, http.StatusUnauthorized)
+			return
+		}
+		if got, want := r.Header.Get("Accept"), "application/vnd.github.v3+json"; got != want {
+			api.errorer.Errorf("Accept header = %q; want %q", got, want)
+		}
+		pathParts := strings.Split(strings.TrimPrefix(path.Clean(r.URL.Path), "/"), "/")
+		switch {
+		case r.Method == "POST" && len(pathParts) == 4 && pathParts[0] == "repos" && pathParts[3] == "pulls":
+			api.createPullRequest(w, r, pathParts)
+			return
+		case r.Method == "POST" && len(pathParts) == 6 && pathParts[0] == "repos" && pathParts[3] == "pulls" && pathParts[5] == "requested_reviewers":
+			api.createReviewRequest(w, r, pathParts)
+			return
+		}
+	}
+	api.logger.Logf("%s received unhandled API request %s %s", r.Host, r.Method, r.URL.Path)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	pathParts := strings.Split(strings.TrimPrefix(path.Clean(r.URL.Path), "/"), "/")
-	if r.Method != "POST" || len(pathParts) != 4 || pathParts[0] != "repos" || pathParts[3] != "pulls" || r.Host != "api.github.com" {
-		api.logger.Logf("%s received unhandled API request %s %s", r.Host, r.Method, r.URL.Path)
-		http.Error(w, `{"message":"Not implemented"}`, http.StatusNotFound)
-		return
-	}
-	if got, want := r.Header.Get("Accept"), "application/vnd.github.v3+json"; got != want {
-		api.errorer.Errorf("Accept header = %q; want %q", got, want)
-	}
+	http.Error(w, `{"message":"Not implemented"}`, http.StatusNotFound)
+}
+
+func (api *fakeGitHubPullRequestAPI) createPullRequest(w http.ResponseWriter, r *http.Request, pathParts []string) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if got, want := r.Header.Get("Content-Type"), "application/json"; parseContentType(got) != want {
 		api.errorer.Errorf("Content-Type header = %q; want %q", got, want)
-	}
-	if got, want := r.Header.Get("Authorization"), "token "+api.permittedToken; got != want {
-		api.errorer.Errorf("Authorization header = %q; want %q", got, want)
-		http.Error(w, `{"message":"Bad auth token"}`, http.StatusUnauthorized)
-		return
 	}
 	var body map[string]interface{} // Struct field matches are always case-insensitive.
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -557,8 +605,57 @@ func (api *fakeGitHubPullRequestAPI) ServeHTTP(w http.ResponseWriter, r *http.Re
 		http.Error(w, `{"message":"Server errror"}`, http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", fmt.Sprint(len(response)))
+	w.Header().Set("Content-Length", fmt.Sprint(len(response)))
 	w.Header().Set("Location", url)
+	w.WriteHeader(http.StatusCreated)
+	if _, err := w.Write(response); err != nil {
+		api.errorer.Errorf("Writing response: %v", err)
+	}
+}
+
+func (api *fakeGitHubPullRequestAPI) createReviewRequest(w http.ResponseWriter, r *http.Request, pathParts []string) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if got, want := r.Header.Get("Content-Type"), "application/json"; parseContentType(got) != want {
+		api.errorer.Errorf("Content-Type header = %q; want %q", got, want)
+	}
+	var body map[string]interface{} // Struct field matches are always case-insensitive.
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		api.errorer.Errorf("Decode body: %v", err)
+		http.Error(w, `{"message":"Could not parse body"}`, http.StatusBadRequest)
+		return
+	}
+	owner := pathParts[1]
+	repo := pathParts[2]
+	pathNum := pathParts[4]
+	num, err := strconv.ParseUint(pathNum, 10, 64)
+	if err != nil {
+		api.errorer.Errorf("PR # = %q; error: %v", pathNum, err)
+		http.Error(w, `{"message":"Invalid pull request #"}`, http.StatusNotFound)
+		return
+	}
+	reviewers := jsonStringArray(body["reviewers"])
+	api.mu.Lock()
+	for i := range api.prs {
+		pr := &api.prs[i]
+		if pr.owner == owner && pr.repo == repo && uint64(pr.num) == num {
+			pr.reviewers = append(pr.reviewers, reviewers...)
+			break
+		}
+	}
+	api.mu.Unlock()
+
+	response, err := json.Marshal(map[string]interface{}{
+		"number":   num,
+		"url":      fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls/%d", owner, repo, num),
+		"html_url": fmt.Sprintf("https://github.com/%s/%s/pull/%d", owner, repo, num),
+		"state":    "open",
+	})
+	if err != nil {
+		api.errorer.Errorf("Failed to marshal API response: %v")
+		http.Error(w, `{"message":"Server errror"}`, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Length", fmt.Sprint(len(response)))
 	w.WriteHeader(http.StatusCreated)
 	if _, err := w.Write(response); err != nil {
 		api.errorer.Errorf("Writing response: %v", err)
@@ -584,6 +681,18 @@ func jsonBool(v interface{}, def bool) bool {
 		return def
 	}
 	return b
+}
+
+func jsonStringArray(v interface{}) []string {
+	arr, ok := v.([]interface{})
+	if !ok {
+		return nil
+	}
+	slice := make([]string, len(arr))
+	for i := range slice {
+		slice[i] = jsonString(arr[i])
+	}
+	return slice
 }
 
 type logger interface {
