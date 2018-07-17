@@ -36,7 +36,7 @@
 
 ### Known Issues
 
-There are a few known issues in 0.6 with their workarounds:
+There are a few known issues in 0.6:
 
 -   `revert` does not produce errors if you pass it unknown files.
     ([#58](https://github.com/zombiezen/gg/issues/58)). This may be confusing,
