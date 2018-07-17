@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 
 	"gg-scm.io/pkg/internal/gittool"
-	"golang.org/x/sys/unix"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 // editor allows editing text content interactively.
@@ -67,23 +67,7 @@ func (e *editor) open(ctx context.Context, basename string, initial []byte) ([]b
 	if len(c.Env) == 0 {
 		c.Env = []string{} // force empty
 	}
-	if err := c.Start(); err != nil {
-		return nil, fmt.Errorf("open editor: %v", err)
-	}
-	done := make(chan struct{})
-	go func() {
-		select {
-		case <-ctx.Done():
-			// TODO(windows): Use the correct Windows signal.
-			// Don't log error from signal, since it just indicates that the
-			// process has already exited (the desired effect).
-			c.Process.Signal(unix.SIGTERM)
-		case <-done:
-		}
-	}()
-	err = c.Wait()
-	close(done)
-	if err != nil {
+	if err := sigterm.Run(ctx, c); err != nil {
 		return nil, fmt.Errorf("open editor: %v", err)
 	}
 	edited, err := ioutil.ReadFile(path)

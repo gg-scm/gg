@@ -26,12 +26,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 func main() {
@@ -40,7 +42,20 @@ func main() {
 		fmt.Fprintln(os.Stderr, "gg:", err)
 		os.Exit(1)
 	}
-	err = run(context.Background(), pctx, os.Args[1:])
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	sig := make(chan os.Signal, 1)
+	done := make(chan struct{})
+	signal.Notify(sig, sigterm.Signals()...)
+	go func() {
+		select {
+		case <-sig:
+			cancel()
+		case <-done:
+		}
+	}()
+	err = run(ctx, pctx, os.Args[1:])
+	close(done)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		if isUsage(err) {
