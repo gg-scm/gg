@@ -28,7 +28,7 @@ You must have Go 1.10 or later with [vgo][] to build gg.
 
 ```
 # From a release tarball or a local clone:
-./build.bash ~/bin/gg
+misc/build.bash ~/bin/gg
 
 # Or using the go tool:
 go install ./cmd/gg
