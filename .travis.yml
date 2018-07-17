@@ -63,5 +63,8 @@ jobs:
           tags: true
 stages:
   - test
+  - name: doc
+    # Include pull requests, but will not run deploy.
+    if: branch = master
   - name: release
     if: tag IS present
