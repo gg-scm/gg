@@ -17,7 +17,7 @@ function outbound(query, label) {
   var q = document.querySelectorAll(query);
   for (var i = 0; i < q.length; i++) {
     q[i].addEventListener('click', function() {
-      ga('send', 'event', 'Outbound Link', 'click', label, {transport: 'beacon'});
+      ga('send', 'event', 'Outbound Link', 'click', label, 1, {transport: 'beacon'});
     });
   }
 }
