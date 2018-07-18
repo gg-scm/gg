@@ -26,10 +26,16 @@ url = "/cmd/"
 weight = 3
 
 [[menu.main]]
+identifier = "download"
+name = "Download"
+url = "https://github.com/zombiezen/gg/releases/tag/v0.6.0"
+weight = 4
+
+[[menu.main]]
 identifier = "github"
 name = "GitHub"
 url = "https://github.com/zombiezen/gg"
-weight = 4
+weight = 5
 
 [params]
 licenseURL = "https://github.com/zombiezen/gg/blob/master/LICENSE"
