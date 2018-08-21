@@ -138,7 +138,10 @@ func defaultCloneDest(url string) string {
 		url = url[:len(url)-4]
 	}
 	if i := strings.LastIndexByte(url, '/'); i != -1 {
-		return url[i:]
+		return url[i+1:]
+	}
+	if i := strings.LastIndexByte(url, '\\'); i != -1 {
+		return url[i+1:]
 	}
 	return url
 }

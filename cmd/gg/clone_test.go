@@ -155,3 +155,49 @@ func setupCloneTest(ctx context.Context, env *testEnv) (head gitobj.Hash, _ erro
 	}
 	return r.Commit(), nil
 }
+
+func TestDefaultCloneDest(t *testing.T) {
+	tests := []struct {
+		url  string
+		want string
+	}{
+		{
+			url:  "git@github.com:google/go-cloud.git",
+			want: "go-cloud",
+		},
+		{
+			url:  "https://github.com/google/go-cloud.git",
+			want: "go-cloud",
+		},
+		{
+			url:  "https://github.com/google/go-cloud",
+			want: "go-cloud",
+		},
+		{
+			url:  "foo",
+			want: "foo",
+		},
+		{
+			url:  "bar",
+			want: "bar",
+		},
+		{
+			url:  "foo/bar/.git",
+			want: "bar",
+		},
+		{
+			url:  "foo/bar.git",
+			want: "bar",
+		},
+		{
+			url:  `C:\Users\Ross\Documents\foo.git`,
+			want: "foo",
+		},
+	}
+	for _, test := range tests {
+		got := defaultCloneDest(test.url)
+		if got != test.want {
+			t.Errorf("defaultCloneDest(%q) = %q; want %q", test.url, got, test.want)
+		}
+	}
+}
