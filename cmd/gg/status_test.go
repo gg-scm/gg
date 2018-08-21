@@ -87,15 +87,39 @@ func TestStatus_RenamedLocally(t *testing.T) {
 	if err := env.git.Run(ctx, "add", "-N", "bar.txt"); err != nil {
 		t.Fatal(err)
 	}
-
-	out, err := env.gg(ctx, env.root, "status")
+	// Check for buggy Git (see https://github.com/zombiezen/gg/issues/60).
+	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
+	statusOut, err := ioutil.ReadAll(p)
+	waitErr := p.Wait()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if waitErr != nil {
+		t.Fatal(err)
+	}
+	isBuggyGit := bytes.Equal(statusOut, []byte(" R foo.txt\x00"))
+	if isBuggyGit {
+		t.Log("This is a buggy Git version.")
+	}
+
+	// Run gg status.
+	out, err := env.gg(ctx, env.root, "status")
+	if isBuggyGit && (err == nil || isUsage(err)) {
+		t.Error("Git is buggy, gg was supposed to fail.")
+	} else if !isBuggyGit && err != nil {
+		t.Error(err)
+	}
 	got := parseGGStatus(out, t)
+	addName := "bar.txt"
+	if isBuggyGit {
+		addName = "???"
+	}
 	want := []ggStatusLine{
 		{letter: '!', name: "foo.txt"},
-		{letter: 'A', name: "bar.txt"},
+		{letter: 'A', name: addName},
 	}
 	diff := cmp.Diff(want, got,
 		cmp.AllowUnexported(ggStatusLine{}),

@@ -28,6 +28,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"gg-scm.io/pkg/internal/sigterm"
 )
@@ -42,6 +43,10 @@ type Tool struct {
 	stdin  io.Reader
 	stdout io.Writer
 	stderr io.Writer
+
+	versionMu   sync.Mutex
+	versionCond chan struct{}
+	version     string
 }
 
 // Options specifies optional parameters to New.
@@ -108,6 +113,52 @@ func (t *Tool) cmd(args []string) *exec.Cmd {
 	c.Stderr = t.stderr
 	c.Dir = t.dir
 	return c
+}
+
+func (t *Tool) getVersion(ctx context.Context) (string, error) {
+	t.versionMu.Lock()
+	for t.versionCond != nil {
+		c := t.versionCond
+		t.versionMu.Unlock()
+		select {
+		case <-c:
+			t.versionMu.Lock()
+		case <-ctx.Done():
+			return "", wrapError("git --version", ctx.Err())
+		}
+	}
+	if t.version != "" {
+		// Cached version string available.
+		v := t.version
+		t.versionMu.Unlock()
+		return v, nil
+	}
+	t.versionCond = make(chan struct{})
+	t.versionMu.Unlock()
+
+	// Run git --version.
+	args := []string{"--version"}
+	if t.log != nil {
+		t.log(ctx, args)
+	}
+	c := t.cmd(args)
+	sb := new(strings.Builder)
+	c.Stdout = &limitWriter{w: sb, n: 4096}
+	if err := sigterm.Run(ctx, c); err != nil {
+		t.versionMu.Lock()
+		close(t.versionCond)
+		t.versionCond = nil
+		t.versionMu.Unlock()
+		return "", wrapError("git --version", err)
+	}
+	v := sb.String()
+
+	t.versionMu.Lock()
+	t.version = v
+	close(t.versionCond)
+	t.versionCond = nil
+	t.versionMu.Unlock()
+	return v, nil
 }
 
 // Path returns the absolute path to the Git executable.
@@ -334,4 +385,23 @@ func errorSubject(args []string) string {
 		}
 	}
 	return "git"
+}
+
+type limitWriter struct {
+	w io.Writer
+	n int64
+}
+
+func (lw *limitWriter) Write(p []byte) (int, error) {
+	if int64(len(p)) > lw.n {
+		n, err := lw.w.Write(p[:int(lw.n)])
+		lw.n -= int64(n)
+		if err != nil {
+			return n, err
+		}
+		return n, errors.New("buffer full")
+	}
+	n, err := lw.w.Write(p)
+	lw.n -= int64(n)
+	return n, err
 }

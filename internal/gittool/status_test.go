@@ -22,8 +22,9 @@ import (
 
 func TestReadStatusEntry(t *testing.T) {
 	tests := []struct {
-		name string
-		data string
+		name      string
+		data      string
+		renameBug bool
 
 		code      StatusCode
 		entName   string
@@ -62,11 +63,32 @@ func TestReadStatusEntry(t *testing.T) {
 		},
 		{
 			// Regression test for https://github.com/zombiezen/gg/issues/44
-			name:    "RenamedLocally",
-			data:    " R bar.txt\x00foo.txt\x00",
-			code:    StatusCode{' ', 'R'},
-			entName: "bar.txt",
-			from:    "foo.txt",
+			name:      "RenamedLocally",
+			data:      " R bar.txt\x00foo.txt\x00",
+			renameBug: false,
+			code:      StatusCode{' ', 'R'},
+			entName:   "bar.txt",
+			from:      "foo.txt",
+		},
+		{
+			// Test for Git bug described in https://github.com/zombiezen/gg/issues/60
+			name:      "RenamedLocally_GoodInputWithGitBug",
+			data:      " R bar.txt\x00foo.txt\x00",
+			renameBug: true,
+			code:      StatusCode{' ', 'R'},
+			entName:   "",
+			from:      "bar.txt",
+			remaining: "foo.txt\x00",
+		},
+		{
+			// Test for Git bug described in https://github.com/zombiezen/gg/issues/60
+			name:      "RenamedLocally_GitBug",
+			data:      " R bar.txt\x00 A foo.txt\x00",
+			renameBug: true,
+			code:      StatusCode{' ', 'R'},
+			entName:   "",
+			from:      "bar.txt",
+			remaining: " A foo.txt\x00",
 		},
 		{
 			name:      "Multiple",
@@ -81,7 +103,7 @@ func TestReadStatusEntry(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			r := strings.NewReader(test.data)
 			var ent StatusEntry
-			err := readStatusEntry(&ent, r)
+			err := readStatusEntry(&ent, r, test.renameBug)
 			if remaining := test.data[len(test.data)-r.Len():]; remaining != test.remaining {
 				t.Errorf("after readStatusEntry, remaining = %q; want %q", remaining, test.remaining)
 			}
@@ -183,5 +205,40 @@ func TestReadDiffStatusEntry(t *testing.T) {
 				t.Errorf("readDiffStatusEntry(...).Name() = %q; want %q", got, want)
 			}
 		})
+	}
+}
+
+func TestAffectedByStatusRenameBug(t *testing.T) {
+	tests := []struct {
+		version string
+		want    bool
+	}{
+		{"", false},
+		{"git version 2.10", false},
+		{"git version 2.10.0", false},
+		{"git version 2.10.0.foobarbaz", false},
+		{"git version 2.11", true},
+		{"git version 2.11.0", true},
+		{"git version 2.11.0.foobarbaz", true},
+		{"git version 2.12", true},
+		{"git version 2.12.0", true},
+		{"git version 2.12.0.foobarbaz", true},
+		{"git version 2.13", true},
+		{"git version 2.13.0", true},
+		{"git version 2.13.0.foobarbaz", true},
+		{"git version 2.14", true},
+		{"git version 2.14.0", true},
+		{"git version 2.14.0.foobarbaz", true},
+		{"git version 2.15", true},
+		{"git version 2.15.0", true},
+		{"git version 2.15.0.foobarbaz", true},
+		{"git version 2.16", false},
+		{"git version 2.16.0", false},
+		{"git version 2.16.0.foobarbaz", false},
+	}
+	for _, test := range tests {
+		if got := affectedByStatusRenameBug(test.version); got != test.want {
+			t.Errorf("affectedByStatusRenameBug(%q) = %t; want %t", test.version, got, test.want)
+		}
 	}
 }

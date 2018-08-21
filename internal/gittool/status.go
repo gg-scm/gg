@@ -25,9 +25,10 @@ import (
 
 // StatusReader is a handle to a running `git status` command.
 type StatusReader struct {
-	p      *Process
-	r      *bufio.Reader
-	cancel context.CancelFunc
+	p         *Process
+	r         *bufio.Reader
+	cancel    context.CancelFunc
+	renameBug bool
 
 	scanned bool
 	ent     StatusEntry
@@ -46,6 +47,10 @@ type StatusOptions struct {
 
 // Status starts a `git status` subprocess.
 func Status(ctx context.Context, git *Tool, opts StatusOptions) (*StatusReader, error) {
+	renameBug := false
+	if version, err := git.getVersion(ctx); err == nil && affectedByStatusRenameBug(version) {
+		renameBug = true
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	args := make([]string, 0, 8+len(opts.Pathspec))
 	if opts.DisableRenames {
@@ -64,15 +69,38 @@ func Status(ctx context.Context, git *Tool, opts StatusOptions) (*StatusReader, 
 		return nil, err
 	}
 	return &StatusReader{
-		p:      p,
-		r:      bufio.NewReader(p),
-		cancel: cancel,
+		p:         p,
+		r:         bufio.NewReader(p),
+		cancel:    cancel,
+		renameBug: renameBug,
 	}, nil
+}
+
+// affectedByStatusRenameBug reports whether `git status --porcelain`
+// emits incorrect output for locally renamed files.
+//
+// In the affected versions, Git will only list the missing source file,
+// not the new added file. See https://github.com/zombiezen/gg/issues/60
+// for a full explanation.
+func affectedByStatusRenameBug(version string) bool {
+	prefixes := []string{
+		"git version 2.11",
+		"git version 2.12",
+		"git version 2.13",
+		"git version 2.14",
+		"git version 2.15",
+	}
+	for _, p := range prefixes {
+		if strings.HasPrefix(version, p) && (len(version) == len(p) || version[len(p)] == '.') {
+			return true
+		}
+	}
+	return false
 }
 
 // Scan reads the next entry in the status output.
 func (sr *StatusReader) Scan() bool {
-	sr.err = readStatusEntry(&sr.ent, sr.r)
+	sr.err = readStatusEntry(&sr.ent, sr.r, sr.renameBug)
 	if sr.err != nil {
 		return false
 	}
@@ -130,7 +158,7 @@ type StatusEntry struct {
 	from string
 }
 
-func readStatusEntry(out *StatusEntry, r io.ByteReader) error {
+func readStatusEntry(out *StatusEntry, r io.ByteReader, renameBug bool) error {
 	var err error
 	// Read status code.
 	out.code[0], err = r.ReadByte()
@@ -158,6 +186,12 @@ func readStatusEntry(out *StatusEntry, r io.ByteReader) error {
 	out.name, err = readString(r, 2048)
 	if err != nil {
 		return fmt.Errorf("read status entry: %v", err)
+	}
+	if renameBug && out.code[0] == ' ' && out.code[1] == 'R' {
+		// See doc for affectedByStatusRenameBug for explanation.
+		out.from = out.name
+		out.name = ""
+		return nil
 	}
 	if out.code[0] == 'R' || out.code[0] == 'C' || out.code[1] == 'R' || out.code[1] == 'C' {
 		out.from, err = readString(r, 2048)

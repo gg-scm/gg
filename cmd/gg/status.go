@@ -92,13 +92,20 @@ aliases: st, check`)
 		}
 	}
 	foundUnrecognized := false
+	hitRenameBug := false
 	for st.Scan() {
 		ent := st.Entry()
 		switch {
 		case ent.Code().IsModified():
 			_, err = fmt.Fprintf(cc.stdout, "%sM %s\n", modifiedColor, ent.Name())
 		case ent.Code().IsAdded():
-			_, err = fmt.Fprintf(cc.stdout, "%sA %s\n", addedColor, ent.Name())
+			name := ent.Name()
+			if name == "" {
+				// See https://github.com/zombiezen/gg/issues/60 for explanation.
+				name = "???"
+				hitRenameBug = true
+			}
+			_, err = fmt.Fprintf(cc.stdout, "%sA %s\n", addedColor, name)
 			if ent.Code().IsOriginalMissing() {
 				// See https://github.com/zombiezen/gg/issues/44 for explanation.
 				if colorize {
@@ -155,6 +162,9 @@ aliases: st, check`)
 	}
 	if foundUnrecognized {
 		return errors.New("unrecognized output from git status. Please file a bug at https://github.com/zombiezen/gg/issues/new and include the output from this command.")
+	}
+	if hitRenameBug {
+		return errors.New("version of Git has buggy rename detection; please upgrade. See https://github.com/zombiezen/gg/issues/60 for details.")
 	}
 	return nil
 }
