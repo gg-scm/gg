@@ -169,6 +169,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		} else if err != nil {
 			return fmt.Errorf("gg: %v", err)
 		}
+		return nil
 	}
 	err = dispatch(ctx, cc, globalFlags, globalFlags.Arg(0), globalFlags.Args()[1:])
 	if isUsage(err) {
