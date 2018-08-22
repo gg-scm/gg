@@ -41,3 +41,9 @@
     sense as unit tests (testing a git output parser, for instance), these are
     fine, as long as the flow it's used in is covered by an integration test.
     This way, we can catch git version differences (of which there are many).
+
+-   As of gg 0.7, the `internal/git` package is now the preferred way of
+    interacting with Git, even in tests. `internal/git` is tested using raw
+    Git commands to ensure that the command-line invocations are correct, and
+    then gg integration tests use `internal/git` so that they are using
+    well-tested and structured Git invocations.
