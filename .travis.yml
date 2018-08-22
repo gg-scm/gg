@@ -11,12 +11,19 @@ script:
   - "goveralls -coverprofile=coverage.out -service=travis-ci"
 jobs:
   include:
+    # Default
     - os: linux
       env: &stdenv "VGO=1 GIT_VERSION=2.18.0"
+    # Ubuntu Xenial
     - os: linux
       env: VGO=1 GIT_VERSION=2.7.4
+    # Debian Stretch
+    - os: linux
+      env: VGO=1 GIT_VERSION=2.11.0
+    # No Go modules
     - os: linux
       env: VGO=0 GIT_VERSION=2.18.0
+    # macOS
     - os: osx
       env: *stdenv
     - stage: docs
