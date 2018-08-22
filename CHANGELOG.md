@@ -1,5 +1,14 @@
 # Release Notes
 
+## 0.6.1
+
+### Bug Fixes
+
+-   `gg --version` no longer crashes ([#71](https://github.com/zombiezen/gg/issues/71))
+-   `gg clone` does not try to clone to `/` ([#70](https://github.com/zombiezen/gg/issues/70))
+-   `gg status` no longer crashes when encountering a renamed file on Git 2.11.
+    ([#60](https://github.com/zombiezen/gg/issues/60))
+
 ## 0.6.0
 
 ### Features
