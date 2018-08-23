@@ -1,6 +1,6 @@
 # Release Notes
 
-## 0.6.1
+## 0.6.1 (2018-08-22)
 
 ### Bug Fixes
 
@@ -9,7 +9,7 @@
 -   `gg status` no longer crashes when encountering a renamed file on Git 2.11.
     ([#60](https://github.com/zombiezen/gg/issues/60))
 
-## 0.6.0
+## 0.6.0 (2018-07-17)
 
 ### Features
 
@@ -55,14 +55,14 @@ There are a few known issues in 0.6:
     ([#60](https://github.com/zombiezen/gg/issues/60)) The workaround here is to
     install a newer version of Git.
 
-## 0.5.1
+## 0.5.1 (2018-05-31)
 
 ### Bug Fixes
 
 -   Running `commit` with no arguments no longer emits a misleading "fatal"
     error message. ([#43](https://github.com/zombiezen/gg/issues/43))
 
-## 0.5.0
+## 0.5.0 (2018-05-30)
 
 ### Features
 
@@ -101,7 +101,7 @@ There are a few known issues in 0.6:
 -   `merge` no longer creates a commit.
     ([#42](https://github.com/zombiezen/gg/issues/42))
 
-## 0.4.2
+## 0.4.2 (2018-05-02)
 
 ### Bug Fixes
 
@@ -110,7 +110,7 @@ There are a few known issues in 0.6:
 -   `rebase -src` now behaves as documented when given a revision that is
     unrelated to HEAD. ([#27](https://github.com/zombiezen/gg/issues/27))
 
-## 0.4.1
+## 0.4.1 (2018-04-18)
 
 ### Bug Fixes
 
@@ -119,7 +119,7 @@ There are a few known issues in 0.6:
     didn't have a test, so I forgot to implement it.
     ([#20](https://github.com/zombiezen/gg/issues/20))
 
-## 0.4.0
+## 0.4.0 (2018-04-18)
 
 ### Features
 
@@ -135,7 +135,7 @@ There are a few known issues in 0.6:
 -   `pull` now fetches all tags from a remote by default. Use `-tags=0` to
     disable this behavior. ([#17](https://github.com/zombiezen/gg/issues/17))
 
-## 0.3.0
+## 0.3.0 (2018-04-06)
 
 ### Features
 
@@ -150,13 +150,13 @@ There are a few known issues in 0.6:
 -   `rebase -dst` now always defaults to the upstream branch, whereas sometimes
     it would take from the source flags.
 
-## 0.2.1
+## 0.2.1 (2018-04-03)
 
 ### Bug Fixes
 
 -   `histedit` flags no longer give incorrect usage errors. ([#11](https://github.com/zombiezen/gg/issues/11))
 
-## 0.2.0
+## 0.2.0 (2018-04-03)
 
 ### Features
 
@@ -179,6 +179,6 @@ There are a few known issues in 0.6:
 -   Running `commit` in a subdirectory of the working copy will no longer fail
     when committing a removed file. ([#10](https://github.com/zombiezen/gg/issues/10))
 
-## 0.1.3
+## 0.1.3 (2018-03-23)
 
 First public binary release.
