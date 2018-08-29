@@ -24,7 +24,7 @@ features and the ideas behind the project.
 
 ## Building from Source
 
-You must have Go 1.10 or later with [vgo][] to build gg.
+You must have Go 1.11 or later to build gg.
 
 ```
 # From a release tarball or a local clone:
@@ -33,8 +33,6 @@ misc/build.bash ~/bin/gg
 # Or using the go tool:
 go install ./cmd/gg
 ```
-
-[vgo]: https://godoc.org/golang.org/x/vgo
 
 ## Contributor License Agreement
 

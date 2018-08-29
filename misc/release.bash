@@ -26,8 +26,8 @@ if [[ -z "$release_version" ]]; then
   echo "misc/release.bash: cannot infer version, please pass explicitly" 1>&2
   exit 1
 fi
-release_os="$(vgo env GOOS)" || exit 1
-release_arch="$(vgo env GOARCH)" || exit 1
+release_os="$(go env GOOS)" || exit 1
+release_arch="$(go env GOARCH)" || exit 1
 release_name="gg-${release_version}-${release_os}_${release_arch}"
 
 echo "Creating ${release_name}.tar.gz..." 1>&2
