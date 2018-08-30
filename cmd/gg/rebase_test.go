@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"gg-scm.io/pkg/internal/escape"
 	"gg-scm.io/pkg/internal/gitobj"
 	"gg-scm.io/pkg/internal/gittool"
 )
@@ -418,7 +419,7 @@ func TestHistedit(t *testing.T) {
 			t.Fatal(err)
 		}
 		config := fmt.Sprintf("[sequence]\neditor = %s\n[core]\neditor = %s\n",
-			configEscape(rebaseEditor), configEscape(msgEditor))
+			escape.GitConfig(rebaseEditor), escape.GitConfig(msgEditor))
 		if err := env.writeConfig([]byte(config)); err != nil {
 			t.Fatal(err)
 		}
@@ -507,7 +508,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		config := fmt.Sprintf("[sequence]\neditor = %s\n[core]\neditor = %s\n",
-			configEscape(rebaseEditor), configEscape(msgEditor))
+			escape.GitConfig(rebaseEditor), escape.GitConfig(msgEditor))
 		if err := env.writeConfig([]byte(config)); err != nil {
 			t.Fatal(err)
 		}
@@ -620,7 +621,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		config := fmt.Sprintf("[sequence]\neditor = %s\n[core]\neditor = %s\n",
-			configEscape(rebaseEditor), configEscape(msgEditor))
+			escape.GitConfig(rebaseEditor), escape.GitConfig(msgEditor))
 		if err := env.writeConfig([]byte(config)); err != nil {
 			t.Fatal(err)
 		}
@@ -682,27 +683,6 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Error(err)
 		}
 	})
-}
-
-func TestShellEscape(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		in, out string
-	}{
-		{``, `''`},
-		{`abc`, `abc`},
-		{`abc def`, `'abc def'`},
-		{`abc/def`, `abc/def`},
-		{`abc.def`, `abc.def`},
-		{`"abc"`, `'"abc"'`},
-		{`'abc'`, `''\''abc'\'''`},
-		{`abc\`, `'abc\'`},
-	}
-	for _, test := range tests {
-		if out := shellEscape(test.in); out != test.out {
-			t.Errorf("shellEscape(%q) = %s; want %s", test.in, out, test.out)
-		}
-	}
 }
 
 type rebaseArgFunc = func(masterCommit gitobj.Hash) string

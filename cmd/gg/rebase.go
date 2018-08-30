@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"gg-scm.io/pkg/internal/escape"
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/gitobj"
 	"gg-scm.io/pkg/internal/gittool"
@@ -96,7 +97,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		editorCmd := fmt.Sprintf(
 			"%s log --reverse --first-parent --pretty='tformat:pick %%H' %s~..%s >",
-			shellEscape(cc.git.Path()), shellEscape(*src), shellEscape(descend[0].String()))
+			escape.Shell(cc.git.Path()), escape.Shell(*src), escape.Shell(descend[0].String()))
 		return cc.git.RunInteractive(ctx,
 			"-c", "sequence.editor="+editorCmd,
 			"rebase",
@@ -244,38 +245,4 @@ func branchesContaining(ctx context.Context, git *gittool.Tool, object string) (
 		return nil, fmt.Errorf("list branches: %v", err)
 	}
 	return refs, nil
-}
-
-// shellEscape quotes s such that it can be used as a literal argument
-// to a shell command.
-func shellEscape(s string) string {
-	if s == "" {
-		return "''"
-	}
-	safe := true
-	for i := 0; i < len(s); i++ {
-		if !isShellSafe(s[i]) {
-			safe = false
-			break
-		}
-	}
-	if safe {
-		return s
-	}
-	sb := new(strings.Builder)
-	sb.Grow(len(s) + 2)
-	sb.WriteByte('\'')
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\'' {
-			sb.WriteString(`'\''`)
-		} else {
-			sb.WriteByte(s[i])
-		}
-	}
-	sb.WriteByte('\'')
-	return sb.String()
-}
-
-func isShellSafe(b byte) bool {
-	return b >= 'A' && b <= 'Z' || b >= 'a' && b <= 'z' || b >= '0' && b <= '9' || b == '-' || b == '_' || b == '/' || b == '.'
 }

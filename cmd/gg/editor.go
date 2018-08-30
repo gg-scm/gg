@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"gg-scm.io/pkg/internal/escape"
 	"gg-scm.io/pkg/internal/gittool"
 	"gg-scm.io/pkg/internal/sigterm"
 )
@@ -59,7 +60,7 @@ func (e *editor) open(ctx context.Context, basename string, initial []byte) ([]b
 	if err := ioutil.WriteFile(path, initial, 0600); err != nil {
 		return nil, fmt.Errorf("open editor: %v", err)
 	}
-	c := exec.Command("/bin/sh", "-c", string(editor)+" "+shellEscape(path))
+	c := exec.Command("/bin/sh", "-c", string(editor)+" "+escape.Shell(path))
 	c.Stdin = e.stdin
 	c.Stdout = e.stdout
 	c.Stderr = e.stderr

@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"testing"
+
+	"gg-scm.io/pkg/internal/escape"
 )
 
 func TestEditor(t *testing.T) {
@@ -33,7 +35,7 @@ func TestEditor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	config := fmt.Sprintf("[core]\neditor = %s\n", configEscape(cmd))
+	config := fmt.Sprintf("[core]\neditor = %s\n", escape.GitConfig(cmd))
 	if err := env.writeConfig([]byte(config)); err != nil {
 		t.Fatal(err)
 	}

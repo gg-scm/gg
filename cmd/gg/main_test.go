@@ -28,6 +28,7 @@ import (
 	"sync"
 	"testing"
 
+	"gg-scm.io/pkg/internal/escape"
 	"gg-scm.io/pkg/internal/gitobj"
 	"gg-scm.io/pkg/internal/gittool"
 	"github.com/google/go-cmp/cmp"
@@ -226,7 +227,7 @@ func (env *testEnv) editorCmd(content []byte) (string, error) {
 	if err := ioutil.WriteFile(dst, content, 0666); err != nil {
 		return "", fmt.Errorf("editor command: %v", err)
 	}
-	return fmt.Sprintf("%s %s", cpPath, shellEscape(dst)), nil
+	return fmt.Sprintf("%s %s", cpPath, escape.Shell(dst)), nil
 }
 
 func (env *testEnv) cleanup() {
@@ -438,27 +439,6 @@ func prettyCommit(h gitobj.Hash, names map[gitobj.Hash]string) string {
 		return h.String()
 	}
 	return h.String() + " (" + n + ")"
-}
-
-// configEscape quotes s such that it can be used as a git configuration value.
-func configEscape(s string) string {
-	sb := new(strings.Builder)
-	sb.Grow(len(s) + 2)
-	sb.WriteByte('"')
-	for i := 0; i < len(s); i++ {
-		switch s[i] {
-		case '\n':
-			sb.WriteString(`\n`)
-		case '\\':
-			sb.WriteString(`\\`)
-		case '"':
-			sb.WriteString(`\"`)
-		default:
-			sb.WriteByte(s[i])
-		}
-	}
-	sb.WriteByte('"')
-	return sb.String()
 }
 
 // stubRoundTripper returns a Bad Gateway response for any incoming request.

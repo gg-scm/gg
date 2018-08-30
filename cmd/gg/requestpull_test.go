@@ -28,6 +28,7 @@ import (
 	"sync"
 	"testing"
 
+	"gg-scm.io/pkg/internal/escape"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -444,7 +445,7 @@ func TestRequestPull_Editor(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			config := fmt.Sprintf("[core]\neditor = %s\n", configEscape(cmd))
+			config := fmt.Sprintf("[core]\neditor = %s\n", escape.GitConfig(cmd))
 			if err := env.writeConfig([]byte(config)); err != nil {
 				t.Fatal(err)
 			}
