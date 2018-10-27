@@ -27,11 +27,12 @@ func TestParseRev(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping due to -short")
 	}
-	if gitPathError != nil {
-		t.Skip("git not found:", gitPathError)
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
 	}
 	ctx := context.Background()
-	env, err := newTestEnv(ctx)
+	env, err := newTestEnv(ctx, gitPath)
 	if err != nil {
 		t.Fatal(err)
 	}

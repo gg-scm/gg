@@ -22,28 +22,20 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
-
-var (
-	gitPath      string
-	gitPathError error
-)
-
-func TestMain(m *testing.M) {
-	gitPath, gitPathError = exec.LookPath("git")
-	os.Exit(m.Run())
-}
 
 func TestRun(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping due to -short")
 	}
-	if gitPathError != nil {
-		t.Skip("git not found:", gitPathError)
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
 	}
 	ctx := context.Background()
-	env, err := newTestEnv(ctx)
+	env, err := newTestEnv(ctx, gitPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,11 +58,12 @@ func TestQuery(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping due to -short")
 	}
-	if gitPathError != nil {
-		t.Skip("git not found:", gitPathError)
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
 	}
 	ctx := context.Background()
-	env, err := newTestEnv(ctx)
+	env, err := newTestEnv(ctx, gitPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +111,7 @@ type testEnv struct {
 	git  *Tool
 }
 
-func newTestEnv(ctx context.Context) (*testEnv, error) {
+func newTestEnv(ctx context.Context, gitPath string) (*testEnv, error) {
 	root, err := ioutil.TempDir("", "gg_gittool_test")
 	if err != nil {
 		return nil, err
@@ -145,4 +138,23 @@ func newTestEnv(ctx context.Context) (*testEnv, error) {
 
 func (env *testEnv) cleanup() {
 	os.RemoveAll(env.root)
+}
+
+var gitPathCache struct {
+	mu  sync.Mutex
+	val string
+}
+
+func findGit() (string, error) {
+	defer gitPathCache.mu.Unlock()
+	gitPathCache.mu.Lock()
+	if gitPathCache.val != "" {
+		return gitPathCache.val, nil
+	}
+	path, err := exec.LookPath("git")
+	if err != nil {
+		return "", err
+	}
+	gitPathCache.val = path
+	return path, nil
 }

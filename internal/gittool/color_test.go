@@ -115,9 +115,6 @@ func TestConfigColor(t *testing.T) {
 }
 
 func TestConfigColorBool(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
 	tests := []struct {
 		config string
 		name   string
@@ -190,11 +187,15 @@ func TestConfigColorBool(t *testing.T) {
 		{"[diff]\ncolor = always\n", "color.diff"},
 		{"[diff]\ncolor = never\n", "color.diff"},
 	}
-	if gitPathError != nil {
-		t.Skip("git not found:", gitPathError)
+	if testing.Short() {
+		t.Skip("skipping due to -short")
+	}
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
 	}
 	ctx := context.Background()
-	env, err := newTestEnv(ctx)
+	env, err := newTestEnv(ctx, gitPath)
 	if err != nil {
 		t.Fatal(err)
 	}

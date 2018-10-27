@@ -90,9 +90,6 @@ func TestParseConfig(t *testing.T) {
 }
 
 func TestConfigValue(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
 	tests := []struct {
 		config string
 		name   string
@@ -105,11 +102,15 @@ func TestConfigValue(t *testing.T) {
 		{"[foo]\n\tbar\n", "foo.bar"},
 		{"[foo]\n\tbar =\n", "foo.bar"},
 	}
-	if gitPathError != nil {
-		t.Skip("git not found:", gitPathError)
+	if testing.Short() {
+		t.Skip("skipping due to -short")
+	}
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
 	}
 	ctx := context.Background()
-	env, err := newTestEnv(ctx)
+	env, err := newTestEnv(ctx, gitPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,9 +142,6 @@ func TestConfigValue(t *testing.T) {
 }
 
 func TestConfigBool(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
 	tests := []struct {
 		config string
 		name   string
@@ -164,11 +162,15 @@ func TestConfigBool(t *testing.T) {
 		{"[foo]\n\tbar = off\n", "foo.bar"},
 		{"[foo]\n\tbar = 0\n", "foo.bar"},
 	}
-	if gitPathError != nil {
-		t.Skip("git not found:", gitPathError)
+	if testing.Short() {
+		t.Skip("skipping due to -short")
+	}
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
 	}
 	ctx := context.Background()
-	env, err := newTestEnv(ctx)
+	env, err := newTestEnv(ctx, gitPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,11 +222,12 @@ func BenchmarkReadConfig(b *testing.B) {
 	if testing.Short() {
 		b.Skip("skipping due to -short")
 	}
-	if gitPathError != nil {
-		b.Skip("git not found:", gitPathError)
+	gitPath, err := findGit()
+	if err != nil {
+		b.Skip("git not found:", err)
 	}
 	ctx := context.Background()
-	env, err := newTestEnv(ctx)
+	env, err := newTestEnv(ctx, gitPath)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -257,11 +260,12 @@ func BenchmarkOneConfigLine(b *testing.B) {
 	if testing.Short() {
 		b.Skip("skipping due to -short")
 	}
-	if gitPathError != nil {
-		b.Skip("git not found:", gitPathError)
+	gitPath, err := findGit()
+	if err != nil {
+		b.Skip("git not found:", err)
 	}
 	ctx := context.Background()
-	env, err := newTestEnv(ctx)
+	env, err := newTestEnv(ctx, gitPath)
 	if err != nil {
 		b.Fatal(err)
 	}
