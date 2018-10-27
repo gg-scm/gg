@@ -29,8 +29,10 @@ func Signals() []os.Signal {
 // Start is like calling Start on os/exec.CommandContext but uses
 // SIGTERM on Unix-based systems.
 func Start(ctx context.Context, c *exec.Cmd) (wait func() error, err error) {
+	if err := c.Start(); err != nil {
+		return nil, err
+	}
 	waitDone := make(chan struct{})
-	defer close(waitDone)
 	go func() {
 		select {
 		case <-ctx.Done():
@@ -38,10 +40,10 @@ func Start(ctx context.Context, c *exec.Cmd) (wait func() error, err error) {
 		case <-waitDone:
 		}
 	}()
-	if err := c.Start(); err != nil {
-		return nil, err
-	}
-	return c.Wait, nil
+	return func() error {
+		defer close(waitDone)
+		return c.Wait()
+	}, nil
 }
 
 // Run is like calling Run on os/exec.CommandContext but uses
