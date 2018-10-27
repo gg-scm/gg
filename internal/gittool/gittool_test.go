@@ -24,7 +24,83 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
+
+func TestCommand(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping due to -short")
+	}
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	tests := []struct {
+		name string
+		env  []string
+	}{
+		{
+			name: "NilEnv",
+			env:  nil,
+		},
+		{
+			name: "FooEnv",
+			env:  []string{"FOO=bar"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			dir, err := ioutil.TempDir("", "gg_gittool_test")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if err := os.Remove(dir); err != nil {
+					t.Error("cleaning up directory:", err)
+				}
+			}()
+			var hookArgs []string
+			var env []string
+			if test.env != nil {
+				env = append([]string(nil), test.env...)
+			}
+			git, err := New(gitPath, dir, &Options{
+				LogHook: func(_ context.Context, args []string) {
+					hookArgs = append([]string(nil), args...)
+				},
+				Env: env,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			c := git.Command(ctx, "commit", "-m", "Hello, World!")
+			if c.Path != gitPath {
+				t.Errorf("c.Path = %q; want %q", c.Path, gitPath)
+			}
+			if len(c.Args) == 0 {
+				t.Error("len(c.Args) = 0; want 4")
+			} else {
+				if got, want := filepath.Base(c.Args[0]), filepath.Base(gitPath); got != want {
+					t.Errorf("c.Args[0], filepath.Base(c.Args[0]) = %q, %q; want %q, %q", c.Args[0], got, gitPath, want)
+				}
+				if got, want := c.Args[1:], ([]string{"commit", "-m", "Hello, World!"}); !cmp.Equal(got, want) {
+					t.Errorf("c.Args[1:] = %q; want %q", got, want)
+				}
+			}
+			if !cmp.Equal(c.Env, test.env) {
+				t.Errorf("c.Env = %q; want %q", c.Env, test.env)
+			}
+			if c.Dir != dir {
+				t.Errorf("c.Dir = %q; want %q", c.Dir, dir)
+			}
+			if want := ([]string{"commit", "-m", "Hello, World!"}); !cmp.Equal(hookArgs, want) {
+				t.Errorf("log hook args = %q; want %q", hookArgs, want)
+			}
+		})
+	}
+}
 
 func TestRun(t *testing.T) {
 	if testing.Short() {

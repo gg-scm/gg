@@ -107,11 +107,22 @@ func New(path string, wd string, opts *Options) (*Tool, error) {
 	return t, nil
 }
 
-func (t *Tool) cmd(args []string) *exec.Cmd {
+// Command creates a new *exec.Cmd that will invoke Git with the given
+// arguments. The returned command does not obey the given Context's deadline
+// or cancelation.
+func (t *Tool) Command(ctx context.Context, args ...string) *exec.Cmd {
+	if t.log != nil {
+		t.log(ctx, args)
+	}
 	c := exec.Command(t.exe, args...)
 	c.Env = t.env
-	c.Stderr = t.stderr
 	c.Dir = t.dir
+	return c
+}
+
+func (t *Tool) cmd(ctx context.Context, args []string) *exec.Cmd {
+	c := t.Command(ctx, args...)
+	c.Stderr = t.stderr
 	return c
 }
 
@@ -138,10 +149,7 @@ func (t *Tool) getVersion(ctx context.Context) (string, error) {
 
 	// Run git --version.
 	args := []string{"--version"}
-	if t.log != nil {
-		t.log(ctx, args)
-	}
-	c := t.cmd(args)
+	c := t.cmd(ctx, args)
 	sb := new(strings.Builder)
 	c.Stdout = &limitWriter{w: sb, n: 4096}
 	if err := sigterm.Run(ctx, c); err != nil {
@@ -179,10 +187,7 @@ func (t *Tool) WithDir(dir string) *Tool {
 // stderr will be sent to the writer specified in the tool's options.
 // stdin and stdout will be connected to the null device.
 func (t *Tool) Run(ctx context.Context, args ...string) error {
-	if t.log != nil {
-		t.log(ctx, args)
-	}
-	if err := sigterm.Run(ctx, t.cmd(args)); err != nil {
+	if err := sigterm.Run(ctx, t.cmd(ctx, args)); err != nil {
 		return wrapError(errorSubject(args), err)
 	}
 	return nil
@@ -195,10 +200,7 @@ func (t *Tool) Run(ctx context.Context, args ...string) error {
 // tool does not exit with zero or one. stdin and stdout will be
 // connected to the null device.
 func (t *Tool) Query(ctx context.Context, args ...string) (bool, error) {
-	if t.log != nil {
-		t.log(ctx, args)
-	}
-	c := t.cmd(args)
+	c := t.cmd(ctx, args)
 	stderr := new(bytes.Buffer)
 	c.Stderr = stderr
 	if err := sigterm.Run(ctx, c); err != nil {
@@ -227,12 +229,9 @@ func (t *Tool) Query(ctx context.Context, args ...string) (bool, error) {
 // to finish.  All standard streams will be attached to the
 // corresponding streams specified in the tool's options.
 func (t *Tool) RunInteractive(ctx context.Context, args ...string) error {
-	c := t.cmd(args)
+	c := t.cmd(ctx, args)
 	c.Stdin = t.stdin
 	c.Stdout = t.stdout
-	if t.log != nil {
-		t.log(ctx, args)
-	}
 	if err := sigterm.Run(ctx, c); err != nil {
 		return wrapError(errorSubject(args), err)
 	}
@@ -289,13 +288,10 @@ func (t *Tool) RunOneLiner(ctx context.Context, delim byte, args ...string) ([]b
 // stderr will be sent to the writer specified in the tool's options.
 // stdin will be connected to the null device.
 func (t *Tool) Start(ctx context.Context, args ...string) (*Process, error) {
-	c := t.cmd(args)
+	c := t.cmd(ctx, args)
 	rc, err := c.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("run %s: %v", errorSubject(args), err)
-	}
-	if t.log != nil {
-		t.log(ctx, args)
 	}
 	wait, err := sigterm.Start(ctx, c)
 	if err != nil {
