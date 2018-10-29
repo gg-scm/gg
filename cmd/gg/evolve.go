@@ -127,7 +127,12 @@ func readChanges(ctx context.Context, git *gittool.Tool, head, base string) ([]c
 	if err != nil {
 		return nil, fmt.Errorf("read changes %s..%s: %v", base, head, err)
 	}
-	defer p.Wait()
+	calledWait := false
+	defer func() {
+		if !calledWait {
+			p.Wait()
+		}
+	}()
 	s := bufio.NewScanner(p)
 	s.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if len(data) == 0 {
@@ -157,6 +162,7 @@ func readChanges(ctx context.Context, git *gittool.Tool, head, base string) ([]c
 			if err := s.Err(); err != nil {
 				return nil, fmt.Errorf("read changes %s..%s: parse log: %v", base, head, err)
 			}
+			calledWait = true
 			if err := p.Wait(); err != nil {
 				return nil, fmt.Errorf("read changes %s..%s: %v", base, head, err)
 			}
@@ -171,6 +177,7 @@ func readChanges(ctx context.Context, git *gittool.Tool, head, base string) ([]c
 	if err := s.Err(); err != nil {
 		return nil, fmt.Errorf("read changes %s..%s: parse log: %v", base, head, err)
 	}
+	calledWait = true
 	if err := p.Wait(); err != nil {
 		return nil, fmt.Errorf("read changes %s..%s: %v", base, head, err)
 	}

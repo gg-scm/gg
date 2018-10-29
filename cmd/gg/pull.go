@@ -119,7 +119,12 @@ func listRemotes(ctx context.Context, git *gittool.Tool) (map[string]struct{}, e
 	if err != nil {
 		return nil, err
 	}
-	defer p.Wait()
+	calledWait := false
+	defer func() {
+		if !calledWait {
+			p.Wait()
+		}
+	}()
 	s := bufio.NewScanner(p)
 	remotes := make(map[string]struct{})
 	for s.Scan() {
@@ -128,6 +133,7 @@ func listRemotes(ctx context.Context, git *gittool.Tool) (map[string]struct{}, e
 	if s.Err() != nil {
 		return remotes, s.Err()
 	}
+	calledWait = true
 	err = p.Wait()
 	return remotes, err
 }

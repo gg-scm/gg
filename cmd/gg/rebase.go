@@ -232,12 +232,18 @@ func branchesContaining(ctx context.Context, git *gittool.Tool, object string) (
 	if err != nil {
 		return nil, fmt.Errorf("list branches: %v", err)
 	}
-	defer p.Wait()
+	calledWait := false
+	defer func() {
+		if !calledWait {
+			p.Wait()
+		}
+	}()
 	s := bufio.NewScanner(p)
 	var refs []gitobj.Ref
 	for s.Scan() {
 		refs = append(refs, gitobj.Ref(s.Text()))
 	}
+	calledWait = true
 	if err := p.Wait(); err != nil {
 		return nil, fmt.Errorf("list branches: %v", err)
 	}

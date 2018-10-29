@@ -107,7 +107,12 @@ func listRefs(ctx context.Context, git *gittool.Tool) (refList, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer p.Wait()
+	calledWait := false
+	defer func() {
+		if !calledWait {
+			p.Wait()
+		}
+	}()
 	s := bufio.NewScanner(p)
 	var refs refList
 	for s.Scan() {
@@ -125,6 +130,7 @@ func listRefs(ctx context.Context, git *gittool.Tool) (refList, error) {
 			commit: h,
 		})
 	}
+	calledWait = true
 	if err := p.Wait(); err != nil {
 		return refs, err
 	}

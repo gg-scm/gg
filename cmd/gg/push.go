@@ -304,7 +304,12 @@ func verifyPushRemoteRef(ctx context.Context, git *gittool.Tool, remote string, 
 	if err != nil {
 		return fmt.Errorf("verify remote ref %s: %v", ref, err)
 	}
-	defer p.Wait()
+	calledWait := false
+	defer func() {
+		if !calledWait {
+			p.Wait()
+		}
+	}()
 	refBytes := []byte(ref)
 	s := bufio.NewScanner(p)
 	for s.Scan() {
@@ -321,6 +326,7 @@ func verifyPushRemoteRef(ctx context.Context, git *gittool.Tool, remote string, 
 	if s.Err() != nil {
 		return fmt.Errorf("verify remote ref %s: %v", ref, err)
 	}
+	calledWait = true
 	if err := p.Wait(); err != nil {
 		return fmt.Errorf("verify remote ref %s: %v", ref, err)
 	}
