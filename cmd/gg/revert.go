@@ -55,7 +55,9 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 		if *rev == gitobj.Head.String() {
 			// If HEAD fails to parse (empty repo), then just use reset.
 			rmArgs := []string{"reset", "--"}
-			rmArgs = appendLiteralPathspec(rmArgs, f.Args())
+			for _, f := range f.Args() {
+				rmArgs = append(rmArgs, gittool.LiteralPath(f).String())
+			}
 			return cc.git.Run(ctx, rmArgs...)
 		}
 		return err
@@ -63,9 +65,13 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 
 	// Find the list of files that have changed between the revision and
 	// the working tree.
+	var pathspecs []gittool.Pathspec
+	for _, f := range f.Args() {
+		pathspecs = append(pathspecs, gittool.LiteralPath(f))
+	}
 	dr, err := gittool.DiffStatus(ctx, cc.git, gittool.DiffStatusOptions{
 		Commit1:        revObj.Commit().String(),
-		Pathspec:       appendLiteralPathspec(nil, f.Args()),
+		Pathspecs:      pathspecs,
 		DisableRenames: true,
 	})
 	if err != nil {
@@ -73,17 +79,17 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	drCloser := singleclose.For(dr)
 	defer drCloser.Close()
-	var adds, deletes, mods, chmods []string
+	var adds, deletes, mods, chmods []gittool.Pathspec
 	for dr.Scan() {
 		switch dr.Entry().Code() {
 		case gittool.DiffStatusAdded:
-			adds = append(adds, ":(top,literal)"+dr.Entry().Name())
+			adds = append(adds, dr.Entry().Name().Pathspec())
 		case gittool.DiffStatusDeleted:
-			deletes = append(deletes, ":(top,literal)"+dr.Entry().Name())
+			deletes = append(deletes, dr.Entry().Name().Pathspec())
 		case gittool.DiffStatusModified:
-			mods = append(mods, ":(top,literal)"+dr.Entry().Name())
+			mods = append(mods, dr.Entry().Name().Pathspec())
 		case gittool.DiffStatusChangedMode:
-			chmods = append(chmods, ":(top,literal)"+dr.Entry().Name())
+			chmods = append(chmods, dr.Entry().Name().Pathspec())
 		}
 	}
 	if err := dr.Err(); err != nil {
@@ -104,16 +110,25 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 	// Now revert files.
 	if len(adds) > 0 {
 		// TODO(#59): Can be fully removed if no local modifications (add test).
-		rmArgs := append([]string{"rm", "--cached", "--"}, adds...)
+		rmArgs := []string{"rm", "--cached", "--"}
+		for _, f := range adds {
+			rmArgs = append(rmArgs, f.String())
+		}
 		if err := cc.git.Run(ctx, rmArgs...); err != nil {
 			return err
 		}
 	}
 	if len(mods)+len(chmods)+len(deletes) > 0 {
 		coArgs := []string{"checkout", revObj.Commit().String(), "--"}
-		coArgs = append(coArgs, mods...)
-		coArgs = append(coArgs, chmods...)
-		coArgs = append(coArgs, deletes...)
+		for _, f := range mods {
+			coArgs = append(coArgs, f.String())
+		}
+		for _, f := range chmods {
+			coArgs = append(coArgs, f.String())
+		}
+		for _, f := range deletes {
+			coArgs = append(coArgs, f.String())
+		}
 		if err := cc.git.Run(ctx, coArgs...); err != nil {
 			return err
 		}
@@ -123,20 +138,20 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 
 // backupForRevert creates ".orig" files for any modified files that
 // have local modifications.
-func backupForRevert(ctx context.Context, cc *cmdContext, modifiedPathspec []string) error {
-	if len(modifiedPathspec) == 0 {
+func backupForRevert(ctx context.Context, cc *cmdContext, modified []gittool.Pathspec) error {
+	if len(modified) == 0 {
 		return nil
 	}
 	sr, err := gittool.Status(ctx, cc.git, gittool.StatusOptions{
 		DisableRenames: true,
-		Pathspec:       modifiedPathspec,
+		Pathspecs:      modified,
 	})
 	if err != nil {
 		return fmt.Errorf("backing up files: %v", err)
 	}
 	srCloser := singleclose.For(sr)
 	defer srCloser.Close()
-	var names []string
+	var names []gittool.TopPath
 	for sr.Scan() {
 		names = append(names, sr.Entry().Name())
 	}
@@ -157,7 +172,7 @@ func backupForRevert(ctx context.Context, cc *cmdContext, modifiedPathspec []str
 	}
 	top := string(topBytes)
 	for _, name := range names {
-		path := filepath.Join(top, filepath.FromSlash(name))
+		path := filepath.Join(top, filepath.FromSlash(name.String()))
 		if err := os.Rename(path, path+".orig"); err != nil {
 			return fmt.Errorf("backing up files: %v", err)
 		}
@@ -165,11 +180,11 @@ func backupForRevert(ctx context.Context, cc *cmdContext, modifiedPathspec []str
 	return nil
 }
 
-// appendLiteralPathspec converts the arguments into literal arguments
+// appendLiteralPaths converts the arguments into literal pathspecs
 // for Git.
-func appendLiteralPathspec(dst, files []string) []string {
+func appendLiteralPaths(dst []gittool.Pathspec, files []string) []gittool.Pathspec {
 	for _, f := range files {
-		dst = append(dst, ":(literal)"+f)
+		dst = append(dst, gittool.LiteralPath(f))
 	}
 	return dst
 }

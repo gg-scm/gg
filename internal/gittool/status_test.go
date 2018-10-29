@@ -27,8 +27,8 @@ func TestReadStatusEntry(t *testing.T) {
 		renameBug bool
 
 		code      StatusCode
-		entName   string
-		from      string
+		entName   TopPath
+		from      TopPath
 		err       func(error) bool
 		remaining string
 	}{
@@ -138,7 +138,7 @@ func TestReadDiffStatusEntry(t *testing.T) {
 		data string
 
 		code      DiffStatusCode
-		entName   string
+		entName   TopPath
 		err       func(error) bool
 		remaining string
 	}{

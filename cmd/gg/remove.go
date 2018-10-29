@@ -61,12 +61,12 @@ func remove(ctx context.Context, cc *cmdContext, args []string) error {
 }
 
 func verifyPresent(ctx context.Context, git *gittool.Tool, args []string) error {
-	statusArgs := make([]string, len(args))
+	statusArgs := make([]gittool.Pathspec, len(args))
 	for i := range args {
-		statusArgs[i] = ":(literal)" + args[i]
+		statusArgs[i] = gittool.LiteralPath(args[i])
 	}
 	st, err := gittool.Status(ctx, git, gittool.StatusOptions{
-		Pathspec: statusArgs,
+		Pathspecs: statusArgs,
 	})
 	if err != nil {
 		return err

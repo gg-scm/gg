@@ -420,17 +420,17 @@ func TestRemove_Recursive(t *testing.T) {
 	found := false
 	for st.Scan() {
 		ent := st.Entry()
-		if ent.Name() != relpath {
+		if ent.Name() != "foo/bar.txt" {
 			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
 		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
-			t.Errorf("%s status = '%v'; want 'D '", relpath, code)
+			t.Errorf("foo/bar.txt status = '%v'; want 'D '", code)
 		}
 	}
 	if !found {
-		t.Errorf("File %s unmodified", relpath)
+		t.Errorf("File foo/bar.txt unmodified")
 	}
 	if err := st.Err(); err != nil {
 		t.Error(err)
@@ -487,17 +487,17 @@ func TestRemove_RecursiveMissingFails(t *testing.T) {
 	found := false
 	for st.Scan() {
 		ent := st.Entry()
-		if ent.Name() != relpath {
+		if ent.Name() != "foo/bar.txt" {
 			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
 		if code := ent.Code(); code[0] != ' ' || code[1] != 'D' {
-			t.Errorf("%s status = '%v'; want ' D'", relpath, code)
+			t.Errorf("foo/bar.txt status = '%v'; want ' D'", code)
 		}
 	}
 	if !found {
-		t.Errorf("File %s unmodified", relpath)
+		t.Errorf("File foo/bar.txt unmodified")
 	}
 	if err := st.Err(); err != nil {
 		t.Error(err)
@@ -552,17 +552,17 @@ func TestRemove_RecursiveMissingAfter(t *testing.T) {
 	found := false
 	for st.Scan() {
 		ent := st.Entry()
-		if ent.Name() != relpath {
+		if ent.Name() != "foo/bar.txt" {
 			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
 		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
-			t.Errorf("%s status = '%v'; want 'D '", relpath, code)
+			t.Errorf("foo/bar.txt status = '%v'; want 'D '", code)
 		}
 	}
 	if !found {
-		t.Errorf("File %s unmodified", relpath)
+		t.Errorf("File foo/bar.txt unmodified")
 	}
 	if err := st.Err(); err != nil {
 		t.Error(err)

@@ -78,8 +78,12 @@ aliases: st, check`)
 			fmt.Fprintln(cc.stderr, "gg:", err)
 		}
 	}
+	pathspecs := make([]gittool.Pathspec, f.NArg())
+	for i, arg := range f.Args() {
+		pathspecs[i] = gittool.Pathspec(arg)
+	}
 	st, err := gittool.Status(ctx, cc.git, gittool.StatusOptions{
-		Pathspec: f.Args(),
+		Pathspecs: pathspecs,
 	})
 	if err != nil {
 		return err

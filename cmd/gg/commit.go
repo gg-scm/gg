@@ -72,43 +72,46 @@ aliases: ci
 			return errors.New("arguments did not match any modified files")
 		}
 		commitArgs = append(commitArgs, "--")
-		commitArgs = append(commitArgs, files...)
+		for _, f := range files {
+			commitArgs = append(commitArgs, f.Pathspec().String())
+		}
 	} else if exists, err := cc.git.Query(ctx, "cat-file", "-e", "MERGE_HEAD"); err == nil && exists {
 		// Merging: must not provide selective files.
 		commitArgs = append(commitArgs, "-a")
 	} else {
 		// Commit all tracked files without modifying index.
-		commitArgs = append(commitArgs, "--")
-		fileStart := len(commitArgs)
-		var err error
-		commitArgs, err = inferCommitFiles(ctx, cc.git, commitArgs)
+		commitFiles, err := inferCommitFiles(ctx, cc.git)
 		if err != nil {
 			return err
 		}
-		if len(commitArgs) == fileStart && !*amend {
+		if len(commitFiles) == 0 && !*amend {
 			return errors.New("nothing changed")
+		}
+		commitArgs = append(commitArgs, "--")
+		for _, f := range commitFiles {
+			commitArgs = append(commitArgs, f.Pathspec().String())
 		}
 	}
 	return cc.git.WithDir(top).RunInteractive(ctx, commitArgs...)
 }
 
 // argsToFiles finds the files named by the arguments.
-func argsToFiles(ctx context.Context, git *gittool.Tool, args []string) ([]string, error) {
-	statusArgs := make([]string, len(args))
+func argsToFiles(ctx context.Context, git *gittool.Tool, args []string) ([]gittool.TopPath, error) {
+	statusArgs := make([]gittool.Pathspec, len(args))
 	for i := range args {
-		statusArgs[i] = ":(literal)" + args[i]
+		statusArgs[i] = gittool.LiteralPath(args[i])
 	}
 	st, err := gittool.Status(ctx, git, gittool.StatusOptions{
-		Pathspec: statusArgs,
+		Pathspecs: statusArgs,
 	})
 	if err != nil {
 		return nil, err
 	}
 	stClose := singleclose.For(st)
 	defer stClose.Close()
-	var files []string
+	var files []gittool.TopPath
 	for st.Scan() {
-		files = append(files, ":(top,literal)"+st.Entry().Name())
+		files = append(files, st.Entry().Name())
 	}
 	if err := st.Err(); err != nil {
 		return nil, err
@@ -119,15 +122,15 @@ func argsToFiles(ctx context.Context, git *gittool.Tool, args []string) ([]strin
 	return files, nil
 }
 
-func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([]string, error) {
+func inferCommitFiles(ctx context.Context, git *gittool.Tool) ([]gittool.TopPath, error) {
 	missing, missingStaged, unmerged := 0, 0, 0
 	st, err := gittool.Status(ctx, git, gittool.StatusOptions{})
 	if err != nil {
-		return files, err
+		return nil, err
 	}
 	stClose := singleclose.For(st)
 	defer stClose.Close()
-	filesStart := len(files)
+	var files []gittool.TopPath
 	for st.Scan() {
 		ent := st.Entry()
 		switch {
@@ -139,44 +142,44 @@ func inferCommitFiles(ctx context.Context, git *gittool.Tool, files []string) ([
 		case ent.Code().IsAdded() || ent.Code().IsModified() || ent.Code().IsRemoved() || ent.Code().IsCopied():
 			// Prepend pathspec options to interpret relative to top of
 			// repository and ignore globs. See gitglossary(7) for more details.
-			files = append(files, ":(top,literal)"+ent.Name())
+			files = append(files, ent.Name())
 		case ent.Code().IsRenamed():
-			files = append(files, ":(top,literal)"+ent.Name(), ":(top,literal)"+ent.From())
+			files = append(files, ent.Name(), ent.From())
 		case ent.Code().IsUntracked():
 			// Skip
 		case ent.Code().IsUnmerged():
 			unmerged++
 		default:
-			return files[:filesStart], fmt.Errorf("unhandled status: %v", ent)
+			return nil, fmt.Errorf("unhandled status: %v", ent)
 		}
 	}
 	if err := st.Err(); err != nil {
-		return files[:filesStart], err
+		return nil, err
 	}
 	if err := stClose.Close(); err != nil {
-		return files[:filesStart], err
+		return nil, err
 	}
 	if unmerged == 1 {
-		return files[:filesStart], errors.New("1 unmerged file; see 'gg status'")
+		return nil, errors.New("1 unmerged file; see 'gg status'")
 	}
 	if unmerged > 1 {
-		return files[:filesStart], fmt.Errorf("%d unmerged files; see 'gg status'", unmerged)
+		return nil, fmt.Errorf("%d unmerged files; see 'gg status'", unmerged)
 	}
-	if len(files) == filesStart {
+	if len(files) == 0 {
 		switch missing {
 		case 0:
-			return files[:filesStart], nil
+			return nil, nil
 		case 1:
-			return files[:filesStart], errors.New("nothing changed (1 missing file; see 'gg status')")
+			return nil, errors.New("nothing changed (1 missing file; see 'gg status')")
 		default:
-			return files[:filesStart], fmt.Errorf("nothing changed (%d missing files; see 'gg status')", missing)
+			return nil, fmt.Errorf("nothing changed (%d missing files; see 'gg status')", missing)
 		}
 	}
 	if missingStaged == 1 {
-		return files[:filesStart], errors.New("git has staged changes for 1 missing file; see 'gg status'")
+		return nil, errors.New("git has staged changes for 1 missing file; see 'gg status'")
 	}
 	if missingStaged > 1 {
-		return files[:filesStart], fmt.Errorf("git has staged changes for %d missing file; see 'gg status'", missingStaged)
+		return nil, fmt.Errorf("git has staged changes for %d missing file; see 'gg status'", missingStaged)
 	}
 	return files, nil
 }

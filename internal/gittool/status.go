@@ -41,8 +41,8 @@ type StatusOptions struct {
 	IncludeIgnored bool
 	// DisableRenames will force Git to disable rename/copy detection.
 	DisableRenames bool
-	// Pathspec filters the output to the given pathspec.
-	Pathspec []string
+	// Pathspecs filters the output to the given pathspecs.
+	Pathspecs []Pathspec
 }
 
 // Status starts a `git status` subprocess.
@@ -52,7 +52,7 @@ func Status(ctx context.Context, git *Tool, opts StatusOptions) (*StatusReader, 
 		renameBug = true
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	args := make([]string, 0, 8+len(opts.Pathspec))
+	args := make([]string, 0, 8+len(opts.Pathspecs))
 	if opts.DisableRenames {
 		args = append(args, "-c", "status.renames=false")
 	}
@@ -60,9 +60,11 @@ func Status(ctx context.Context, git *Tool, opts StatusOptions) (*StatusReader, 
 	if opts.IncludeIgnored {
 		args = append(args, "--ignored")
 	}
-	if len(opts.Pathspec) > 0 {
+	if len(opts.Pathspecs) > 0 {
 		args = append(args, "--")
-		args = append(args, opts.Pathspec...)
+		for _, spec := range opts.Pathspecs {
+			args = append(args, string(spec))
+		}
 	}
 	p, err := git.Start(ctx, args...)
 	if err != nil {
@@ -154,8 +156,8 @@ func (sr *StatusReader) Close() error {
 // A StatusEntry describes the state of a single file in the working copy.
 type StatusEntry struct {
 	code StatusCode
-	name string
-	from string
+	name TopPath
+	from TopPath
 }
 
 func readStatusEntry(out *StatusEntry, r io.ByteReader, renameBug bool) error {
@@ -183,10 +185,11 @@ func readStatusEntry(out *StatusEntry, r io.ByteReader, renameBug bool) error {
 	}
 
 	// Read name and from.
-	out.name, err = readString(r, 2048)
+	name, err := readString(r, 2048)
 	if err != nil {
 		return fmt.Errorf("read status entry: %v", err)
 	}
+	out.name = TopPath(name)
 	if renameBug && out.code[0] == ' ' && out.code[1] == 'R' {
 		// See doc for affectedByStatusRenameBug for explanation.
 		out.from = out.name
@@ -194,10 +197,11 @@ func readStatusEntry(out *StatusEntry, r io.ByteReader, renameBug bool) error {
 		return nil
 	}
 	if out.code[0] == 'R' || out.code[0] == 'C' || out.code[1] == 'R' || out.code[1] == 'C' {
-		out.from, err = readString(r, 2048)
+		from, err := readString(r, 2048)
 		if err != nil {
 			return fmt.Errorf("read status entry: %v", err)
 		}
+		out.from = TopPath(from)
 	}
 
 	// Check code validity at very end in order to consume as much as possible.
@@ -233,9 +237,9 @@ func readString(r io.ByteReader, limit int) (string, error) {
 // String returns the entry in short format.
 func (ent *StatusEntry) String() string {
 	if ent.from != "" {
-		return ent.code.String() + " " + ent.from + " -> " + ent.name
+		return ent.code.String() + " " + ent.from.String() + " -> " + ent.name.String()
 	}
-	return ent.code.String() + " " + ent.name
+	return ent.code.String() + " " + ent.name.String()
 }
 
 // Code returns the two-letter code from the git status short format.
@@ -245,16 +249,14 @@ func (ent *StatusEntry) Code() StatusCode {
 	return ent.code
 }
 
-// Name returns the path of the file. The path will always be relative
-// to the top of the repository.
-func (ent *StatusEntry) Name() string {
+// Name returns the path of the file.
+func (ent *StatusEntry) Name() TopPath {
 	return ent.name
 }
 
 // From returns the path of the file that this file was renamed or
-// copied from, otherwise an empty string. The path will always be
-/// relative to the top of the repository.
-func (ent *StatusEntry) From() string {
+// copied from, otherwise an empty string.
+func (ent *StatusEntry) From() TopPath {
 	return ent.from
 }
 
@@ -379,8 +381,8 @@ type DiffStatusOptions struct {
 	// DiffStatus compares against the working tree. Callers must not set
 	// Commit2 if Commit1 is empty.
 	Commit2 string
-	// Pathspec filters the output to the given pathspec.
-	Pathspec []string
+	// Pathspecs filters the output to the given pathspecs.
+	Pathspecs []Pathspec
 	// DisableRenames will force Git to disable rename/copy detection.
 	DisableRenames bool
 }
@@ -398,7 +400,7 @@ func DiffStatus(ctx context.Context, git *Tool, opts DiffStatusOptions) (*DiffSt
 		return nil, fmt.Errorf("diff status: commit %q should not start with '-'", opts.Commit2)
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	args := make([]string, 0, 6+len(opts.Pathspec))
+	args := make([]string, 0, 6+len(opts.Pathspecs))
 	args = append(args, "diff", "--name-status", "-z")
 	if opts.DisableRenames {
 		args = append(args, "--no-renames")
@@ -409,9 +411,11 @@ func DiffStatus(ctx context.Context, git *Tool, opts DiffStatusOptions) (*DiffSt
 	if opts.Commit2 != "" {
 		args = append(args, opts.Commit2)
 	}
-	if len(opts.Pathspec) > 0 {
+	if len(opts.Pathspecs) > 0 {
 		args = append(args, "--")
-		args = append(args, opts.Pathspec...)
+		for _, p := range opts.Pathspecs {
+			args = append(args, string(p))
+		}
 	}
 	p, err := git.Start(ctx, args...)
 	if err != nil {
@@ -480,7 +484,7 @@ func (dr *DiffStatusReader) Close() error {
 // A DiffStatusEntry describes the state of a single file in a diff.
 type DiffStatusEntry struct {
 	code DiffStatusCode
-	name string
+	name TopPath
 }
 
 func readDiffStatusEntry(out *DiffStatusEntry, r io.ByteReader) error {
@@ -528,10 +532,11 @@ func readDiffStatusEntry(out *DiffStatusEntry, r io.ByteReader) error {
 			return fmt.Errorf("read diff entry: %v", err)
 		}
 	}
-	out.name, err = readString(r, 2048)
+	name, err := readString(r, 2048)
 	if err != nil {
 		return fmt.Errorf("read diff entry: %v", err)
 	}
+	out.name = TopPath(name)
 
 	// Check code validity at very end in order to consume as much as possible.
 	if !out.code.isValid() {
@@ -545,9 +550,8 @@ func (ent *DiffStatusEntry) Code() DiffStatusCode {
 	return ent.code
 }
 
-// Name returns the path of the file. The path will always be relative
-// to the top of the repository.
-func (ent *DiffStatusEntry) Name() string {
+// Name returns the path of the file.
+func (ent *DiffStatusEntry) Name() TopPath {
 	return ent.name
 }
 

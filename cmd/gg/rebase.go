@@ -182,14 +182,15 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 // continueRebase adds any modified files to the index and then runs
 // `git rebase --continue`.
 func continueRebase(ctx context.Context, git *gittool.Tool) error {
-	addArgs := []string{"add", "--"}
-	fileStart := len(addArgs)
-	var err error
-	addArgs, err = inferCommitFiles(ctx, git, addArgs)
+	addFiles, err := inferCommitFiles(ctx, git)
 	if err != nil {
 		return err
 	}
-	if len(addArgs) > fileStart {
+	if len(addFiles) > 0 {
+		addArgs := []string{"add", "--"}
+		for _, f := range addFiles {
+			addArgs = append(addArgs, f.Pathspec().String())
+		}
 		if err := git.RunInteractive(ctx, addArgs...); err != nil {
 			return err
 		}

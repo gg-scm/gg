@@ -72,7 +72,9 @@ func add(ctx context.Context, cc *cmdContext, args []string) error {
 	// intent to add. -f adds ignored files.
 	if len(untrackedFiles) > 0 {
 		gitArgs := []string{"add", "-f", "-N", "--"}
-		gitArgs = append(gitArgs, untrackedFiles...)
+		for _, tp := range untrackedFiles {
+			gitArgs = append(gitArgs, tp.Pathspec().String())
+		}
 		if err := cc.git.Run(ctx, gitArgs...); err != nil {
 			return err
 		}
@@ -82,7 +84,9 @@ func add(ctx context.Context, cc *cmdContext, args []string) error {
 	// single entry, which would mean -f would apply to the whole tree.
 	if len(untrackedDirs) > 0 {
 		gitArgs := []string{"add", "-N", "--"}
-		gitArgs = append(gitArgs, untrackedDirs...)
+		for _, tp := range untrackedDirs {
+			gitArgs = append(gitArgs, tp.Pathspec().String())
+		}
 		if err := cc.git.Run(ctx, gitArgs...); err != nil {
 			return err
 		}
@@ -90,8 +94,12 @@ func add(ctx context.Context, cc *cmdContext, args []string) error {
 	// Unmerged files should be added in their entirety.
 	if len(unmerged1)+len(unmerged2) > 0 {
 		gitArgs := []string{"add", "--"}
-		gitArgs = append(gitArgs, unmerged1...)
-		gitArgs = append(gitArgs, unmerged2...)
+		for _, tp := range unmerged1 {
+			gitArgs = append(gitArgs, tp.Pathspec().String())
+		}
+		for _, tp := range unmerged2 {
+			gitArgs = append(gitArgs, tp.Pathspec().String())
+		}
 		if err := cc.git.Run(ctx, gitArgs...); err != nil {
 			return err
 		}
@@ -106,16 +114,16 @@ func isdir(name string) bool {
 
 // findAddFiles finds the files described by the arguments and groups
 // them based on how they should be handled by add.
-func findAddFiles(ctx context.Context, git *gittool.Tool, args []string, includeIgnored bool) (untracked, unmerged []string, _ error) {
+func findAddFiles(ctx context.Context, git *gittool.Tool, args []string, includeIgnored bool) (untracked, unmerged []gittool.TopPath, _ error) {
 	if len(args) == 0 {
 		return nil, nil, nil
 	}
-	statusArgs := make([]string, len(args))
+	statusArgs := make([]gittool.Pathspec, len(args))
 	for i := range args {
-		statusArgs[i] = ":(literal)" + args[i]
+		statusArgs[i] = gittool.LiteralPath(args[i])
 	}
 	st, err := gittool.Status(ctx, git, gittool.StatusOptions{
-		Pathspec:       statusArgs,
+		Pathspecs:      statusArgs,
 		IncludeIgnored: includeIgnored,
 	})
 	if err != nil {
@@ -127,9 +135,9 @@ func findAddFiles(ctx context.Context, git *gittool.Tool, args []string, include
 		ent := st.Entry()
 		switch code := ent.Code(); {
 		case code.IsUntracked() || code.IsIgnored():
-			untracked = append(untracked, ":(top,literal)"+ent.Name())
+			untracked = append(untracked, ent.Name())
 		case code.IsUnmerged():
-			unmerged = append(unmerged, ":(top,literal)"+ent.Name())
+			unmerged = append(unmerged, ent.Name())
 		}
 	}
 	if err := st.Err(); err != nil {

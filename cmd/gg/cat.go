@@ -55,7 +55,7 @@ func catFile(ctx context.Context, cc *cmdContext, rev *gittool.Rev, path string)
 	// Find path relative to top of repository. ls-files outputs files in
 	// a different order than its arguments, so we have to do this one at
 	// a time.
-	topPath, err := cc.git.RunOneLiner(ctx, 0, "ls-tree", "-z", "--name-only", "--full-name", rev.Commit().String(), "--", ":(literal)"+path)
+	topPath, err := cc.git.RunOneLiner(ctx, 0, "ls-tree", "-z", "--name-only", "--full-name", rev.Commit().String(), "--", gittool.LiteralPath(path).String())
 	if err != nil {
 		return err
 	}
