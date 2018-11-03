@@ -25,45 +25,66 @@ import (
 	"strings"
 )
 
-// An Operation describes a single step of a Dir.Apply.
+// An Operation describes a single step of a Dir.Apply. The zero value
+// is a no-op.
 type Operation struct {
-	// Op specifies what Apply should do.
-	Op Op
-	// Name is a slash-separated path relative to the directory.
-	Name string
-	// Content is the content of the file created for a Write Op.
-	Content string
+	code    opCode
+	name    string
+	content string
+}
+
+// Write returns a new write operation. The name is a slash-separated
+// path relative to the Dir.
+func Write(name, content string) Operation {
+	return Operation{code: opWrite, name: name, content: content}
+}
+
+// Mkdir returns a new make directory operation. The name is a
+// slash-separated path relative to the Dir.
+func Mkdir(name string) Operation {
+	return Operation{code: opMkdir, name: name}
+}
+
+// Remove returns a new remove operation. The name is a slash-separated
+// path relative to the Dir.
+func Remove(name string) Operation {
+	return Operation{code: opRemove, name: name}
 }
 
 // String returns a readable description of an operation like "remove foo/bar".
-func (o *Operation) String() string {
-	if o.Op == Write {
-		return fmt.Sprintf("write %q to %q", o.Content, o.Name)
+func (o Operation) String() string {
+	switch o.code {
+	case nop:
+		return nop.String()
+	case opWrite:
+		return fmt.Sprintf("write %q to %q", o.content, o.name)
+	default:
+		return fmt.Sprintf("%s %q", o.code, o.name)
 	}
-	return fmt.Sprintf("%s %q", o.Op, o.Name)
 }
 
-// Op is an operation code.
-type Op int
+type opCode int
 
-// Operation codes.
 const (
-	Write Op = iota
-	Mkdir
-	Remove
+	nop opCode = iota
+	opWrite
+	opMkdir
+	opRemove
 )
 
-// String returns the lowercased constant name of op.
-func (op Op) String() string {
-	switch op {
-	case Write:
+// String returns the human-readable name of code.
+func (code opCode) String() string {
+	switch code {
+	case nop:
+		return "no-op"
+	case opWrite:
 		return "write"
-	case Mkdir:
+	case opMkdir:
 		return "mkdir"
-	case Remove:
+	case opRemove:
 		return "remove"
 	default:
-		return fmt.Sprintf("Op(%d)", int(op))
+		return fmt.Sprintf("opCode(%d)", int(code))
 	}
 }
 
@@ -72,28 +93,30 @@ type Dir string
 
 // Apply applies the sequence of filesystem operations given. It stops
 // at the first operation to fail.
-func (dir Dir) Apply(ops []Operation) error {
+func (dir Dir) Apply(ops ...Operation) error {
 	for _, o := range ops {
-		p, err := dir.fromSlash(o.Op.String(), o.Name)
+		p, err := dir.fromSlash(o.code.String(), o.name)
 		if err != nil {
 			return err
 		}
-		switch o.Op {
-		case Write:
+		switch o.code {
+		case nop:
+			// Do nothing.
+		case opWrite:
 			if err := os.MkdirAll(filepath.Dir(p), 0777); err != nil {
 				return err
 			}
-			if err := ioutil.WriteFile(p, []byte(o.Content), 0666); err != nil {
+			if err := ioutil.WriteFile(p, []byte(o.content), 0666); err != nil {
 				return err
 			}
-		case Mkdir:
+		case opMkdir:
 			if err := os.MkdirAll(filepath.Dir(p), 0777); err != nil {
 				return err
 			}
 			if err := os.Mkdir(p, 0777); err != nil {
 				return err
 			}
-		case Remove:
+		case opRemove:
 			if _, err := os.Lstat(p); os.IsNotExist(err) {
 				return err
 			}
@@ -101,7 +124,7 @@ func (dir Dir) Apply(ops []Operation) error {
 				return err
 			}
 		default:
-			return fmt.Errorf("apply: unknown operation %v", o.Op)
+			panic("invalid operation code")
 		}
 	}
 	return nil
