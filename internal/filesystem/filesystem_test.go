@@ -187,6 +187,30 @@ func TestApply(t *testing.T) {
 	})
 }
 
+func TestReadFile(t *testing.T) {
+	dir, err := ioutil.TempDir("", "gg_filesystem")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error("clean up temp dir:", err)
+		}
+	}()
+	parent := filepath.Join(dir, "foo")
+	if err := os.Mkdir(parent, 0777); err != nil {
+		t.Fatal(err)
+	}
+	const want = "Hello, World!\n"
+	if err := ioutil.WriteFile(filepath.Join(parent, "bar.txt"), []byte(want), 0666); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Dir(dir).ReadFile("foo/bar.txt")
+	if got != want || err != nil {
+		t.Errorf("ReadFile(\"foo/bar.txt\") = %q, %v; want %q, <nil>", got, err, want)
+	}
+}
+
 func TestFromSlash(t *testing.T) {
 	tests := []struct {
 		name string

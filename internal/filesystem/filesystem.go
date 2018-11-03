@@ -18,6 +18,7 @@ package filesystem
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -73,7 +74,10 @@ type Dir string
 // at the first operation to fail.
 func (dir Dir) Apply(ops []Operation) error {
 	for _, o := range ops {
-		p := dir.FromSlash(o.Name)
+		p, err := dir.fromSlash(o.Op.String(), o.Name)
+		if err != nil {
+			return err
+		}
 		switch o.Op {
 		case Write:
 			if err := os.MkdirAll(filepath.Dir(p), 0777); err != nil {
@@ -103,13 +107,41 @@ func (dir Dir) Apply(ops []Operation) error {
 	return nil
 }
 
+// ReadFile reads the content of the given slash-separated path relative
+// to dir.
+func (dir Dir) ReadFile(path string) (string, error) {
+	fpath, err := dir.fromSlash("read", path)
+	if err != nil {
+		return "", err
+	}
+	f, err := os.Open(fpath)
+	if err != nil {
+		return "", err
+	}
+	sb := new(strings.Builder)
+	_, cpErr := io.Copy(sb, f)
+	closeErr := f.Close()
+	if cpErr != nil {
+		return "", cpErr
+	}
+	return sb.String(), closeErr
+}
+
 // FromSlash resolves the given slash-separated path relative to dir.
 // path must not be an absolute path.
 func (dir Dir) FromSlash(path string) string {
-	if strings.HasPrefix(path, "/") {
-		panic("absolute path to filesystem.Dir.FromSlash")
+	fpath, err := dir.fromSlash("resolve", path)
+	if err != nil {
+		panic(err)
 	}
-	return filepath.Join(string(dir), filepath.FromSlash(path))
+	return fpath
+}
+
+func (dir Dir) fromSlash(op, path string) (string, error) {
+	if strings.HasPrefix(path, "/") {
+		return "", fmt.Errorf("filesystem: %s %q: absolute path not permitted", op, path)
+	}
+	return filepath.Join(string(dir), filepath.FromSlash(path)), nil
 }
 
 // String returns the directory path.
