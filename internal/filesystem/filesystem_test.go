@@ -205,6 +205,12 @@ func TestFromSlash(t *testing.T) {
 			want: "foo",
 		},
 		{
+			name: "Dot",
+			dir:  "foo",
+			path: ".",
+			want: "foo",
+		},
+		{
 			name: "SingleName",
 			dir:  "foo",
 			path: "bar.txt",
