@@ -71,7 +71,7 @@ type Dir string
 
 // Apply applies the sequence of filesystem operations given. It stops
 // at the first operation to fail.
-func (dir Dir) Apply(ops ...Operation) error {
+func (dir Dir) Apply(ops []Operation) error {
 	for _, o := range ops {
 		p := dir.FromSlash(o.Name)
 		switch o.Op {

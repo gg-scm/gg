@@ -34,11 +34,11 @@ func TestApply(t *testing.T) {
 			}
 		}()
 		const wantContent = "Hello, World!\n"
-		err = Dir(dir).Apply(Operation{
+		err = Dir(dir).Apply([]Operation{{
 			Op:      Write,
 			Name:    "foo.txt",
 			Content: wantContent,
-		})
+		}})
 		if err != nil {
 			t.Error("Apply(...) =", err)
 		}
@@ -61,11 +61,11 @@ func TestApply(t *testing.T) {
 			}
 		}()
 		const wantContent = "Hello, World!\n"
-		err = Dir(dir).Apply(Operation{
+		err = Dir(dir).Apply([]Operation{{
 			Op:      Write,
 			Name:    "foo/bar/baz.txt",
 			Content: wantContent,
-		})
+		}})
 		if err != nil {
 			t.Error("Apply(...) =", err)
 		}
@@ -87,10 +87,10 @@ func TestApply(t *testing.T) {
 				t.Error("clean up temp dir:", err)
 			}
 		}()
-		err = Dir(dir).Apply(Operation{
+		err = Dir(dir).Apply([]Operation{{
 			Op:   Mkdir,
 			Name: "foo/bar/baz",
-		})
+		}})
 		if err != nil {
 			t.Error("Apply(...) =", err)
 		}
@@ -116,10 +116,10 @@ func TestApply(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "foo", "bar"), 0777); err != nil {
 			t.Fatal(err)
 		}
-		err = Dir(dir).Apply(Operation{
+		err = Dir(dir).Apply([]Operation{{
 			Op:   Mkdir,
 			Name: "foo/bar",
-		})
+		}})
 		if err == nil {
 			t.Error("Apply(...) = nil; want error")
 		}
@@ -142,10 +142,10 @@ func TestApply(t *testing.T) {
 		if err := ioutil.WriteFile(filepath.Join(parent, "bar.txt"), []byte("sup"), 0666); err != nil {
 			t.Fatal(err)
 		}
-		err = Dir(dir).Apply(Operation{
+		err = Dir(dir).Apply([]Operation{{
 			Op:   Remove,
 			Name: "foo/bar.txt",
-		})
+		}})
 		if err != nil {
 			t.Error("Apply(...) =", err)
 		}
@@ -171,10 +171,10 @@ func TestApply(t *testing.T) {
 		if err := os.Mkdir(parent, 0777); err != nil {
 			t.Fatal(err)
 		}
-		err = Dir(dir).Apply(Operation{
+		err = Dir(dir).Apply([]Operation{{
 			Op:   Remove,
 			Name: "foo/bar.txt",
-		})
+		}})
 		if err == nil {
 			t.Error("Apply(...) = nil; want error")
 		}
