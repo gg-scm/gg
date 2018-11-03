@@ -186,3 +186,39 @@ func TestApply(t *testing.T) {
 		}
 	})
 }
+
+func TestFromSlash(t *testing.T) {
+	tests := []struct {
+		name string
+		dir  Dir
+		path string
+		want string
+	}{
+		{
+			name: "Empty",
+			dir:  "foo",
+			path: "",
+			want: "foo",
+		},
+		{
+			name: "SingleName",
+			dir:  "foo",
+			path: "bar.txt",
+			want: filepath.Join("foo", "bar.txt"),
+		},
+		{
+			name: "SubDir",
+			dir:  "foo",
+			path: "bar/baz.txt",
+			want: filepath.Join("foo", "bar", "baz.txt"),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := test.dir.FromSlash(test.path)
+			if got != test.want {
+				t.Errorf("Dir(%q).FromSlash(%q) = %q; want %q", string(test.dir), test.path, got, test.want)
+			}
+		})
+	}
+}
