@@ -29,6 +29,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/escape"
+	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/gitobj"
 	"gg-scm.io/pkg/internal/gittool"
 	"github.com/google/go-cmp/cmp"
@@ -100,7 +101,7 @@ func TestNewXDGDirs(t *testing.T) {
 type testEnv struct {
 	// root is the path to a directory guaranteed to be empty at the
 	// beginning of the test.
-	root string
+	root filesystem.Dir
 
 	// git is a Git tool configured to operate in root.
 	git *gittool.Tool
@@ -113,7 +114,7 @@ type testEnv struct {
 	// referred to in tests.
 
 	// topDir is the path to the temporary directory created by newTestEnv.
-	topDir string
+	topDir filesystem.Dir
 
 	stderr   *bytes.Buffer
 	tb       testing.TB
@@ -140,17 +141,17 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	if err != nil {
 		return nil, err
 	}
-	root := filepath.Join(topDir, "scratch")
-	if err := os.Mkdir(root, 0777); err != nil {
+	topFS := filesystem.Dir(topDir)
+	err = topFS.Apply(
+		filesystem.Mkdir("scratch"),
+		filesystem.Mkdir("temp"),
+	)
+	if err != nil {
 		os.RemoveAll(topDir)
 		return nil, err
 	}
-	tempDir := filepath.Join(topDir, "temp")
-	if err := os.Mkdir(tempDir, 0777); err != nil {
-		os.RemoveAll(topDir)
-		return nil, err
-	}
-	xdgConfigDir := filepath.Join(topDir, "xdgconfig")
+	root := topFS.FromSlash("scratch")
+	xdgConfigDir := topFS.FromSlash("xdgconfig")
 	stderr := new(bytes.Buffer)
 	git, err := gittool.New(gitPath, root, &gittool.Options{
 		Env: append(os.Environ(),
@@ -166,8 +167,8 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 		return nil, err
 	}
 	env := &testEnv{
-		topDir:       topDir,
-		root:         root,
+		topDir:       topFS,
+		root:         filesystem.Dir(root),
 		git:          git,
 		roundTripper: stubRoundTripper{},
 		stderr:       stderr,
@@ -184,10 +185,9 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 // The test harness may write some baseline settings as well, but any
 // settings in the argument take precedence.
 func (env *testEnv) writeConfig(config []byte) error {
-	path := filepath.Join(env.topDir, ".gitconfig")
-	fullConfig := []byte("[user]\nname = User\nemail = foo@example.com\n")
-	fullConfig = append(fullConfig, config...)
-	if err := ioutil.WriteFile(path, fullConfig, 0666); err != nil {
+	fullConfig := "[user]\nname = User\nemail = foo@example.com\n" + string(config)
+	err := env.topDir.Apply(filesystem.Write(".gitconfig", fullConfig))
+	if err != nil {
 		return fmt.Errorf("write git config: %v", err)
 	}
 	return nil
@@ -195,12 +195,8 @@ func (env *testEnv) writeConfig(config []byte) error {
 
 // writeGitHubAuth writes a new file at $XDG_CONFIG_DIR/gg/github_token.
 func (env *testEnv) writeGitHubAuth(tokenFile []byte) error {
-	configDir := filepath.Join(env.topDir, "xdgconfig", "gg")
-	if err := os.MkdirAll(configDir, 0777); err != nil {
-		return fmt.Errorf("write GitHub auth: %v", err)
-	}
-	path := filepath.Join(configDir, "github_token")
-	if err := ioutil.WriteFile(path, tokenFile, 0666); err != nil {
+	err := env.topDir.Apply(filesystem.Write("xdgconfig/gg/github_token", string(tokenFile)))
+	if err != nil {
 		return fmt.Errorf("write GitHub auth: %v", err)
 	}
 	return nil
@@ -222,11 +218,13 @@ func (env *testEnv) editorCmd(content []byte) (string, error) {
 	if cpPathError != nil {
 		return "", fmt.Errorf("editor command: cp not found: %v", cpPathError)
 	}
-	dst := filepath.Join(env.topDir, fmt.Sprintf("msg%02d", env.editFile))
+	fname := fmt.Sprintf("msg%02d", env.editFile)
 	env.editFile++
-	if err := ioutil.WriteFile(dst, content, 0666); err != nil {
+	err := env.topDir.Apply(filesystem.Write(fname, string(content)))
+	if err != nil {
 		return "", fmt.Errorf("editor command: %v", err)
 	}
+	dst := env.topDir.FromSlash(fname)
 	return fmt.Sprintf("%s %s", cpPath, escape.Shell(dst)), nil
 }
 
@@ -234,23 +232,23 @@ func (env *testEnv) cleanup() {
 	if env.tb.Failed() && env.stderr.Len() > 0 {
 		env.tb.Log("stderr:", env.stderr)
 	}
-	if err := os.RemoveAll(env.topDir); err != nil {
+	if err := os.RemoveAll(string(env.topDir)); err != nil {
 		env.tb.Error("cleanup:", err)
 	}
 }
 
 func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte, error) {
 	out := new(bytes.Buffer)
-	xdgConfigDir := filepath.Join(env.topDir, "xdgconfig")
+	xdgConfigDir := env.topDir.FromSlash("xdgconfig")
 	pctx := &processContext{
 		dir: dir,
 		env: []string{
 			"GIT_CONFIG_NOSYSTEM=1",
-			"HOME=" + env.topDir,
+			"HOME=" + env.topDir.String(),
 			"XDG_CONFIG_HOME=" + xdgConfigDir,
 			"XDG_CONFIG_DIRS=" + xdgConfigDir,
 		},
-		tempDir:    filepath.Join(env.topDir, "temp"),
+		tempDir:    env.topDir.FromSlash("temp"),
 		stdout:     out,
 		stderr:     env.stderr,
 		httpClient: &http.Client{Transport: env.roundTripper},
@@ -265,26 +263,22 @@ func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte,
 	return out.Bytes(), err
 }
 
-// rel resolves a slash-separated path relative to env.root.
-func (env *testEnv) rel(path string) string {
-	return filepath.Join(env.root, filepath.FromSlash(path))
-}
-
 // initEmptyRepo creates a repository at the slash-separated path
 // relative to env.root.
 func (env *testEnv) initEmptyRepo(ctx context.Context, dir string) error {
-	return env.git.Run(ctx, "init", env.rel(dir))
+	return env.git.Run(ctx, "init", env.root.FromSlash(dir))
 }
 
 // initRepoWithHistory creates a repository with some dummy commits but
 // a blank, clean working copy. dir is a slash-separated path relative
 // to env.root.
 func (env *testEnv) initRepoWithHistory(ctx context.Context, dir string) error {
-	repoDir := env.rel(dir)
+	repoDir := env.root.FromSlash(dir)
 	if err := env.git.Run(ctx, "init", repoDir); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filepath.Join(repoDir, ".dummy"), nil, 0666); err != nil {
+	err := env.root.Apply(filesystem.Write(dir+"/.dummy", ""))
+	if err != nil {
 		return err
 	}
 	repoGit := env.git.WithDir(repoDir)
@@ -303,39 +297,11 @@ func (env *testEnv) initRepoWithHistory(ctx context.Context, dir string) error {
 	return nil
 }
 
-// readFile reads the file with the given content at the
-// slash-separated path relative to env.root.
-func (env *testEnv) readFile(path string) (string, error) {
-	data, err := ioutil.ReadFile(env.rel(path))
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
-}
-
-// newFile creates a file with some non-empty dummy content at the
-// slash-separated path relative to env.root.
-func (env *testEnv) newFile(path string) error {
-	return env.writeFile(path, "Hello, World!\n")
-}
-
-// writeFile creates a file with the given content at the
-// slash-separated path relative to env.root.
-func (env *testEnv) writeFile(path string, content string) error {
-	return ioutil.WriteFile(env.rel(path), []byte(content), 0666)
-}
-
-// mkdir creates a directory at the slash-separated path relative to
-// env.root.
-func (env *testEnv) mkdir(path string) error {
-	return os.Mkdir(env.rel(path), 0777)
-}
-
 // addFiles runs `git add -N` with the slash-separated paths relative to
 // env.root.
 func (env *testEnv) addFiles(ctx context.Context, files ...string) error {
 	// Use the first file's directory as the Git working directory.
-	anchor := env.rel(files[0])
+	anchor := env.root.FromSlash(files[0])
 	info, err := os.Stat(anchor)
 	if err != nil {
 		return err
@@ -348,7 +314,7 @@ func (env *testEnv) addFiles(ctx context.Context, files ...string) error {
 	args := make([]string, 0, 2+len(files))
 	args = append(args, "add", "--")
 	for i := range files {
-		args = append(args, env.rel(files[i]))
+		args = append(args, env.root.FromSlash(files[i]))
 	}
 	return env.git.WithDir(anchor).Run(ctx, args...)
 }
@@ -357,7 +323,7 @@ func (env *testEnv) addFiles(ctx context.Context, files ...string) error {
 // env.root.
 func (env *testEnv) trackFiles(ctx context.Context, files ...string) error {
 	// Use the first file's directory as the Git working directory.
-	anchor := env.rel(files[0])
+	anchor := env.root.FromSlash(files[0])
 	info, err := os.Stat(anchor)
 	if err != nil {
 		return err
@@ -370,7 +336,7 @@ func (env *testEnv) trackFiles(ctx context.Context, files ...string) error {
 	args := make([]string, 0, 3+len(files))
 	args = append(args, "add", "-N", "--")
 	for i := range files {
-		args = append(args, env.rel(files[i]))
+		args = append(args, env.root.FromSlash(files[i]))
 	}
 	return env.git.WithDir(anchor).Run(ctx, args...)
 }
@@ -378,7 +344,7 @@ func (env *testEnv) trackFiles(ctx context.Context, files ...string) error {
 // newCommit runs `git commit -a` with some dummy commit message at the
 // slash-separated path relative to env.root.
 func (env *testEnv) newCommit(ctx context.Context, dir string) (gitobj.Hash, error) {
-	git := env.git.WithDir(env.rel(dir))
+	git := env.git.WithDir(env.root.FromSlash(dir))
 	if err := git.Run(ctx, "commit", "-am", "did stuff"); err != nil {
 		return gitobj.Hash{}, err
 	}
@@ -440,6 +406,10 @@ func prettyCommit(h gitobj.Hash, names map[gitobj.Hash]string) string {
 	}
 	return h.String() + " (" + n + ")"
 }
+
+// dummyContent is a non-empty string that is used in tests where the
+// exact data is not relevant to the test.
+const dummyContent = "Hello, World!\n"
 
 // stubRoundTripper returns a Bad Gateway response for any incoming request.
 type stubRoundTripper struct{}

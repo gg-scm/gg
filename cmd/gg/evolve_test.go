@@ -32,22 +32,22 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer env.cleanup()
-		if err := env.git.Run(ctx, "init"); err != nil {
+		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+		base, err := dummyRev(ctx, env.git, env.root.String(), "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
+		c1, err := dummyRev(ctx, env.git, env.root.String(), "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
+		c2, err := dummyRev(ctx, env.git, env.root.String(), "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
 		if err != nil {
 			t.Fatal(err)
 		}
-		submit1, err := dummyRev(ctx, env.git, env.root, "master", "submitted.txt", "Submitted first feature change\n\nChange-Id: abcdef")
+		submit1, err := dummyRev(ctx, env.git, env.root.String(), "master", "submitted.txt", "Submitted first feature change\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -61,7 +61,7 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 		if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
 			t.Fatal(err)
 		}
-		out, err := env.gg(ctx, env.root, appendNonEmpty([]string{"evolve", "-l"}, argFunc(submit1))...)
+		out, err := env.gg(ctx, env.root.String(), appendNonEmpty([]string{"evolve", "-l"}, argFunc(submit1))...)
 		if err != nil {
 			t.Error(err)
 		} else {
@@ -79,7 +79,7 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 			t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.Commit(), names), prettyCommit(c2, names))
 		}
 
-		_, err = env.gg(ctx, env.root, appendNonEmpty([]string{"evolve"}, argFunc(submit1))...)
+		_, err = env.gg(ctx, env.root.String(), appendNonEmpty([]string{"evolve"}, argFunc(submit1))...)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -115,19 +115,19 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if err := env.git.Run(ctx, "init"); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+		base, err := dummyRev(ctx, env.git, env.root.String(), "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
+		c1, err := dummyRev(ctx, env.git, env.root.String(), "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
+		c2, err := dummyRev(ctx, env.git, env.root.String(), "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
 		if err != nil {
 			t.Fatal(err)
 		}
-		other, err := dummyRev(ctx, env.git, env.root, "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
+		other, err := dummyRev(ctx, env.git, env.root.String(), "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -141,7 +141,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
 			t.Fatal(err)
 		}
-		out, err := env.gg(ctx, env.root, appendNonEmpty([]string{"evolve", "-l"}, argFunc(other))...)
+		out, err := env.gg(ctx, env.root.String(), appendNonEmpty([]string{"evolve", "-l"}, argFunc(other))...)
 		if err != nil {
 			t.Error(err)
 		} else if len(out) > 0 {
@@ -155,7 +155,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 			t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.Commit(), names), prettyCommit(c2, names))
 		}
 
-		_, err = env.gg(ctx, env.root, appendNonEmpty([]string{"evolve"}, argFunc(other))...)
+		_, err = env.gg(ctx, env.root.String(), appendNonEmpty([]string{"evolve"}, argFunc(other))...)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -203,23 +203,23 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if err := env.git.Run(ctx, "init"); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+		base, err := dummyRev(ctx, env.git, env.root.String(), "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
+		c1, err := dummyRev(ctx, env.git, env.root.String(), "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
+		c2, err := dummyRev(ctx, env.git, env.root.String(), "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
 		if err != nil {
 			t.Fatal(err)
 		}
-		submit1, err := dummyRev(ctx, env.git, env.root, "master", "bar-submitted.txt", "Submitted first feature\n\nChange-Id: abcdef")
+		submit1, err := dummyRev(ctx, env.git, env.root.String(), "master", "bar-submitted.txt", "Submitted first feature\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
-		other, err := dummyRev(ctx, env.git, env.root, "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
+		other, err := dummyRev(ctx, env.git, env.root.String(), "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -234,7 +234,7 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
 			t.Fatal(err)
 		}
-		out, err := env.gg(ctx, env.root, appendNonEmpty([]string{"evolve", "-l"}, argFunc(other))...)
+		out, err := env.gg(ctx, env.root.String(), appendNonEmpty([]string{"evolve", "-l"}, argFunc(other))...)
 		if err != nil {
 			t.Error(err)
 		} else {
@@ -252,7 +252,7 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 			t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.Commit(), names), prettyCommit(c2, names))
 		}
 
-		_, err = env.gg(ctx, env.root, appendNonEmpty([]string{"evolve"}, argFunc(other))...)
+		_, err = env.gg(ctx, env.root.String(), appendNonEmpty([]string{"evolve"}, argFunc(other))...)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -289,19 +289,19 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		if err := env.git.Run(ctx, "init"); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+		base, err := dummyRev(ctx, env.git, env.root.String(), "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
+		c1, err := dummyRev(ctx, env.git, env.root.String(), "topic", "bar.txt", "First feature change\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
+		c2, err := dummyRev(ctx, env.git, env.root.String(), "topic", "baz.txt", "Second feature change\n\nChange-Id: ghijkl")
 		if err != nil {
 			t.Fatal(err)
 		}
-		submit2, err := dummyRev(ctx, env.git, env.root, "master", "submitted.txt", "Submitted second feature change\n\nChange-Id: ghijkl")
+		submit2, err := dummyRev(ctx, env.git, env.root.String(), "master", "submitted.txt", "Submitted second feature change\n\nChange-Id: ghijkl")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -315,7 +315,7 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
 			t.Fatal(err)
 		}
-		out, err := env.gg(ctx, env.root, appendNonEmpty([]string{"evolve", "-l"}, argFunc(submit2))...)
+		out, err := env.gg(ctx, env.root.String(), appendNonEmpty([]string{"evolve", "-l"}, argFunc(submit2))...)
 		if err != nil {
 			t.Error(err)
 		} else {
@@ -333,7 +333,7 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 			t.Fatalf("HEAD after evolve -l = %s; want %s", prettyCommit(curr.Commit(), names), prettyCommit(c2, names))
 		}
 
-		_, err = env.gg(ctx, env.root, appendNonEmpty([]string{"evolve"}, argFunc(submit2))...)
+		_, err = env.gg(ctx, env.root.String(), appendNonEmpty([]string{"evolve"}, argFunc(submit2))...)
 		if err == nil {
 			t.Error("gg evolve did not return error")
 		} else if isUsage(err) {

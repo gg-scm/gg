@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/gitobj"
 	"gg-scm.io/pkg/internal/gittool"
 )
@@ -33,7 +34,7 @@ func TestBackout(t *testing.T) {
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.writeFile("foo.txt", "Hello, World!\n"); err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Hello, World!\n")); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.addFiles(ctx, "foo.txt"); err != nil {
@@ -43,7 +44,7 @@ func TestBackout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.writeFile("foo.txt", "Hello, World!\nI had a thought...\n"); err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Hello, World!\nI had a thought...\n")); err != nil {
 		t.Fatal(err)
 	}
 	c2, err := env.newCommit(ctx, ".")
@@ -51,10 +52,10 @@ func TestBackout(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "backout", "--edit=0", "HEAD"); err != nil {
+	if _, err := env.gg(ctx, env.root.String(), "backout", "--edit=0", "HEAD"); err != nil {
 		t.Error(err)
 	}
-	if got, err := env.readFile("foo.txt"); err != nil {
+	if got, err := env.root.ReadFile("foo.txt"); err != nil {
 		t.Error(err)
 	} else if want := "Hello, World!\n"; got != want {
 		t.Errorf("After backout, content = %q; want %q", got, want)
@@ -91,7 +92,7 @@ func TestBackout_NoCommit(t *testing.T) {
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.writeFile("foo.txt", "Hello, World!\n"); err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Hello, World!\n")); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.addFiles(ctx, "foo.txt"); err != nil {
@@ -101,7 +102,7 @@ func TestBackout_NoCommit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.writeFile("foo.txt", "Hello, World!\nI had a thought...\n"); err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Hello, World!\nI had a thought...\n")); err != nil {
 		t.Fatal(err)
 	}
 	c2, err := env.newCommit(ctx, ".")
@@ -109,10 +110,10 @@ func TestBackout_NoCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "backout", "--no-commit", "--edit=0", "HEAD"); err != nil {
+	if _, err := env.gg(ctx, env.root.String(), "backout", "--no-commit", "--edit=0", "HEAD"); err != nil {
 		t.Error(err)
 	}
-	if got, err := env.readFile("foo.txt"); err != nil {
+	if got, err := env.root.ReadFile("foo.txt"); err != nil {
 		t.Error(err)
 	} else if want := "Hello, World!\n"; got != want {
 		t.Errorf("After backout, content = %q; want %q", got, want)

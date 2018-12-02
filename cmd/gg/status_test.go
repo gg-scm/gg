@@ -19,10 +19,9 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 
+	"gg-scm.io/pkg/internal/filesystem"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -35,11 +34,47 @@ func TestStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := stageCommitTest(ctx, env, true); err != nil {
+
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	// Create the parent commit.
+	const (
+		addContent  = "And now...\n"
+		modifiedOld = "The Larch\n"
+		modifiedNew = "The Chestnut\n"
+	)
+	err = env.root.Apply(
+		filesystem.Write("modified.txt", modifiedOld),
+		filesystem.Write("deleted.txt", dummyContent),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "modified.txt", "deleted.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 
-	out, err := env.gg(ctx, env.root, "status")
+	// Arrange working copy changes.
+	err = env.root.Apply(
+		filesystem.Write("modified.txt", modifiedNew),
+		filesystem.Write("added.txt", addContent),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.trackFiles(ctx, "added.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Run(ctx, "rm", "deleted.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg status.
+	out, err := env.gg(ctx, env.root.String(), "status")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,26 +103,29 @@ func TestStatus_RenamedLocally(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+
+	// Create a new repository with committed foo.txt.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(env.root, "foo.txt"), []byte("Hello, World!\n"), 0666)
-	if err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Hello, World!\n")); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "add", "foo.txt"); err != nil {
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "commit", "-m", "initial commit"); err != nil {
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Rename(filepath.Join(env.root, "foo.txt"), filepath.Join(env.root, "bar.txt")); err != nil {
+	// Rename foo.txt to bar.txt without informing Git and "git add -N bar.txt".
+	if err := env.root.Apply(filesystem.Rename("foo.txt", "bar.txt")); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "add", "-N", "bar.txt"); err != nil {
+	if err := env.trackFiles(ctx, "bar.txt"); err != nil {
 		t.Fatal(err)
 	}
 	// Check for buggy Git (see https://github.com/zombiezen/gg/issues/60).
+	// Useful for debugging.
 	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
@@ -105,13 +143,16 @@ func TestStatus_RenamedLocally(t *testing.T) {
 		t.Log("This is a buggy Git version.")
 	}
 
-	// Run gg status.
-	out, err := env.gg(ctx, env.root, "status")
+	// Call gg status. If Git is buggy, verify that gg returns an error.
+	out, err := env.gg(ctx, env.root.String(), "status")
 	if isBuggyGit && (err == nil || isUsage(err)) {
 		t.Error("Git is buggy, gg was supposed to fail.")
 	} else if !isBuggyGit && err != nil {
 		t.Error(err)
 	}
+
+	// Verify that foo.txt is reported missing and that an added file of
+	// some sort is shown.
 	got := parseGGStatus(out, t)
 	addName := "bar.txt"
 	if isBuggyGit {

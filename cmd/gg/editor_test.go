@@ -42,7 +42,7 @@ func TestEditor(t *testing.T) {
 
 	e := &editor{
 		git:      env.git,
-		tempRoot: env.rel("."),
+		tempRoot: env.root.String(),
 		log: func(e error) {
 			t.Error("Editor error:", e)
 		},

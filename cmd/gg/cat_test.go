@@ -16,10 +16,10 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
+
+	"gg-scm.io/pkg/internal/filesystem"
 )
 
 func TestCat(t *testing.T) {
@@ -30,61 +30,37 @@ func TestCat(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, "foo.txt"),
-		[]byte("foo 1\n"),
-		0666)
+	err = env.root.Apply(
+		filesystem.Write("foo.txt", "foo 1\n"),
+		filesystem.Write("bar.txt", "bar 1\n"),
+		filesystem.Mkdir("baz"),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, "bar.txt"),
-		[]byte("bar 1\n"),
-		0666)
+	if err := env.addFiles(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.newCommit(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	err = env.root.Apply(
+		filesystem.Write("foo.txt", "foo 2\n"),
+		filesystem.Write("bar.txt", "bar 2\n"),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = os.Mkdir(filepath.Join(env.root, "baz"), 0777)
-	if err != nil {
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "add", "."); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.Run(ctx, "commit", "-m", "first"); err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, "foo.txt"),
-		[]byte("foo 2\n"),
-		0666)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, "bar.txt"),
-		[]byte("bar 2\n"),
-		0666)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.Run(ctx, "commit", "-a", "-m", "second"); err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, "foo.txt"),
-		[]byte("dirty foo\n"),
-		0666)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, "bar.txt"),
-		[]byte("dirty bar\n"),
-		0666)
+	err = env.root.Apply(
+		filesystem.Write("foo.txt", "dirty foo\n"),
+		filesystem.Write("bar.txt", "dirty bar\n"),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,14 +94,14 @@ func TestCat(t *testing.T) {
 		{
 			name: "InSubdir",
 			dir:  "baz",
-			args: []string{"../foo.txt"},
+			args: []string{filepath.Join("..", "foo.txt")},
 			out:  "foo 2\n",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			args := append([]string{"cat"}, test.args...)
-			out, err := env.gg(ctx, filepath.Join(env.root, test.dir), args...)
+			out, err := env.gg(ctx, filepath.Join(env.root.String(), test.dir), args...)
 			if err != nil {
 				t.Fatal(err)
 			}

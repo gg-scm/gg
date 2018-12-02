@@ -16,11 +16,9 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 
+	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/gitobj"
 	"gg-scm.io/pkg/internal/gittool"
 )
@@ -33,29 +31,152 @@ func TestMerge(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
-	if err != nil {
-		t.Fatal(err)
-	}
-	feature, err := dummyRev(ctx, env.git, env.root, "feature", "bar.txt", "Feature branch change")
-	if err != nil {
-		t.Fatal(err)
-	}
-	upstream, err := dummyRev(ctx, env.git, env.root, "master", "baz.txt", "Upstream change")
+	baseRev, err := gittool.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	out, err := env.gg(ctx, env.root, "merge", "feature")
+	// Make a change on a feature branch.
+	if err := env.git.Run(ctx, "checkout", "--quiet", "-b", "feature"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	feature, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make a non-conflicting change on master.
+	if err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "bar.txt"); err != nil {
+		t.Fatal(err)
+	}
+	upstream, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to start merge of feature branch into master branch.
+	out, err := env.gg(ctx, env.root.String(), "merge", "feature")
 	if len(out) > 0 {
 		t.Logf("merge output:\n%s", out)
 	}
 	if err != nil {
 		t.Error("merge:", err)
 	}
+
+	// Verify that HEAD is still the upstream commit. gg should not create a new commit.
+	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := map[gitobj.Hash]string{
+		baseRev.Commit(): "initial commit",
+		upstream:         "master commit",
+		feature:          "branch commit",
+	}
+	if curr.Commit() != upstream {
+		t.Errorf("after merge, HEAD = %s; want %s",
+			prettyCommit(curr.Commit(), names),
+			prettyCommit(upstream, names))
+	}
+
+	// Verify that the to-be-merged commit is the feature branch.
+	mergeHead, err := gittool.ParseRev(ctx, env.git, "MERGE_HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mergeHead.Commit() != feature {
+		t.Errorf("after merge, MERGE_HEAD = %s; want %s",
+			prettyCommit(curr.Commit(), names),
+			prettyCommit(feature, names))
+	}
+
+	// Verify that both of the changes are present in the working copy.
+	if exists, err := env.root.Exists("foo.txt"); !exists || err != nil {
+		t.Errorf("foo.txt does not exist. error = %v", err)
+	}
+	if exists, err := env.root.Exists("bar.txt"); !exists || err != nil {
+		t.Errorf("bar.txt does not exist. error = %v", err)
+	}
+}
+
+func TestMerge_Conflict(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the first commit adding foo.txt.
+	if err := env.root.Apply(filesystem.Write("foo.txt", "In the beginning...\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	base, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make a change on a feature branch.
+	if err := env.git.Run(ctx, "checkout", "--quiet", "-b", "feature"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", "feature content\n")); err != nil {
+		t.Fatal(err)
+	}
+	feature, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make a conflicting change on master.
+	if err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", "boring text\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	upstream, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to merge the feature branch into the master branch.
+	out, err := env.gg(ctx, env.root.String(), "merge", "feature")
+	if len(out) > 0 {
+		t.Logf("merge output:\n%s", out)
+	}
+	if err == nil {
+		t.Error("merge did not return error")
+	} else if isUsage(err) {
+		t.Errorf("merge returned usage error: %v", err)
+	}
+
+	// Verify that HEAD is still the upstream commit. gg should not create a new commit.
 	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
@@ -70,6 +191,8 @@ func TestMerge(t *testing.T) {
 			prettyCommit(curr.Commit(), names),
 			prettyCommit(upstream, names))
 	}
+
+	// Verify that the to-be-merged commit is the feature branch.
 	mergeHead, err := gittool.ParseRev(ctx, env.git, "MERGE_HEAD")
 	if err != nil {
 		t.Fatal(err)
@@ -78,89 +201,5 @@ func TestMerge(t *testing.T) {
 		t.Errorf("after merge, MERGE_HEAD = %s; want %s",
 			prettyCommit(curr.Commit(), names),
 			prettyCommit(feature, names))
-	}
-	if _, err := os.Stat(filepath.Join(env.root, "bar.txt")); err != nil {
-		t.Error(err)
-	}
-	if _, err := os.Stat(filepath.Join(env.root, "baz.txt")); err != nil {
-		t.Error(err)
-	}
-}
-
-func TestMerge_Conflict(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	env, err := newTestEnv(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
-		t.Fatal(err)
-	}
-	base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.Run(ctx, "checkout", "--quiet", "-b", "feature"); err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(filepath.Join(env.root, "foo.txt"), []byte("feature content\n"), 0666)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.Run(ctx, "commit", "-a", "-m", "Made a change myself"); err != nil {
-		t.Fatal(err)
-	}
-	feature, err := gittool.ParseRev(ctx, env.git, "HEAD")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(filepath.Join(env.root, "foo.txt"), []byte("boring text\n"), 0666)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.Run(ctx, "commit", "-a", "-m", "Upstream change"); err != nil {
-		t.Fatal(err)
-	}
-	upstream, err := gittool.ParseRev(ctx, env.git, "HEAD")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	out, err := env.gg(ctx, env.root, "merge", "feature")
-	if len(out) > 0 {
-		t.Logf("merge output:\n%s", out)
-	}
-	if err == nil {
-		t.Error("merge did not return error")
-	} else if isUsage(err) {
-		t.Errorf("merge returned usage error: %v", err)
-	}
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
-	if err != nil {
-		t.Fatal(err)
-	}
-	names := map[gitobj.Hash]string{
-		base:              "initial commit",
-		upstream.Commit(): "master commit",
-		feature.Commit():  "branch commit",
-	}
-	if curr.Commit() != upstream.Commit() {
-		t.Errorf("after merge, HEAD = %s; want %s",
-			prettyCommit(curr.Commit(), names),
-			prettyCommit(upstream.Commit(), names))
-	}
-	mergeHead, err := gittool.ParseRev(ctx, env.git, "MERGE_HEAD")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if mergeHead.Commit() != feature.Commit() {
-		t.Errorf("after merge, MERGE_HEAD = %s; want %s",
-			prettyCommit(curr.Commit(), names),
-			prettyCommit(feature.Commit(), names))
 	}
 }

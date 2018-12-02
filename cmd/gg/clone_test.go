@@ -16,11 +16,9 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
-	"path/filepath"
 	"testing"
 
-	"gg-scm.io/pkg/internal/gitobj"
+	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/gittool"
 )
 
@@ -34,15 +32,29 @@ func TestClone(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-
-	head, err := setupCloneTest(ctx, env)
+	if err := env.initEmptyRepo(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	const fileContent = "wut up\n"
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", fileContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	head, err := env.newCommit(ctx, "repoA")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.gg(ctx, env.root, "clone", "repoA", "repoB"); err != nil {
+	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
+	if err := gitA.Run(ctx, "branch", "foo"); err != nil {
 		t.Fatal(err)
 	}
-	gitB := env.git.WithDir(filepath.Join(env.root, "repoB"))
+
+	if _, err := env.gg(ctx, env.root.String(), "clone", "repoA", "repoB"); err != nil {
+		t.Fatal(err)
+	}
+	gitB := env.git.WithDir(env.root.FromSlash("repoB"))
 	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
@@ -68,11 +80,10 @@ func TestClone(t *testing.T) {
 	} else if r.Commit() != head {
 		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.Commit(), head)
 	}
-	got, err := ioutil.ReadFile(filepath.Join(env.root, "repoB", "foo.txt"))
-	if err != nil {
+	if got, err := env.root.ReadFile("repoB/foo.txt"); err != nil {
 		t.Error(err)
-	} else if string(got) != cloneFileMsg {
-		t.Errorf("repoB/foo.txt content = %q; want %q", got, cloneFileMsg)
+	} else if got != fileContent {
+		t.Errorf("repoB/foo.txt content = %q; want %q", got, fileContent)
 	}
 }
 
@@ -84,15 +95,29 @@ func TestClone_Branch(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-
-	head, err := setupCloneTest(ctx, env)
+	if err := env.initEmptyRepo(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	const fileContent = "wut up\n"
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", fileContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	head, err := env.newCommit(ctx, "repoA")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.gg(ctx, env.root, "clone", "-b=foo", "repoA", "repoB"); err != nil {
+	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
+	if err := gitA.Run(ctx, "branch", "foo"); err != nil {
 		t.Fatal(err)
 	}
-	gitB := env.git.WithDir(filepath.Join(env.root, "repoB"))
+
+	if _, err := env.gg(ctx, env.root.String(), "clone", "-b=foo", "repoA", "repoB"); err != nil {
+		t.Fatal(err)
+	}
+	gitB := env.git.WithDir(env.root.FromSlash("repoB"))
 	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
@@ -118,42 +143,11 @@ func TestClone_Branch(t *testing.T) {
 	} else if r.Commit() != head {
 		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.Commit(), head)
 	}
-	got, err := ioutil.ReadFile(filepath.Join(env.root, "repoB", "foo.txt"))
-	if err != nil {
+	if got, err := env.root.ReadFile("repoB/foo.txt"); err != nil {
 		t.Error(err)
-	} else if string(got) != cloneFileMsg {
-		t.Errorf("repoB/foo.txt content = %q; want %q", got, cloneFileMsg)
+	} else if got != fileContent {
+		t.Errorf("repoB/foo.txt content = %q; want %q", got, fileContent)
 	}
-}
-
-func setupCloneTest(ctx context.Context, env *testEnv) (head gitobj.Hash, _ error) {
-	repoA := filepath.Join(env.root, "repoA")
-	if err := env.git.Run(ctx, "init", repoA); err != nil {
-		return gitobj.Hash{}, err
-	}
-	gitA := env.git.WithDir(repoA)
-	const fileName = "foo.txt"
-	err := ioutil.WriteFile(
-		filepath.Join(repoA, fileName),
-		[]byte(cloneFileMsg),
-		0666)
-	if err != nil {
-		return gitobj.Hash{}, err
-	}
-	if err := gitA.Run(ctx, "add", fileName); err != nil {
-		return gitobj.Hash{}, err
-	}
-	if err := gitA.Run(ctx, "commit", "-m", "initial commit"); err != nil {
-		return gitobj.Hash{}, err
-	}
-	if err := gitA.Run(ctx, "branch", "foo"); err != nil {
-		return gitobj.Hash{}, err
-	}
-	r, err := gittool.ParseRev(ctx, gitA, "HEAD")
-	if err != nil {
-		return gitobj.Hash{}, err
-	}
-	return r.Commit(), nil
 }
 
 func TestDefaultCloneDest(t *testing.T) {

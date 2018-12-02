@@ -16,8 +16,6 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
-	"path/filepath"
 	"testing"
 
 	"gg-scm.io/pkg/internal/gittool"
@@ -32,21 +30,7 @@ func TestBranch(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := env.git.Run(ctx, "init"); err != nil {
-		t.Fatal(err)
-	}
-	const fileName = "foo.txt"
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, fileName),
-		[]byte("Hello, World!\n"),
-		0666)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.Run(ctx, "add", fileName); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.Run(ctx, "commit", "-m", "initial commit"); err != nil {
+	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 	first, err := gittool.ParseRev(ctx, env.git, "HEAD")
@@ -54,7 +38,7 @@ func TestBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "branch", "foo", "bar"); err != nil {
+	if _, err := env.gg(ctx, env.root.String(), "branch", "foo", "bar"); err != nil {
 		t.Fatal(err)
 	}
 	if r, err := gittool.ParseRev(ctx, env.git, "HEAD"); err != nil {
@@ -88,25 +72,10 @@ func TestBranch_Upstream(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath1 := filepath.Join(env.root, "repo1")
-	if err := env.git.Run(ctx, "init", repoPath1); err != nil {
+	if err := env.initRepoWithHistory(ctx, "repo1"); err != nil {
 		t.Fatal(err)
 	}
-	const fileName = "foo.txt"
-	err = ioutil.WriteFile(
-		filepath.Join(repoPath1, fileName),
-		[]byte("Hello, World!\n"),
-		0666)
-	if err != nil {
-		t.Fatal(err)
-	}
-	git1 := env.git.WithDir(repoPath1)
-	if err := git1.Run(ctx, "add", fileName); err != nil {
-		t.Fatal(err)
-	}
-	if err := git1.Run(ctx, "commit", "-m", "initial commit"); err != nil {
-		t.Fatal(err)
-	}
+	git1 := env.git.WithDir(env.root.FromSlash("repo1"))
 	first, err := gittool.ParseRev(ctx, git1, "HEAD")
 	if err != nil {
 		t.Fatal(err)
@@ -115,7 +84,7 @@ func TestBranch_Upstream(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repoPath2 := filepath.Join(env.root, "repo2")
+	repoPath2 := env.root.FromSlash("repo2")
 	if _, err := env.gg(ctx, repoPath2, "branch", "foo"); err != nil {
 		t.Fatal(err)
 	}

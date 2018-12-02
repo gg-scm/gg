@@ -17,9 +17,9 @@ package main
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
-	"path/filepath"
 	"testing"
+
+	"gg-scm.io/pkg/internal/filesystem"
 )
 
 func TestDiff(t *testing.T) {
@@ -30,33 +30,33 @@ func TestDiff(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
+
+	// Create a commit with foo.txt.
 	const oldLine = "Hello, World!"
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, "foo.txt"),
-		[]byte(oldLine+"\n"),
-		0666)
-	if err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", oldLine+"\n")); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "add", "foo.txt"); err != nil {
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "commit", "-m", "first post"); err != nil {
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
+
+	// Modify foo.txt in the working copy without committing.
 	const newLine = "Good bye, World!"
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, "foo.txt"),
-		[]byte(newLine+"\n"),
-		0666)
+	if err := env.root.Apply(filesystem.Write("foo.txt", newLine+"\n")); err != nil {
+		t.Fatal(err)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	out, err := env.gg(ctx, env.root, "diff")
+	// Verify that diff contains both the old content and the new content.
+	out, err := env.gg(ctx, env.root.String(), "diff")
 	if err != nil {
 		t.Error(err)
 	}
@@ -73,24 +73,24 @@ func TestDiff_NoChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, "foo.txt"),
-		[]byte("Hello, World!\n"),
-		0666)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.Run(ctx, "add", "foo.txt"); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.Run(ctx, "commit", "-m", "first post"); err != nil {
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 
-	out, err := env.gg(ctx, env.root, "diff")
+	// Create a commit with foo.txt.
+	const oldLine = "Hello, World!"
+	if err := env.root.Apply(filesystem.Write("foo.txt", oldLine+"\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.newCommit(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify that diff is empty (working copy is clean).
+	out, err := env.gg(ctx, env.root.String(), "diff")
 	if err != nil {
 		t.Error(err)
 	}
@@ -107,11 +107,12 @@ func TestDiff_AfterInit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 
-	out, err := env.gg(ctx, env.root, "diff")
+	// Verify that diff is empty (working copy is clean).
+	out, err := env.gg(ctx, env.root.String(), "diff")
 	if err != nil {
 		t.Error(err)
 	}
@@ -128,22 +129,21 @@ func TestDiff_BeforeFirstCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
-		t.Fatal(err)
-	}
-	const line = "Hello, World!"
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, "foo.txt"),
-		[]byte(line+"\n"),
-		0666)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.Run(ctx, "add", "foo.txt"); err != nil {
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 
-	out, err := env.gg(ctx, env.root, "diff")
+	// Create a file foo.txt and add it to the index. Do not commit.
+	const line = "Hello, World!"
+	if err := env.root.Apply(filesystem.Write("foo.txt", line+"\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify that diff contains the line written to foo.txt.
+	out, err := env.gg(ctx, env.root.String(), "diff")
 	if err != nil {
 		t.Error(err)
 	}

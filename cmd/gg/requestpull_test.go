@@ -29,6 +29,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/escape"
+	"gg-scm.io/pkg/internal/filesystem"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -161,44 +162,45 @@ func TestRequestPull(t *testing.T) {
 			if err := env.git.Run(ctx, "clone", "--quiet", "origin", "local"); err != nil {
 				t.Fatal(err)
 			}
-			localDir := env.rel("local")
-			if err := env.git.WithDir(localDir).Run(ctx, "branch", "--track", "shared", "origin/master"); err != nil {
+			localDir := env.root.FromSlash("local")
+			localGit := env.git.WithDir(localDir)
+			if err := localGit.Run(ctx, "branch", "--track", "shared", "origin/master"); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.git.WithDir(localDir).Run(ctx, "branch", "--track", "myfork", "origin/master"); err != nil {
+			if err := localGit.Run(ctx, "branch", "--track", "myfork", "origin/master"); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.git.WithDir(localDir).Run(ctx, "remote", "add", "forkremote", test.forkURL); err != nil {
+			if err := localGit.Run(ctx, "remote", "add", "forkremote", test.forkURL); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.git.WithDir(localDir).Run(ctx, "remote", "set-url", "origin", test.upstreamURL); err != nil {
+			if err := localGit.Run(ctx, "remote", "set-url", "origin", test.upstreamURL); err != nil {
 				t.Fatal(err)
 			}
 			if test.forkURL != "" {
-				if err := env.git.WithDir(localDir).Run(ctx, "config", "branch.myfork.pushRemote", "forkremote"); err != nil {
+				if err := localGit.Run(ctx, "config", "branch.myfork.pushRemote", "forkremote"); err != nil {
 					t.Fatal(err)
 				}
 				defer func() {
-					if err := env.git.WithDir(localDir).Run(ctx, "config", "--unset", "branch.myfork.pushRemote"); err != nil {
+					if err := localGit.Run(ctx, "config", "--unset", "branch.myfork.pushRemote"); err != nil {
 						t.Error(err)
 					}
 				}()
 			}
 			for _, b := range []string{"shared", "myfork"} {
-				if err := env.git.WithDir(localDir).Run(ctx, "checkout", "--quiet", b); err != nil {
+				if err := localGit.Run(ctx, "checkout", "--quiet", b); err != nil {
 					t.Fatal(err)
 				}
-				if err := env.newFile("local/blah.txt"); err != nil {
+				if err := env.root.Apply(filesystem.Write("local/blah.txt", dummyContent)); err != nil {
 					t.Fatal(err)
 				}
 				if err := env.addFiles(ctx, "local/blah.txt"); err != nil {
 					t.Fatal(err)
 				}
-				if err := env.git.WithDir(localDir).Run(ctx, "commit", "-m", "Commit title\n\nCommit description"); err != nil {
+				if err := localGit.Run(ctx, "commit", "-m", "Commit title\n\nCommit description"); err != nil {
 					t.Fatal(err)
 				}
 			}
-			if err := env.git.WithDir(localDir).Run(ctx, "checkout", "--quiet", test.branch); err != nil {
+			if err := localGit.Run(ctx, "checkout", "--quiet", test.branch); err != nil {
 				t.Fatal(err)
 			}
 
@@ -265,14 +267,15 @@ func TestRequestPull_BodyWithoutTitleUsageError(t *testing.T) {
 	if err := env.git.Run(ctx, "clone", "--quiet", "origin", "local"); err != nil {
 		t.Fatal(err)
 	}
-	localDir := env.rel("local")
-	if err := env.git.WithDir(localDir).Run(ctx, "remote", "set-url", "origin", "https://github.com/example/foo.git"); err != nil {
+	localDir := env.root.FromSlash("local")
+	localGit := env.git.WithDir(localDir)
+	if err := localGit.Run(ctx, "remote", "set-url", "origin", "https://github.com/example/foo.git"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.WithDir(localDir).Run(ctx, "checkout", "--quiet", "--track", "-b", "feature", "origin/master"); err != nil {
+	if err := localGit.Run(ctx, "checkout", "--quiet", "--track", "-b", "feature", "origin/master"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.newFile("local/blah.txt"); err != nil {
+	if err := env.root.Apply(filesystem.Write("local/blah.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.addFiles(ctx, "local/blah.txt"); err != nil {
@@ -330,14 +333,14 @@ func TestRequestPull_Editor(t *testing.T) {
 	if err := env.git.Run(ctx, "clone", "--quiet", "origin", "local"); err != nil {
 		t.Fatal(err)
 	}
-	localDir := env.rel("local")
+	localDir := env.root.FromSlash("local")
 	if err := env.git.WithDir(localDir).Run(ctx, "remote", "set-url", "origin", "https://github.com/example/foo.git"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.git.WithDir(localDir).Run(ctx, "checkout", "--quiet", "--track", "-b", "feature", "origin/master"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.newFile("local/blah.txt"); err != nil {
+	if err := env.root.Apply(filesystem.Write("local/blah.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.addFiles(ctx, "local/blah.txt"); err != nil {
@@ -778,7 +781,7 @@ func TestInferPullRequestMessage(t *testing.T) {
 			if err := env.git.Run(ctx, "branch", "--track", "feature", "master"); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.newFile("mainline.txt"); err != nil {
+			if err := env.root.Apply(filesystem.Write("mainline.txt", dummyContent)); err != nil {
 				t.Fatal(err)
 			}
 			if err := env.addFiles(ctx, "mainline.txt"); err != nil {
@@ -792,7 +795,7 @@ func TestInferPullRequestMessage(t *testing.T) {
 			}
 			for i, msg := range test.messages {
 				name := fmt.Sprintf("file%d.txt", i)
-				if err := env.newFile(name); err != nil {
+				if err := env.root.Apply(filesystem.Write(name, dummyContent)); err != nil {
 					t.Fatal(err)
 				}
 				if err := env.addFiles(ctx, name); err != nil {

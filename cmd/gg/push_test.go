@@ -16,12 +16,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/url"
-	"path/filepath"
 	"strings"
 	"testing"
 
+	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/gitobj"
 	"gg-scm.io/pkg/internal/gittool"
 )
@@ -34,22 +33,59 @@ func TestPush(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	pushEnv, err := stagePushTest(ctx, env)
+
+	// Create repository with some junk history.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	repoAPath := env.root.FromSlash("repoA")
+	gitA := env.git.WithDir(repoAPath)
+	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, pushEnv.repoA, "push"); err != nil {
+	// Push from repo A to repo B.
+	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
 		t.Fatal(err)
 	}
-	gitB := env.git.WithDir(pushEnv.repoB)
+	repoBPath := env.root.FromSlash("repoB")
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a new commit in repo A.
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to push from repo A to repo B.
+	if _, err := env.gg(ctx, repoAPath, "push"); err != nil {
+		t.Error(err)
+	}
+
+	// Verify that repo B has the new commit.
+	gitB := env.git.WithDir(repoBPath)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pushEnv.commit2 {
-		names := pushEnv.commitNames()
+	} else if r.Commit() != commit2 {
+		names := map[gitobj.Hash]string{
+			rev1.Commit(): "shared commit",
+			commit2:       "local commit",
+		}
 		t.Errorf("refs/heads/master = %s; want %s",
 			prettyCommit(r.Commit(), names),
-			prettyCommit(pushEnv.commit2, names))
+			prettyCommit(commit2, names))
 	}
 }
 
@@ -61,34 +97,77 @@ func TestPush_Arg(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	pushEnv, err := stagePushTest(ctx, env)
+
+	// Create repository with some junk history.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	repoAPath := env.root.FromSlash("repoA")
+	gitA := env.git.WithDir(repoAPath)
+	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Push from repo A to repo B.
+	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+		t.Fatal(err)
+	}
+	repoBPath := env.root.FromSlash("repoB")
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a new commit in repo A.
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Clone from repo B to repo C. We want to make sure that the origin remote is
+	// not used at all.
 	if err := env.git.Run(ctx, "clone", "--bare", "repoB", "repoC"); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, pushEnv.repoA, "push", filepath.Join(env.root, "repoC")); err != nil {
-		t.Fatal(err)
-	}
-	gitB := env.git.WithDir(pushEnv.repoB)
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	// Call gg to push from repo A to repo C.
+	repoCPath := env.root.FromSlash("repoC")
+	if _, err := env.gg(ctx, repoAPath, "push", repoCPath); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pushEnv.commit1 {
-		names := pushEnv.commitNames()
-		t.Errorf("origin refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pushEnv.commit1, names))
 	}
-	gitC := env.git.WithDir(filepath.Join(env.root, "repoC"))
+
+	// Ensure that repo C's master branch has moved to the new commit.
+	commit1 := rev1.Commit()
+	commitNames := map[gitobj.Hash]string{
+		commit1: "shared commit",
+		commit2: "local commit",
+	}
+	gitC := env.git.WithDir(repoCPath)
 	if r, err := gittool.ParseRev(ctx, gitC, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pushEnv.commit2 {
-		names := pushEnv.commitNames()
+	} else if r.Commit() != commit2 {
 		t.Errorf("named remote refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pushEnv.commit2, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit2, commitNames))
+	}
+
+	// Verify that repo B's master branch has stayed the same.
+	gitB := env.git.WithDir(repoBPath)
+	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+		t.Error(err)
+	} else if r.Commit() != commit1 {
+		t.Errorf("origin refs/heads/master = %s; want %s",
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit1, commitNames))
 	}
 }
 
@@ -100,32 +179,71 @@ func TestPush_FailUnknownRef(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	pushEnv, err := stagePushTest(ctx, env)
+
+	// Create repository with some junk history.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	repoAPath := env.root.FromSlash("repoA")
+	gitA := env.git.WithDir(repoAPath)
+	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-d", "foo"); err == nil {
+	// Push from repo A to repo B.
+	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+		t.Fatal(err)
+	}
+	repoBPath := env.root.FromSlash("repoB")
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a new commit in repo A.
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to push from repo A's master branch to repo B's nonexistent foo branch.
+	// This should return an error.
+	if _, err := env.gg(ctx, repoAPath, "push", "-d", "foo"); err == nil {
 		t.Error("push of new ref did not return error")
 	} else if isUsage(err) {
 		t.Errorf("push of new ref returned usage error: %v", err)
 	}
-	gitB := env.git.WithDir(pushEnv.repoB)
+
+	// Verify that repo B's master branch has not changed.
+	commit1 := rev1.Commit()
+	commitNames := map[gitobj.Hash]string{
+		commit1: "shared commit",
+		commit2: "local commit",
+	}
+	gitB := env.git.WithDir(repoBPath)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pushEnv.commit1 {
-		names := pushEnv.commitNames()
+	} else if r.Commit() != commit1 {
 		t.Errorf("refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pushEnv.commit1, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit1, commitNames))
 	}
+
+	// Verify that repo B did not gain a foo branch.
 	if r, err := gittool.ParseRev(ctx, gitB, "foo"); err == nil {
 		if ref := r.Ref(); ref != "" {
 			t.Logf("foo resolved to %s", ref)
 		}
-		names := pushEnv.commitNames()
-		t.Errorf("on remote, foo = %s; want to not exist",
-			prettyCommit(r.Commit(), names))
+		t.Errorf("on remote, foo = %s; want to not exist", prettyCommit(r.Commit(), commitNames))
 	}
 }
 
@@ -137,30 +255,69 @@ func TestPush_CreateRef(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	pushEnv, err := stagePushTest(ctx, env)
+
+	// Create repository with some junk history.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	repoAPath := env.root.FromSlash("repoA")
+	gitA := env.git.WithDir(repoAPath)
+	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-d", "foo", "--create"); err != nil {
+	// Push from repo A to repo B.
+	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
 		t.Fatal(err)
 	}
-	gitB := env.git.WithDir(pushEnv.repoB)
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
-		t.Error(err)
-	} else if r.Commit() != pushEnv.commit1 {
-		names := pushEnv.commitNames()
-		t.Errorf("refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pushEnv.commit1, names))
+	repoBPath := env.root.FromSlash("repoB")
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+		t.Fatal(err)
 	}
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a new commit in repo A.
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to push the repo A master branch to repo B's foo branch.
+	if _, err := env.gg(ctx, repoAPath, "push", "-d", "foo", "--create"); err != nil {
+		t.Error(err)
+	}
+
+	// Verify that repo B's foo branch has moved to the new commit.
+	commit1 := rev1.Commit()
+	commitNames := map[gitobj.Hash]string{
+		commit1: "shared commit",
+		commit2: "local commit",
+	}
+	gitB := env.git.WithDir(repoBPath)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/foo"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pushEnv.commit2 {
-		names := pushEnv.commitNames()
+	} else if r.Commit() != commit2 {
 		t.Errorf("refs/heads/foo = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pushEnv.commit2, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit2, commitNames))
+	}
+
+	// Verify that repo B's master branch has not changed.
+	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+		t.Error(err)
+	} else if r.Commit() != commit1 {
+		t.Errorf("refs/heads/master = %s; want %s",
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit1, commitNames))
 	}
 }
 
@@ -172,30 +329,68 @@ func TestPush_RewindFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	pushEnv, err := stagePushTest(ctx, env)
+
+	// Create repository with some junk history.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	repoAPath := env.root.FromSlash("repoA")
+	gitA := env.git.WithDir(repoAPath)
+	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Push second commit to B
-	if err := env.git.WithDir(pushEnv.repoA).Run(ctx, "push", "origin", "master"); err != nil {
+	// Push from repo A to repo B.
+	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+		t.Fatal(err)
+	}
+	repoBPath := env.root.FromSlash("repoB")
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
-	// Push rewind
-	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-d", "master", "-r", pushEnv.commit1.String()); err == nil {
+	// Create a new commit in repo A.
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Push second commit to repo B.
+	if err := gitA.Run(ctx, "push", "origin", "master"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to push initial commit from repo A to repo B's master branch (a rewind).
+	// This should return an error.
+	commit1 := rev1.Commit()
+	if _, err := env.gg(ctx, repoAPath, "push", "-d", "master", "-r", commit1.String()); err == nil {
 		t.Error("push of parent rev did not return error")
 	} else if isUsage(err) {
 		t.Errorf("push of parent rev returned usage error: %v", err)
 	}
-	gitB := env.git.WithDir(pushEnv.repoB)
+
+	// Verify that repo B's master branch has not changed.
+	commitNames := map[gitobj.Hash]string{
+		commit1: "shared commit",
+		commit2: "local commit",
+	}
+	gitB := env.git.WithDir(repoBPath)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pushEnv.commit2 {
-		names := pushEnv.commitNames()
+	} else if r.Commit() != commit2 {
 		t.Errorf("refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pushEnv.commit2, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit2, commitNames))
 	}
 }
 
@@ -207,28 +402,66 @@ func TestPush_RewindForce(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	pushEnv, err := stagePushTest(ctx, env)
+
+	// Create repository with some junk history.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	repoAPath := env.root.FromSlash("repoA")
+	gitA := env.git.WithDir(repoAPath)
+	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Push second commit to B
-	if err := env.git.WithDir(pushEnv.repoA).Run(ctx, "push", "origin", "master"); err != nil {
+	// Push from repo A to repo B.
+	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+		t.Fatal(err)
+	}
+	repoBPath := env.root.FromSlash("repoB")
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
-	// Push rewind
-	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-f", "-d", "master", "-r", pushEnv.commit1.String()); err != nil {
+	// Create a new commit in repo A.
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	gitB := env.git.WithDir(pushEnv.repoB)
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Push second commit to repo B.
+	if err := gitA.Run(ctx, "push", "origin", "master"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to push initial commit from repo A to repo B's master branch (a rewind) with
+	// the -f flag.
+	commit1 := rev1.Commit()
+	if _, err := env.gg(ctx, repoAPath, "push", "-f", "-d", "master", "-r", commit1.String()); err != nil {
+		t.Error(err)
+	}
+
+	// Verify that repo B's master branch has moved to the new commit.
+	commitNames := map[gitobj.Hash]string{
+		commit1: "shared commit",
+		commit2: "local commit",
+	}
+	gitB := env.git.WithDir(repoBPath)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pushEnv.commit1 {
-		names := pushEnv.commitNames()
+	} else if r.Commit() != commit1 {
 		t.Errorf("refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pushEnv.commit1, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit1, commitNames))
 	}
 }
 
@@ -240,30 +473,67 @@ func TestPush_AncestorInferDst(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	pushEnv, err := stagePushTest(ctx, env)
-	if err != nil {
+
+	// Create repository with some junk history.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
 		t.Fatal(err)
 	}
-	commit3, err := dummyRev(ctx, env.git, pushEnv.repoA, "master", "baz.txt", "third commit")
+	repoAPath := env.root.FromSlash("repoA")
+	gitA := env.git.WithDir(repoAPath)
+	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, pushEnv.repoA, "push", "-r", pushEnv.commit2.String()); err != nil {
+	// Push from repo A to repo B.
+	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+		t.Fatal(err)
+	}
+	repoBPath := env.root.FromSlash("repoB")
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create two new commits in repo A.
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", "Hello, World!\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", "It's...\n")); err != nil {
+		t.Fatal(err)
+	}
+	commit3, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to push the first new commit from repo A to repo B.
+	if _, err := env.gg(ctx, repoAPath, "push", "-r", commit2.String()); err != nil {
 		t.Error(err)
 	}
-	gitB := env.git.WithDir(pushEnv.repoB)
+
+	// Verify that repo B's master has moved to the first new commit.
+	gitB := env.git.WithDir(repoBPath)
 	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pushEnv.commit2 {
-		names := map[gitobj.Hash]string{
-			pushEnv.commit1: "first commit",
-			pushEnv.commit2: "second commit",
-			commit3:         "third commit",
+	} else if r.Commit() != commit2 {
+		commitNames := map[gitobj.Hash]string{
+			rev1.Commit(): "first commit",
+			commit2:       "second commit",
+			commit3:       "third commit",
 		}
 		t.Errorf("remote refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pushEnv.commit2, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit2, commitNames))
 	}
 }
 
@@ -275,39 +545,79 @@ func TestPush_DistinctPushURL(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	pushEnv, err := stagePushTest(ctx, env)
+
+	// Create repository with some junk history.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	repoAPath := env.root.FromSlash("repoA")
+	gitA := env.git.WithDir(repoAPath)
+	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
-	repoC := filepath.Join(env.root, "repoC")
-	if err := env.git.Run(ctx, "clone", "--bare", pushEnv.repoB, repoC); err != nil {
+
+	// Push from repo A to repo B.
+	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
 		t.Fatal(err)
 	}
-	gitA := env.git.WithDir(pushEnv.repoA)
-	if err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoC); err != nil {
+	repoBPath := env.root.FromSlash("repoB")
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, pushEnv.repoA, "push"); err != nil {
+	// Create a new commit in repo A.
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Set push URL of origin to a new repo C.
+	if err := env.git.Run(ctx, "clone", "--bare", "repoB", "repoC"); err != nil {
+		t.Fatal(err)
+	}
+	repoCPath := env.root.FromSlash("repoC")
+	if err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoCPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to push from repo A to repo C.
+	if _, err := env.gg(ctx, repoAPath, "push"); err != nil {
 		t.Error(err)
 	}
-	gitB := env.git.WithDir(pushEnv.repoB)
-	if r, err := gittool.ParseRev(ctx, gitB, "master"); err != nil {
-		t.Error("In fetch repo:", err)
-	} else if r.Commit() != pushEnv.commit1 {
-		names := pushEnv.commitNames()
-		t.Errorf("master in fetch repo = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pushEnv.commit1, names))
+
+	// Verify that repo C's master branch has moved to the new commit.
+	commit1 := rev1.Commit()
+	commitNames := map[gitobj.Hash]string{
+		commit1: "shared commit",
+		commit2: "local commit",
 	}
-	gitC := env.git.WithDir(repoC)
+	gitC := env.git.WithDir(repoCPath)
 	if r, err := gittool.ParseRev(ctx, gitC, "master"); err != nil {
 		t.Error("In push repo:", err)
-	} else if r.Commit() != pushEnv.commit2 {
-		names := pushEnv.commitNames()
+	} else if r.Commit() != commit2 {
 		t.Errorf("master in push repo = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pushEnv.commit2, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit2, commitNames))
+	}
+
+	// Verify that repo B's master branch has not changed.
+	gitB := env.git.WithDir(repoBPath)
+	if r, err := gittool.ParseRev(ctx, gitB, "master"); err != nil {
+		t.Error("In fetch repo:", err)
+	} else if r.Commit() != commit1 {
+		t.Errorf("master in fetch repo = %s; want %s",
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit1, commitNames))
 	}
 }
 
@@ -323,42 +633,82 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	pushEnv, err := stagePushTest(ctx, env)
+
+	// Create repository with some junk history.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	repoAPath := env.root.FromSlash("repoA")
+	gitA := env.git.WithDir(repoAPath)
+	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
-	repoC := filepath.Join(env.root, "repoC")
-	if err := env.git.Run(ctx, "clone", "--bare", pushEnv.repoB, repoC); err != nil {
+
+	// Push from repo A to repo B.
+	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
 		t.Fatal(err)
 	}
-	gitC := env.git.WithDir(repoC)
-	if err := gitC.Run(ctx, "branch", "newbranch", "master"); err != nil {
+	repoBPath := env.root.FromSlash("repoB")
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	gitA := env.git.WithDir(pushEnv.repoA)
-	if err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoC); err != nil {
-		t.Fatal(err)
-	}
-	if err := gitA.Run(ctx, "checkout", "-b", "newbranch"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, pushEnv.repoA, "push"); err != nil {
+	// Create a new commit in repo A.
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a new branch in repo A called "newbranch".
+	if err := gitA.Run(ctx, "checkout", "--quiet", "-b", "newbranch"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Set repo A's origin push URL to a new repo C with branch "newbranch" present.
+	if err := env.git.Run(ctx, "clone", "--bare", "repoB", "repoC"); err != nil {
+		t.Fatal(err)
+	}
+	repoCPath := env.root.FromSlash("repoC")
+	gitC := env.git.WithDir(repoCPath)
+	if err := gitC.Run(ctx, "branch", "newbranch", "master"); err != nil {
+		t.Fatal(err)
+	}
+	if err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoCPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to push from repo A to repo C.
+	if _, err := env.gg(ctx, repoAPath, "push"); err != nil {
 		t.Error(err)
 	}
-	gitB := env.git.WithDir(pushEnv.repoB)
-	if r, err := gittool.ParseRev(ctx, gitB, "newbranch"); err == nil {
-		names := pushEnv.commitNames()
-		t.Errorf("newbranch in fetch repo = %s; want to not exist",
-			prettyCommit(r.Commit(), names))
+
+	// Verify that repo C's branch "newbranch" was moved to the new commit.
+	commitNames := map[gitobj.Hash]string{
+		rev1.Commit(): "shared commit",
+		commit2:       "local commit",
 	}
 	if r, err := gittool.ParseRev(ctx, gitC, "newbranch"); err != nil {
 		t.Error("In push repo:", err)
-	} else if r.Commit() != pushEnv.commit2 {
-		names := pushEnv.commitNames()
+	} else if r.Commit() != commit2 {
 		t.Errorf("newbranch in push repo = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pushEnv.commit2, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit2, commitNames))
+	}
+
+	// Verify that repo B's branch "newbranch" was not created.
+	gitB := env.git.WithDir(repoBPath)
+	if r, err := gittool.ParseRev(ctx, gitB, "newbranch"); err == nil {
+		t.Errorf("newbranch in fetch repo = %s; want to not exist", prettyCommit(r.Commit(), commitNames))
 	}
 }
 
@@ -391,7 +741,7 @@ func TestGerritPushRef(t *testing.T) {
 			},
 			wantRef: "refs/for/master",
 			wantOpts: map[string][]string{
-				"m": {"This is a rebase on master!"},
+				"m":                   {"This is a rebase on master!"},
 				"no-publish-comments": nil,
 			},
 		},
@@ -403,8 +753,8 @@ func TestGerritPushRef(t *testing.T) {
 			},
 			wantRef: "refs/for/master",
 			wantOpts: map[string][]string{
-				"r":  {"a@a.com", "c@r.com"},
-				"cc": {"b@o.com", "d@zombo.com"},
+				"r":                   {"a@a.com", "c@r.com"},
+				"cc":                  {"b@o.com", "d@zombo.com"},
 				"no-publish-comments": nil,
 			},
 		},
@@ -416,8 +766,8 @@ func TestGerritPushRef(t *testing.T) {
 			},
 			wantRef: "refs/for/master",
 			wantOpts: map[string][]string{
-				"r":  {"a@a.com", "c@r.com"},
-				"cc": {"b@o.com", "d@zombo.com"},
+				"r":                   {"a@a.com", "c@r.com"},
+				"cc":                  {"b@o.com", "d@zombo.com"},
 				"no-publish-comments": nil,
 			},
 		},
@@ -571,62 +921,4 @@ func gerritOptionsEqual(m1, m2 map[string][]string) bool {
 		}
 	}
 	return true
-}
-
-type pushEnv struct {
-	repoA, repoB     string
-	commit1, commit2 gitobj.Hash
-}
-
-func stagePushTest(ctx context.Context, env *testEnv) (*pushEnv, error) {
-	repoA := filepath.Join(env.root, "repoA")
-	if err := env.git.Run(ctx, "init", repoA); err != nil {
-		return nil, err
-	}
-	repoB := filepath.Join(env.root, "repoB")
-	if err := env.git.Run(ctx, "init", "--bare", repoB); err != nil {
-		return nil, err
-	}
-
-	gitA := env.git.WithDir(repoA)
-	commit1, err := dummyRev(ctx, gitA, repoA, "master", "foo.txt", "initial commit")
-	if err != nil {
-		return nil, err
-	}
-
-	if err := gitA.Run(ctx, "remote", "add", "origin", repoB); err != nil {
-		return nil, err
-	}
-	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
-		return nil, err
-	}
-	if r, err := gittool.ParseRev(ctx, gitA, "refs/remotes/origin/master"); err != nil {
-		return nil, err
-	} else if r.Commit() != commit1 {
-		return nil, fmt.Errorf("source repository origin/master = %v; want %v", r.Commit(), commit1)
-	}
-	gitB := env.git.WithDir(repoB)
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
-		return nil, err
-	} else if r.Commit() != commit1 {
-		return nil, fmt.Errorf("destination repository master = %v; want %v", r.Commit(), commit1)
-	}
-
-	commit2, err := dummyRev(ctx, gitA, repoA, "master", "bar.txt", "second commit")
-	if err != nil {
-		return nil, err
-	}
-	return &pushEnv{
-		repoA:   repoA,
-		repoB:   repoB,
-		commit1: commit1,
-		commit2: commit2,
-	}, nil
-}
-
-func (env *pushEnv) commitNames() map[gitobj.Hash]string {
-	return map[gitobj.Hash]string{
-		env.commit1: "shared commit",
-		env.commit2: "local commit",
-	}
 }

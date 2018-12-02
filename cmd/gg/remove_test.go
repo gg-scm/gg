@@ -16,15 +16,11 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 
+	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/gittool"
 )
-
-const removeTestFileName = "foo.txt"
 
 func TestRemove(t *testing.T) {
 	t.Parallel()
@@ -35,13 +31,32 @@ func TestRemove(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := stageRemoveTest(ctx, env.git, env.root); err != nil {
+	// Create a repository with a committed foo.txt file.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "rm", removeTestFileName); err != nil {
+	// Call gg to remove foo.txt.
+	if _, err := env.gg(ctx, env.root.String(), "rm", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
+
+	// Verify that foo.txt is not in the working copy.
+	if exists, err := env.root.Exists("foo.txt"); err != nil {
+		t.Error(err)
+	} else if exists {
+		t.Error("foo.txt exists after gg rm")
+	}
+	// Verify that foo.txt is no longer in the index.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -54,17 +69,17 @@ func TestRemove(t *testing.T) {
 	found := false
 	for st.Scan() {
 		ent := st.Entry()
-		if ent.Name() != removeTestFileName {
+		if ent.Name() != "foo.txt" {
 			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
 		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
-			t.Errorf("%s status = '%v'; want 'D '", removeTestFileName, code)
+			t.Errorf("foo.txt status = '%v'; want 'D '", code)
 		}
 	}
 	if !found {
-		t.Errorf("File %s unmodified", removeTestFileName)
+		t.Error("File foo.txt unmodified")
 	}
 	if err := st.Err(); err != nil {
 		t.Error(err)
@@ -80,25 +95,31 @@ func TestRemove_AddedFails(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := env.git.Run(ctx, "init"); err != nil {
+	// Create a repository with an uncommitted foo.txt.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, removeTestFileName),
-		[]byte("Hello, World!\n"),
-		0666)
-	if err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "add", removeTestFileName); err != nil {
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err = env.gg(ctx, env.root, "rm", removeTestFileName); err == nil {
+	// Call gg to remove foo.txt. Verify that it returns an error.
+	if _, err = env.gg(ctx, env.root.String(), "rm", "foo.txt"); err == nil {
 		t.Error("`gg rm` returned success on added file")
 	} else if isUsage(err) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
+
+	// Verify that foo.txt is still in the working copy.
+	if exists, err := env.root.Exists("foo.txt"); err != nil {
+		t.Error(err)
+	} else if !exists {
+		t.Error("foo.txt does not exist")
+	}
+	// Verify that foo.txt is still in the index as added.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -111,17 +132,17 @@ func TestRemove_AddedFails(t *testing.T) {
 	found := false
 	for st.Scan() {
 		ent := st.Entry()
-		if ent.Name() != removeTestFileName {
+		if ent.Name() != "foo.txt" {
 			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
 		if code := ent.Code(); code[0] != 'A' || code[1] != ' ' {
-			t.Errorf("%s status = '%v'; want 'A '", removeTestFileName, code)
+			t.Errorf("foo.txt status = '%v'; want 'A '", code)
 		}
 	}
 	if !found {
-		t.Errorf("File %s removed", removeTestFileName)
+		t.Error("File foo.txt removed")
 	}
 	if err := st.Err(); err != nil {
 		t.Error(err)
@@ -137,23 +158,29 @@ func TestRemove_AddedForce(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := env.git.Run(ctx, "init"); err != nil {
+	// Create a repository with an uncommitted foo.txt.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, removeTestFileName),
-		[]byte("Hello, World!\n"),
-		0666)
-	if err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "add", removeTestFileName); err != nil {
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "rm", "-f", removeTestFileName); err != nil {
+	// Call gg to remove foo.txt with the -f flag.
+	if _, err := env.gg(ctx, env.root.String(), "rm", "-f", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
+
+	// Verify that foo.txt is not in the working copy.
+	if exists, err := env.root.Exists("foo.txt"); err != nil {
+		t.Error(err)
+	} else if exists {
+		t.Error("foo.txt exists after gg rm")
+	}
+	// Verify that the index is clean.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -180,22 +207,38 @@ func TestRemove_ModifiedFails(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := stageRemoveTest(ctx, env.git, env.root); err != nil {
+	// Create a repository with a committed foo.txt file.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, removeTestFileName),
-		[]byte("The world has changed...\n"),
-		0666)
-	if err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Original Content\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.newCommit(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	// Make local modifications to foo.txt.
+	if err := env.root.Apply(filesystem.Write("foo.txt", "The world has changed...\n")); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err = env.gg(ctx, env.root, "rm", removeTestFileName); err == nil {
+	// Call gg to remove foo.txt. Verify that it returns an error.
+	if _, err = env.gg(ctx, env.root.String(), "rm", "foo.txt"); err == nil {
 		t.Error("`gg rm` returned success on modified file")
 	} else if isUsage(err) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
+
+	// Verify that foo.txt is still in the working copy.
+	if exists, err := env.root.Exists("foo.txt"); err != nil {
+		t.Error(err)
+	} else if !exists {
+		t.Error("foo.txt does not exist")
+	}
+	// Verify that foo.txt is still in the index as modified.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -208,17 +251,17 @@ func TestRemove_ModifiedFails(t *testing.T) {
 	found := false
 	for st.Scan() {
 		ent := st.Entry()
-		if ent.Name() != removeTestFileName {
+		if ent.Name() != "foo.txt" {
 			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
 		if code := ent.Code(); code[0] != ' ' || code[1] != 'M' {
-			t.Errorf("%s status = '%v'; want ' M'", removeTestFileName, code)
+			t.Errorf("foo.txt status = '%v'; want ' M'", code)
 		}
 	}
 	if !found {
-		t.Errorf("File %s reverted", removeTestFileName)
+		t.Error("File foo.txt reverted")
 	}
 	if err := st.Err(); err != nil {
 		t.Error(err)
@@ -234,20 +277,36 @@ func TestRemove_ModifiedForce(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := stageRemoveTest(ctx, env.git, env.root); err != nil {
+	// Create a repository with a committed foo.txt file.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, removeTestFileName),
-		[]byte("The world has changed...\n"),
-		0666)
-	if err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Original Content\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.newCommit(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	// Make local modifications to foo.txt.
+	if err := env.root.Apply(filesystem.Write("foo.txt", "The world has changed...\n")); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "rm", "-f", removeTestFileName); err != nil {
+	// Call gg to remove foo.txt with the -f flag.
+	if _, err := env.gg(ctx, env.root.String(), "rm", "-f", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
+
+	// Verify that foo.txt is not in the working copy.
+	if exists, err := env.root.Exists("foo.txt"); err != nil {
+		t.Error(err)
+	} else if exists {
+		t.Error("foo.txt exists after gg rm")
+	}
+	// Verify that foo.txt is no longer in the index.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -260,17 +319,17 @@ func TestRemove_ModifiedForce(t *testing.T) {
 	found := false
 	for st.Scan() {
 		ent := st.Entry()
-		if ent.Name() != removeTestFileName {
+		if ent.Name() != "foo.txt" {
 			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
 		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
-			t.Errorf("%s status = '%v'; want 'D '", removeTestFileName, code)
+			t.Errorf("foo.txt status = '%v'; want 'D '", code)
 		}
 	}
 	if !found {
-		t.Errorf("File %s unmodified", removeTestFileName)
+		t.Error("File foo.txt unmodified")
 	}
 	if err := st.Err(); err != nil {
 		t.Error(err)
@@ -286,18 +345,31 @@ func TestRemove_MissingFails(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := stageRemoveTest(ctx, env.git, env.root); err != nil {
+	// Create a repository with a committed foo.txt file.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Remove(filepath.Join(env.root, removeTestFileName)); err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.newCommit(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	// Remove the foo.txt file without informing Git.
+	if err := env.root.Apply(filesystem.Remove("foo.txt")); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err = env.gg(ctx, env.root, "rm", removeTestFileName); err == nil {
+	// Call gg to remove foo.txt. Verify that gg returns an error.
+	if _, err = env.gg(ctx, env.root.String(), "rm", "foo.txt"); err == nil {
 		t.Error("`gg rm` returned success on missing file")
 	} else if isUsage(err) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
+	// Verify that foo.txt is still in the index.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -310,17 +382,17 @@ func TestRemove_MissingFails(t *testing.T) {
 	found := false
 	for st.Scan() {
 		ent := st.Entry()
-		if ent.Name() != removeTestFileName {
+		if ent.Name() != "foo.txt" {
 			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
 		if code := ent.Code(); code[0] != ' ' || code[1] != 'D' {
-			t.Errorf("%s status = '%v'; want ' D'", removeTestFileName, code)
+			t.Errorf("foo.txt status = '%v'; want ' D'", code)
 		}
 	}
 	if !found {
-		t.Errorf("File %s reverted", removeTestFileName)
+		t.Error("File foo.txt reverted")
 	}
 	if err := st.Err(); err != nil {
 		t.Error(err)
@@ -336,16 +408,30 @@ func TestRemove_MissingAfter(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := stageRemoveTest(ctx, env.git, env.root); err != nil {
+	// Create a repository with a committed foo.txt file.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Remove(filepath.Join(env.root, removeTestFileName)); err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.newCommit(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	// Remove the foo.txt file without informing Git.
+	if err := env.root.Apply(filesystem.Remove("foo.txt")); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "rm", "-after", removeTestFileName); err != nil {
+	// Call gg to remove foo.txt with the -after flag.
+	if _, err := env.gg(ctx, env.root.String(), "rm", "-after", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
+
+	// Verify that foo.txt is no longer in the index.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -358,17 +444,17 @@ func TestRemove_MissingAfter(t *testing.T) {
 	found := false
 	for st.Scan() {
 		ent := st.Entry()
-		if ent.Name() != removeTestFileName {
+		if ent.Name() != "foo.txt" {
 			t.Errorf("Unknown line in status: %v", ent)
 			continue
 		}
 		found = true
 		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
-			t.Errorf("%s status = '%v'; want 'D '", removeTestFileName, code)
+			t.Errorf("foo.txt status = '%v'; want 'D '", code)
 		}
 	}
 	if !found {
-		t.Errorf("File %s reverted", removeTestFileName)
+		t.Error("File foo.txt reverted")
 	}
 	if err := st.Err(); err != nil {
 		t.Error(err)
@@ -384,30 +470,32 @@ func TestRemove_Recursive(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := os.Mkdir(filepath.Join(env.root, "foo"), 0777); err != nil {
+	// Create a repository with a committed foo/bar.txt file.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	relpath := filepath.Join("foo", "bar.txt")
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, relpath),
-		[]byte("Hello, World!\n"),
-		0666)
-	if err != nil {
+	if err := env.root.Apply(filesystem.Write("foo/bar.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "init", env.root); err != nil {
+	if err := env.addFiles(ctx, "foo/bar.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "add", relpath); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.Run(ctx, "commit", "-m", "committed"); err != nil {
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "rm", "-r", "foo"); err != nil {
+	// Call gg to remove the foo directory.
+	if _, err := env.gg(ctx, env.root.String(), "rm", "-r", "foo"); err != nil {
 		t.Error(err)
 	}
+
+	// Verify that foo/bar.txt is not in the working copy.
+	if exists, err := env.root.Exists("foo/bar.txt"); err != nil {
+		t.Error(err)
+	} else if exists {
+		t.Error("foo/bar.txt exists after gg rm")
+	}
+	// Verify that foo/bar.txt is not in the index.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -430,7 +518,7 @@ func TestRemove_Recursive(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Errorf("File foo/bar.txt unmodified")
+		t.Error("File foo/bar.txt unmodified")
 	}
 	if err := st.Err(); err != nil {
 		t.Error(err)
@@ -446,35 +534,32 @@ func TestRemove_RecursiveMissingFails(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := os.Mkdir(filepath.Join(env.root, "foo"), 0777); err != nil {
+	// Create a repository with a committed foo/bar.txt file.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	relpath := filepath.Join("foo", "bar.txt")
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, relpath),
-		[]byte("Hello, World!\n"),
-		0666)
-	if err != nil {
+	if err := env.root.Apply(filesystem.Write("foo/bar.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "init", env.root); err != nil {
+	if err := env.addFiles(ctx, "foo/bar.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "add", relpath); err != nil {
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "commit", "-m", "committed"); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.RemoveAll(filepath.Join(env.root, "foo")); err != nil {
+	// Remove the directory without informing Git.
+	if err := env.root.Apply(filesystem.Remove("foo")); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "rm", "-r", "foo"); err == nil {
+	// Call gg to remove the foo directory. Verify that gg returns an error.
+	if _, err := env.gg(ctx, env.root.String(), "rm", "-r", "foo"); err == nil {
 		t.Error("`gg rm -r` returned success on missing directory")
 	} else if isUsage(err) {
 		t.Errorf("`gg rm -r` error: %v; want failure, not usage", err)
 	}
+
+	// Verify that foo.txt is still in the index.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -497,7 +582,7 @@ func TestRemove_RecursiveMissingFails(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Errorf("File foo/bar.txt unmodified")
+		t.Error("File foo/bar.txt unmodified")
 	}
 	if err := st.Err(); err != nil {
 		t.Error(err)
@@ -513,33 +598,30 @@ func TestRemove_RecursiveMissingAfter(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := os.Mkdir(filepath.Join(env.root, "foo"), 0777); err != nil {
+	// Create a repository with a committed foo/bar.txt file.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	relpath := filepath.Join("foo", "bar.txt")
-	err = ioutil.WriteFile(
-		filepath.Join(env.root, relpath),
-		[]byte("Hello, World!\n"),
-		0666)
-	if err != nil {
+	if err := env.root.Apply(filesystem.Write("foo/bar.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "init", env.root); err != nil {
+	if err := env.addFiles(ctx, "foo/bar.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "add", relpath); err != nil {
+	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "commit", "-m", "committed"); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.RemoveAll(filepath.Join(env.root, "foo")); err != nil {
+	// Remove the directory without informing Git.
+	if err := env.root.Apply(filesystem.Remove("foo")); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "rm", "-r", "-after", "foo"); err != nil {
+	// Call gg to remove the foo directory with the -after flag.
+	if _, err := env.gg(ctx, env.root.String(), "rm", "-r", "-after", "foo"); err != nil {
 		t.Error(err)
 	}
+
+	// Verify that foo/bar.txt is not in the index.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -562,30 +644,9 @@ func TestRemove_RecursiveMissingAfter(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Errorf("File foo/bar.txt unmodified")
+		t.Error("File foo/bar.txt unmodified")
 	}
 	if err := st.Err(); err != nil {
 		t.Error(err)
 	}
-}
-
-func stageRemoveTest(ctx context.Context, git *gittool.Tool, repo string) error {
-	if err := git.Run(ctx, "init", repo); err != nil {
-		return err
-	}
-	err := ioutil.WriteFile(
-		filepath.Join(repo, removeTestFileName),
-		[]byte("Hello, World!\n"),
-		0666)
-	if err != nil {
-		return err
-	}
-	git = git.WithDir(repo)
-	if err := git.Run(ctx, "add", removeTestFileName); err != nil {
-		return err
-	}
-	if err := git.Run(ctx, "commit", "-m", "initial commit"); err != nil {
-		return err
-	}
-	return nil
 }

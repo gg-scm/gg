@@ -17,12 +17,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"gg-scm.io/pkg/internal/escape"
+	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/gitobj"
 	"gg-scm.io/pkg/internal/gittool"
 )
@@ -36,40 +35,65 @@ func TestRebase(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer env.cleanup()
-		if err := env.git.Run(ctx, "init"); err != nil {
+
+		// Create repository with two commits on a branch called "topic" and
+		// a diverging commit on "master".
+		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
+		baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
-		c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change")
+		if err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("mainline.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "mainline.txt"); err != nil {
+			t.Fatal(err)
+		}
+		head, err := env.newCommit(ctx, ".")
 		if err != nil {
 			t.Fatal(err)
 		}
-		c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change")
+		if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "foo.txt"); err != nil {
+			t.Fatal(err)
+		}
+		c1, err := env.newCommit(ctx, ".")
 		if err != nil {
 			t.Fatal(err)
 		}
-		head, err := dummyRev(ctx, env.git, env.root, "master", "quux.txt", "Mainline change")
+		if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "bar.txt"); err != nil {
+			t.Fatal(err)
+		}
+		c2, err := env.newCommit(ctx, ".")
 		if err != nil {
 			t.Fatal(err)
 		}
 		names := map[gitobj.Hash]string{
-			base: "initial import",
-			c1:   "change 1",
-			c2:   "change 2",
-			head: "mainline change",
+			baseRev.Commit(): "initial import",
+			c1:               "change 1",
+			c2:               "change 2",
+			head:             "mainline change",
 		}
 
-		if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
-			t.Fatal(err)
-		}
+		// Call gg with the rebase arguments to move onto master.
 		ggArgs := []string{"rebase"}
 		if arg := argFunc(head); arg != "" {
 			ggArgs = append(ggArgs, "-base="+arg, "-dst="+arg)
 		}
-		_, err = env.gg(ctx, env.root, ggArgs...)
+		_, err = env.gg(ctx, env.root.String(), ggArgs...)
 		if err != nil {
 			t.Error(err)
 		}
@@ -78,27 +102,45 @@ func TestRebase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if curr.Commit() == c2 {
-			t.Fatal("rebase did not change commit; want new commit")
+		// Verify that HEAD points to a new commit.
+		if _, existedBefore := names[curr.Commit()]; existedBefore {
+			t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
-			t.Error("baz.txt not in rebased change:", err)
-		}
+		// Verify that HEAD is on the topic branch.
 		if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
 			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
+		}
+		// Verify that HEAD contains all the files.
+		if err := objectExists(ctx, env.git, curr.Commit().String()+":foo.txt"); err != nil {
+			t.Error("foo.txt not in second rebased change:", err)
+		}
+		if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err != nil {
+			t.Error("bar.txt not in second rebased change:", err)
+		}
+		if err := objectExists(ctx, env.git, curr.Commit().String()+":mainline.txt"); err != nil {
+			t.Error("mainline.txt not in second rebased change:", err)
 		}
 
 		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.Commit() == c1 {
-			t.Fatal("rebase did not change parent commit; want new commit")
+		// Verify that the parent is a new commit.
+		if _, existedBefore := names[parent.Commit()]; existedBefore {
+			t.Fatalf("rebase HEAD~1 = %s; want new commit", prettyCommit(parent.Commit(), names))
 		}
-		if err := objectExists(ctx, env.git, parent.Commit().String()+":bar.txt"); err != nil {
-			t.Error("bar.txt not in rebased change:", err)
+		// Verify that HEAD~1 contains all the files except the one in the second change.
+		if err := objectExists(ctx, env.git, parent.Commit().String()+":foo.txt"); err != nil {
+			t.Error("foo.txt not in first rebased change:", err)
+		}
+		if err := objectExists(ctx, env.git, parent.Commit().String()+":mainline.txt"); err != nil {
+			t.Error("mainline.txt not in first rebased change:", err)
+		}
+		if err := objectExists(ctx, env.git, parent.Commit().String()+":bar.txt"); err == nil {
+			t.Error("bar.txt in first rebased change")
 		}
 
+		// Verify that the grandparent is the diverged upstream commit.
 		grandparent, err := gittool.ParseRev(ctx, env.git, "HEAD~2")
 		if err != nil {
 			t.Fatal(err)
@@ -117,36 +159,61 @@ func TestRebase_Src(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+
+	// Create repository with two commits on a branch called "topic" and
+	// a diverging commit on "master".
+	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
+	baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
-	c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change")
+	if err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("mainline.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "mainline.txt"); err != nil {
+		t.Fatal(err)
+	}
+	head, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change")
+	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	c1, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	head, err := dummyRev(ctx, env.git, env.root, "master", "quux.txt", "Mainline change")
+	if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "bar.txt"); err != nil {
+		t.Fatal(err)
+	}
+	c2, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
 	names := map[gitobj.Hash]string{
-		base: "initial import",
-		c1:   "change 1",
-		c2:   "change 2",
-		head: "mainline change",
+		baseRev.Commit(): "initial import",
+		c1:               "change 1",
+		c2:               "change 2",
+		head:             "mainline change",
 	}
 
-	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := env.gg(ctx, env.root, "rebase", "-src="+c2.String()); err != nil {
+	// Call gg to rebase just the second change onto its upstream branch (master).
+	if _, err := env.gg(ctx, env.root.String(), "rebase", "-src="+c2.String()); err != nil {
 		t.Error(err)
 	}
 
@@ -154,16 +221,26 @@ func TestRebase_Src(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if curr.Commit() == c2 {
-		t.Fatal("rebase did not change commit; want new commit", c2)
+	// Verify that HEAD points to a new commit.
+	if _, existedBefore := names[curr.Commit()]; existedBefore {
+		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
-		t.Error("baz.txt not in rebased change:", err)
-	}
+	// Verify that HEAD is on the topic branch.
 	if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
 		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 	}
+	// Verify that HEAD contains all the files except the first topic change.
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":foo.txt"); err == nil {
+		t.Error("foo.txt is in rebased change")
+	}
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err != nil {
+		t.Error("bar.txt not in rebased change:", err)
+	}
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":mainline.txt"); err != nil {
+		t.Error("mainline.txt not in rebased change:", err)
+	}
 
+	// Verify that the parent commit is the diverged master commit.
 	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
 	if err != nil {
 		t.Fatal(err)
@@ -181,31 +258,49 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+
+	// Create repository with two commits on a branch called "topic".
+	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
+	baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
-	c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change")
+	if err := env.git.Run(ctx, "checkout", "--quiet", "--track", "-b", "topic"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	c1, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change")
+	if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "bar.txt"); err != nil {
+		t.Fatal(err)
+	}
+	c2, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
 	names := map[gitobj.Hash]string{
-		base: "initial import",
-		c1:   "change 1",
-		c2:   "change 2",
+		baseRev.Commit(): "initial import",
+		c1:               "change 1",
+		c2:               "change 2",
 	}
 
+	// Call gg on master to rebase the second commit onto master.
 	if err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.gg(ctx, env.root, "rebase", "-src="+c2.String(), "-dst=HEAD"); err != nil {
+	if _, err := env.gg(ctx, env.root.String(), "rebase", "-src="+c2.String(), "-dst=HEAD"); err != nil {
 		t.Error(err)
 	}
 
@@ -213,22 +308,29 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if curr.Commit() == base || curr.Commit() == c1 || curr.Commit() == c2 {
-		t.Fatalf("HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
+	// Verify that HEAD points to a new commit.
+	if _, existedBefore := names[curr.Commit()]; existedBefore {
+		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
-		t.Error("baz.txt not in rebased change:", err)
-	}
+	// Verify that HEAD is on the master branch.
 	if want := gitobj.Ref("refs/heads/master"); curr.Ref() != want {
 		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 	}
+	// Verify that HEAD contains the file from the second change but not from the first change.
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":foo.txt"); err == nil {
+		t.Error("foo.txt in rebased change")
+	}
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err != nil {
+		t.Error("bar.txt not in rebased change:", err)
+	}
 
+	// Verify that the parent is the initial commit.
 	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parent.Commit() != base {
-		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(base, names))
+	if parent.Commit() != baseRev.Commit() {
+		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(baseRev.Commit(), names))
 	}
 }
 
@@ -240,46 +342,98 @@ func TestRebase_Base(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+
+	// Create a repository with this commit topology:
+	//
+	// *-----*  master
+	//  \
+	//   *-*-*  topic
+	//      \
+	//       *  magic
+	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
+	baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
-	c1, err := dummyRev(ctx, env.git, env.root, "topic", "bar.txt", "First feature change")
+	if err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("mainline.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "mainline.txt"); err != nil {
+		t.Fatal(err)
+	}
+	head, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c2, err := dummyRev(ctx, env.git, env.root, "topic", "baz.txt", "Second feature change")
+	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	c1, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	magic, err := dummyRev(ctx, env.git, env.root, "magic", "shazam.txt", "Something different")
+	if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "bar.txt"); err != nil {
+		t.Fatal(err)
+	}
+	c2, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	c3, err := dummyRev(ctx, env.git, env.root, "topic", "xyzzy.txt", "Third feature change")
+	if err := env.git.Run(ctx, "branch", "--quiet", "--track", "magic"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("baz.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "baz.txt"); err != nil {
+		t.Fatal(err)
+	}
+	c3, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	head, err := dummyRev(ctx, env.git, env.root, "master", "quux.txt", "Mainline change")
+	if err := env.git.Run(ctx, "checkout", "--quiet", "magic"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("shazam.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "shazam.txt"); err != nil {
+		t.Fatal(err)
+	}
+	magic, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
 	names := map[gitobj.Hash]string{
-		base:  "initial import",
-		c1:    "change 1",
-		c2:    "change 2",
-		c3:    "change 3",
-		magic: "magic",
-		head:  "mainline change",
+		baseRev.Commit(): "initial import",
+		c1:               "change 1",
+		c2:               "change 2",
+		c3:               "change 3",
+		magic:            "magic",
+		head:             "mainline change",
 	}
 
+	// Call gg on the topic branch to rebase everything past the merge
+	// point of topic and magic (change 2) onto topic's upstream (master).
 	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.gg(ctx, env.root, "rebase", "-base="+magic.String()); err != nil {
+	if _, err := env.gg(ctx, env.root.String(), "rebase", "-base="+magic.String()); err != nil {
 		t.Error(err)
 	}
 
@@ -287,16 +441,32 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if curr.Commit() == c3 {
-		t.Fatal("rebase did not change commit; want new commit", c3)
+	// Verify that HEAD points to a new commit.
+	if _, existedBefore := names[curr.Commit()]; existedBefore {
+		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":xyzzy.txt"); err != nil {
-		t.Error("xyzzy.txt not in rebased change:", err)
-	}
+	// Verify that HEAD is on the topic branch.
 	if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
 		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 	}
+	// Verify that HEAD contains the mainline file and the change 3 file, but no others.
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":foo.txt"); err == nil {
+		t.Error("foo.txt in rebased change")
+	}
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err == nil {
+		t.Error("bar.txt in rebased change")
+	}
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
+		t.Error("baz.txt not in rebased change:", err)
+	}
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":mainline.txt"); err != nil {
+		t.Error("mainline.txt not in rebased change:", err)
+	}
+	if err := objectExists(ctx, env.git, curr.Commit().String()+":shazam.txt"); err == nil {
+		t.Error("shazam.txt in rebased change")
+	}
 
+	// Verify that the parent commit is the diverged upstream commit.
 	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
 	if err != nil {
 		t.Fatal(err)
@@ -317,61 +487,91 @@ func TestRebase_ResetUpstream(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer env.cleanup()
-		if err := env.git.Run(ctx, "init"); err != nil {
+
+		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
+		baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
-		feature, err := dummyRev(ctx, env.git, env.root, "master", "bar.txt", "Feature change")
+		// Create a commit on master.
+		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "foo.txt"); err != nil {
+			t.Fatal(err)
+		}
+		feature, err := env.newCommit(ctx, ".")
 		if err != nil {
 			t.Fatal(err)
 		}
+		// Create topic branch with the new commit.
 		if err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.git.Run(ctx, "reset", "--hard", base.String()); err != nil {
+		// Move master branch back to the base commit.
+		// Importantly, this will be recorded in the reflog.
+		if err := env.git.Run(ctx, "reset", "--hard", baseRev.Commit().String()); err != nil {
 			t.Fatal(err)
 		}
-		upstream, err := dummyRev(ctx, env.git, env.root, "master", "baz.txt", "Upstream change")
-		if err != nil {
+		// Create a new commit on master.
+		if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+		if err := env.addFiles(ctx, "bar.txt"); err != nil {
 			t.Fatal(err)
 		}
-
-		rebaseArgs := []string{"rebase", "-dst=master"}
-		if arg := argFunc(upstream); arg != "" {
-			rebaseArgs = append(rebaseArgs, "-base="+arg)
-		}
-		if _, err := env.gg(ctx, env.root, rebaseArgs...); err != nil {
-			t.Error(err)
-		}
-		curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+		upstream, err := env.newCommit(ctx, ".")
 		if err != nil {
 			t.Fatal(err)
 		}
 		names := map[gitobj.Hash]string{
-			base:     "initial import",
-			feature:  "feature change",
-			upstream: "upstream change",
+			baseRev.Commit(): "initial import",
+			feature:          "feature change",
+			upstream:         "upstream change",
 		}
-		if curr.Commit() == base || curr.Commit() == feature || curr.Commit() == upstream {
-			t.Errorf("after rebase, HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
+
+		// Call gg on the topic branch to rebase all changes past the merge
+		// point of master and topic (the base revision) on top of the new
+		// master commit.
+		if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+			t.Fatal(err)
+		}
+		rebaseArgs := []string{"rebase", "-dst=master"}
+		if arg := argFunc(upstream); arg != "" {
+			rebaseArgs = append(rebaseArgs, "-base="+arg)
+		}
+		if _, err := env.gg(ctx, env.root.String(), rebaseArgs...); err != nil {
+			t.Error(err)
+		}
+
+		curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Verify that HEAD points to a new commit.
+		if _, existedBefore := names[curr.Commit()]; existedBefore {
+			t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
+		}
+		// Verify that HEAD is on the topic branch.
+		if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
+			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
+		}
+		// Verify that HEAD contains both of the files.
+		if err := objectExists(ctx, env.git, curr.Commit().String()+":foo.txt"); err != nil {
+			t.Error("foo.txt not in rebased change:", err)
 		}
 		if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err != nil {
 			t.Error("bar.txt not in rebased change:", err)
 		}
+		// Verify that the parent commit is the diverged upstream commit.
 		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~")
 		if err != nil {
 			t.Fatal(err)
 		}
 		if parent.Commit() != upstream {
-			t.Errorf("after rebase, HEAD~ = %s; want %s",
-				prettyCommit(parent.Commit(), names),
-				prettyCommit(upstream, names))
+			t.Errorf("HEAD~ = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(upstream, names))
 		}
 	})
 }
@@ -385,35 +585,55 @@ func TestHistedit(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer env.cleanup()
-		if err := env.git.Run(ctx, "init"); err != nil {
+
+		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
+		baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
-		c, err := dummyRev(ctx, env.git, env.root, "foo", "bar.txt", "Divergence")
+		// Create a new branch.
+		if err := env.git.Run(ctx, "branch", "--quiet", "--track", "foo"); err != nil {
+			t.Fatal(err)
+		}
+		// Create a commit on master.
+		if err := env.root.Apply(filesystem.Write("upstream.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "upstream.txt"); err != nil {
+			t.Fatal(err)
+		}
+		head, err := env.newCommit(ctx, ".")
 		if err != nil {
 			t.Fatal(err)
 		}
-		head, err := dummyRev(ctx, env.git, env.root, "master", "baz.txt", "Upstream")
+		// Check out foo and create a commit.
+		if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "foo.txt"); err != nil {
+			t.Fatal(err)
+		}
+		c, err := env.newCommit(ctx, ".")
 		if err != nil {
 			t.Fatal(err)
 		}
 		names := map[gitobj.Hash]string{
-			base: "initial import",
-			c:    "branch change",
-			head: "mainline change",
+			baseRev.Commit(): "initial import",
+			c:                "branch change",
+			head:             "mainline change",
 		}
 
-		if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
-			t.Fatal(err)
-		}
+		// Call gg histedit on foo branch.
 		rebaseEditor, err := env.editorCmd([]byte("reword " + c.String() + "\n"))
 		if err != nil {
 			t.Fatal(err)
 		}
-		const wantMessage = "New commit message for bar.txt"
+		const wantMessage = "New commit message for foo.txt"
 		msgEditor, err := env.editorCmd([]byte(wantMessage + "\n"))
 		if err != nil {
 			t.Fatal(err)
@@ -423,7 +643,7 @@ func TestHistedit(t *testing.T) {
 		if err := env.writeConfig([]byte(config)); err != nil {
 			t.Fatal(err)
 		}
-		out, err := env.gg(ctx, env.root, appendNonEmpty([]string{"histedit"}, argFunc(head))...)
+		out, err := env.gg(ctx, env.root.String(), appendNonEmpty([]string{"histedit"}, argFunc(head))...)
 		if err != nil {
 			t.Fatalf("failed: %v; output:\n%s", err, out)
 		}
@@ -432,27 +652,35 @@ func TestHistedit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got := curr.Commit(); got == c || got == head || got == base {
-			t.Fatalf("after histedit, commit = %s; want new commit", prettyCommit(got, names))
+		// Verify that HEAD points to a new commit.
+		if _, existedBefore := names[curr.Commit()]; existedBefore {
+			t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err != nil {
-			t.Error("bar.txt not in rebased change:", err)
-		}
+		// Verify that HEAD is on the foo branch.
 		if want := gitobj.Ref("refs/heads/foo"); curr.Ref() != want {
 			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 		}
+		// Verify that HEAD contains foo.txt but not upstream.txt.
+		if err := objectExists(ctx, env.git, curr.Commit().String()+":foo.txt"); err != nil {
+			t.Error("foo.txt not in rebased change:", err)
+		}
+		if err := objectExists(ctx, env.git, curr.Commit().String()+":upstream.txt"); err == nil {
+			t.Error("upstream.txt in rebased change")
+		}
+		// Verify that the commit message matches what was given.
 		if msg, err := readCommitMessage(ctx, env.git, curr.Commit().String()); err != nil {
 			t.Error(err)
 		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
 			t.Errorf("commit message = %q; want %q", got, wantMessage)
 		}
 
+		// Verify that the parent commit is the base commit.
 		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.Commit() != base {
-			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(base, names))
+		if parent.Commit() != baseRev.Commit() {
+			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(baseRev.Commit(), names))
 		}
 	})
 }
@@ -466,43 +694,75 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer env.cleanup()
-		if err := env.git.Run(ctx, "init"); err != nil {
+
+		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
+		baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
-		c1, err := dummyRev(ctx, env.git, env.root, "foo", "bar.txt", "Divergence 1")
+		// Create a new branch.
+		if err := env.git.Run(ctx, "branch", "--quiet", "--track", "foo"); err != nil {
+			t.Fatal(err)
+		}
+		// Create a commit on master.
+		if err := env.root.Apply(filesystem.Write("upstream.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "upstream.txt"); err != nil {
+			t.Fatal(err)
+		}
+		head, err := env.newCommit(ctx, ".")
 		if err != nil {
+			t.Fatal(err)
+		}
+		// Create two commits on foo.
+		if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("foo.txt", "This is the original data\n")); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "foo.txt"); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.git.Run(ctx, "commit", "--quiet", "-m", "Divergence 1"); err != nil {
+			t.Fatal(err)
+		}
+		rev1, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "bar.txt"); err != nil {
 			t.Fatal(err)
 		}
 		const wantMessage2 = "Divergence 2"
-		c2, err := dummyRev(ctx, env.git, env.root, "foo", "baz.txt", wantMessage2)
-		if err != nil {
+		if err := env.git.Run(ctx, "commit", "--quiet", "-m", wantMessage2); err != nil {
 			t.Fatal(err)
 		}
-		head, err := dummyRev(ctx, env.git, env.root, "master", "quux.txt", "Upstream")
+		rev2, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
 		names := map[gitobj.Hash]string{
-			base: "initial import",
-			c1:   "branch change 1",
-			c2:   "branch change 2",
-			head: "mainline change",
+			baseRev.Commit(): "initial import",
+			rev1.Commit():    "branch change 1",
+			rev2.Commit():    "branch change 2",
+			head:             "mainline change",
 		}
 
-		if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
-			t.Fatal(err)
-		}
+		// Call gg histedit on foo branch.
 		rebaseEditor, err := env.editorCmd([]byte(
-			"edit " + c1.String() + "\n" +
-				"pick " + c2.String() + "\n"))
+			"edit " + rev1.Commit().String() + "\n" +
+				"pick " + rev2.Commit().String() + "\n"))
 		if err != nil {
 			t.Fatal(err)
 		}
-		const wantMessage1 = "New commit message for bar.txt"
+		const wantMessage1 = "New commit message for foo.txt"
 		msgEditor, err := env.editorCmd([]byte(wantMessage1 + "\n"))
 		if err != nil {
 			t.Fatal(err)
@@ -512,59 +772,76 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err := env.writeConfig([]byte(config)); err != nil {
 			t.Fatal(err)
 		}
-		out, err := env.gg(ctx, env.root, appendNonEmpty([]string{"histedit"}, argFunc(head))...)
+		out, err := env.gg(ctx, env.root.String(), appendNonEmpty([]string{"histedit"}, argFunc(head))...)
 		if err != nil {
 			t.Fatalf("failed: %v; output:\n%s", err, out)
 		}
 
-		// Stopped for amending after applying c1.
+		// Stopped for amending after applying the first commit.
+		// Verify that the parent commit is the base commit.
 		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.Commit() != base {
+		if parent.Commit() != baseRev.Commit() {
 			t.Errorf("After first stop, HEAD~ = %s; want %s",
 				prettyCommit(parent.Commit(), names),
-				prettyCommit(base, names))
+				prettyCommit(baseRev.Commit(), names))
 		}
+		// Write new data to foo.txt.
 		const amendedData = "This is edited history\n"
-		err = ioutil.WriteFile(filepath.Join(env.root, "bar.txt"), []byte(amendedData), 0666)
-		if err != nil {
+		if err := env.root.Apply(filesystem.Write("foo.txt", amendedData)); err != nil {
 			t.Fatal(err)
 		}
 
 		// Continue rebase, should be finished.
-		out, err = env.gg(ctx, env.root, "histedit", "-continue")
+		out, err = env.gg(ctx, env.root.String(), "histedit", "-continue")
 		if err != nil {
 			t.Fatalf("failed: %v; output:\n%s", err, out)
 		}
+
+		// Verify that the grandparent commit is the base commit.
 		grandparent, err := gittool.ParseRev(ctx, env.git, "HEAD~2")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if grandparent.Commit() != base {
+		if grandparent.Commit() != baseRev.Commit() {
 			t.Errorf("After continuing, HEAD~2 = %s; want %s",
 				prettyCommit(grandparent.Commit(), names),
-				prettyCommit(base, names))
+				prettyCommit(baseRev.Commit(), names))
 		}
 
+		// Verify that the commit message of the first edited commit is the message from the editor.
 		if msg, err := readCommitMessage(ctx, env.git, "HEAD~"); err != nil {
 			t.Errorf("Rebased change 1: %v", err)
 		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage1 {
 			t.Errorf("Rebased change 1 commit message = %q; want %q", got, wantMessage1)
 		}
-		if content, err := catBlob(ctx, env.git, "HEAD~", "bar.txt"); err != nil {
+		// Verify that the content of foo.txt in the first edited commit is the rewritten content.
+		if content, err := catBlob(ctx, env.git, "HEAD~", "foo.txt"); err != nil {
 			t.Error(err)
 		} else if string(content) != amendedData {
-			t.Errorf("bar.txt @ HEAD~ = %q; want %q", content, amendedData)
+			t.Errorf("foo.txt @ HEAD~ = %q; want %q", content, amendedData)
+		}
+		// Verify that bar.txt does not exist in the first edited commit.
+		if err := objectExists(ctx, env.git, "HEAD~:bar.txt"); err == nil {
+			t.Error("bar.txt @ HEAD~ exists")
 		}
 
+		// Verify that the commit message of the second edited commit is the same as before.
 		if msg, err := readCommitMessage(ctx, env.git, "HEAD"); err != nil {
 			t.Errorf("Rebased change 2: %v", err)
 		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage2 {
 			t.Errorf("Rebased change 2 commit message = %q; want %q", got, wantMessage2)
 		}
-		if err := objectExists(ctx, env.git, "HEAD:baz.txt"); err != nil {
+		// Verify that the content of foo.txt in the second edited commit is the rewritten content.
+		if content, err := catBlob(ctx, env.git, "HEAD", "foo.txt"); err != nil {
+			t.Error(err)
+		} else if string(content) != amendedData {
+			t.Errorf("foo.txt @ HEAD = %q; want %q", content, amendedData)
+		}
+		// Verify that bar.txt exists in the second edited commit.
+		if err := objectExists(ctx, env.git, "HEAD:bar.txt"); err != nil {
 			t.Error(err)
 		}
 	})
@@ -579,40 +856,72 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer env.cleanup()
-		if err := env.git.Run(ctx, "init"); err != nil {
+
+		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Initial import")
+		baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
 		if err != nil {
+			t.Fatal(err)
+		}
+		// Create a new branch.
+		if err := env.git.Run(ctx, "branch", "--quiet", "--track", "foo"); err != nil {
+			t.Fatal(err)
+		}
+		// Create a commit on master.
+		if err := env.root.Apply(filesystem.Write("upstream.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "upstream.txt"); err != nil {
+			t.Fatal(err)
+		}
+		head, err := env.newCommit(ctx, ".")
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Create two commits on foo.
+		if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("foo.txt", "This is the original data\n")); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "foo.txt"); err != nil {
 			t.Fatal(err)
 		}
 		const wantMessage1 = "Divergence 1"
-		c1, err := dummyRev(ctx, env.git, env.root, "foo", "bar.txt", wantMessage1)
+		if err := env.git.Run(ctx, "commit", "--quiet", "-m", wantMessage1); err != nil {
+			t.Fatal(err)
+		}
+		rev1, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
 		if err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "bar.txt"); err != nil {
 			t.Fatal(err)
 		}
 		const wantMessage2 = "Divergence 2"
-		c2, err := dummyRev(ctx, env.git, env.root, "foo", "baz.txt", wantMessage2)
-		if err != nil {
+		if err := env.git.Run(ctx, "commit", "--quiet", "-m", wantMessage2); err != nil {
 			t.Fatal(err)
 		}
-		head, err := dummyRev(ctx, env.git, env.root, "master", "quux.txt", "Upstream")
+		rev2, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
 		names := map[gitobj.Hash]string{
-			base: "initial import",
-			c1:   "branch change 1",
-			c2:   "branch change 2",
-			head: "mainline change",
+			baseRev.Commit(): "initial import",
+			rev1.Commit():    "branch change 1",
+			rev2.Commit():    "branch change 2",
+			head:             "mainline change",
 		}
 
-		if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
-			t.Fatal(err)
-		}
+		// Call gg histedit on foo branch.
 		rebaseEditor, err := env.editorCmd([]byte(
-			"edit " + c1.String() + "\n" +
-				"pick " + c2.String() + "\n"))
+			"edit " + rev1.Commit().String() + "\n" +
+				"pick " + rev2.Commit().String() + "\n"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -625,20 +934,21 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err := env.writeConfig([]byte(config)); err != nil {
 			t.Fatal(err)
 		}
-		out, err := env.gg(ctx, env.root, appendNonEmpty([]string{"histedit"}, argFunc(head))...)
+		out, err := env.gg(ctx, env.root.String(), appendNonEmpty([]string{"histedit"}, argFunc(head))...)
 		if err != nil {
 			t.Fatalf("failed: %v; output:\n%s", err, out)
 		}
 
-		// Stopped for amending after applying c1.
+		// Stopped for amending after applying the first commit.
+		// Verify that the parent commit is the base commit.
 		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.Commit() != base {
+		if parent.Commit() != baseRev.Commit() {
 			t.Errorf("After first stop, HEAD~ = %s; want %s",
 				prettyCommit(parent.Commit(), names),
-				prettyCommit(base, names))
+				prettyCommit(baseRev.Commit(), names))
 		}
 		rebased1, err := gittool.ParseRev(ctx, env.git, "HEAD")
 		if err != nil {
@@ -647,25 +957,28 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		names[rebased1.Commit()] = "rebased change 1"
 
 		// Continue rebase, should be finished.
-		out, err = env.gg(ctx, env.root, "histedit", "-continue")
+		out, err = env.gg(ctx, env.root.String(), "histedit", "-continue")
 		if err != nil {
 			t.Fatalf("failed: %v; output:\n%s", err, out)
 		}
+		// Verify that the grandparent commit is the base commit.
 		grandparent, err := gittool.ParseRev(ctx, env.git, "HEAD~2")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if grandparent.Commit() != base {
+		if grandparent.Commit() != baseRev.Commit() {
 			t.Errorf("After continuing, HEAD~2 = %s; want %s",
 				prettyCommit(grandparent.Commit(), names),
-				prettyCommit(base, names))
+				prettyCommit(baseRev.Commit(), names))
 		}
-
+		// Verify that the commit message of the first edited commit is the same as before.
 		if msg, err := readCommitMessage(ctx, env.git, "HEAD~"); err != nil {
 			t.Errorf("Rebased change 1: %v", err)
 		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage1 {
 			t.Errorf("Rebased change 1 commit message = %q; want %q", got, wantMessage1)
 		}
+		// Verify that the first edited commit hash is the same as what was
+		// observed during the rebase operation.
 		if r, err := gittool.ParseRev(ctx, env.git, "HEAD~"); err != nil {
 			t.Errorf("Rebased change 1: %v", err)
 		} else if r.Commit() != rebased1.Commit() {
@@ -673,13 +986,17 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 				prettyCommit(r.Commit(), names),
 				prettyCommit(rebased1.Commit(), names))
 		}
-
+		// Verify that the commit message of the second edited commit is the same as before.
 		if msg, err := readCommitMessage(ctx, env.git, "HEAD"); err != nil {
 			t.Errorf("Rebased change 2: %v", err)
 		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage2 {
 			t.Errorf("Rebased change 2 commit message = %q; want %q", got, wantMessage2)
 		}
-		if err := objectExists(ctx, env.git, "HEAD:baz.txt"); err != nil {
+		// Verify that the second edited commit contains both foo.txt and bar.txt.
+		if err := objectExists(ctx, env.git, "HEAD:foo.txt"); err != nil {
+			t.Error(err)
+		}
+		if err := objectExists(ctx, env.git, "HEAD:bar.txt"); err != nil {
 			t.Error(err)
 		}
 	})

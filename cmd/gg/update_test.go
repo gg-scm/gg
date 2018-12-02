@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/gitobj"
 	"gg-scm.io/pkg/internal/gittool"
 )
@@ -30,14 +31,28 @@ func TestUpdate_NoArgsFastForward(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+
+	// Create a repository with two commits, with master behind the "upstream" branch.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	h1, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Commit 1")
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Apple\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	h1, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	h2, err := dummyRev(ctx, env.git, env.root, "upstream", "bar.txt", "Commit 2")
+	if err := env.git.Run(ctx, "checkout", "--quiet", "-b", "upstream"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Banana\n")); err != nil {
+		t.Fatal(err)
+	}
+	h2, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,10 +63,13 @@ func TestUpdate_NoArgsFastForward(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = env.gg(ctx, env.root, "update")
+	// Call gg to update.
+	_, err = env.gg(ctx, env.root.String(), "update")
 	if err != nil {
 		t.Error(err)
 	}
+
+	// Verify that HEAD moved to the second commit.
 	if r, err := gittool.ParseRev(ctx, env.git, "HEAD"); err != nil {
 		t.Fatal(err)
 	} else if r.Commit() != h2 {
@@ -63,6 +81,13 @@ func TestUpdate_NoArgsFastForward(t *testing.T) {
 			prettyCommit(r.Commit(), names),
 			prettyCommit(h2, names))
 	}
+
+	// Verify that foo.txt has the second commit's content.
+	if got, err := env.root.ReadFile("foo.txt"); err != nil {
+		t.Error(err)
+	} else if want := "Banana\n"; got != want {
+		t.Errorf("foo.txt = %q; want %q", got, want)
+	}
 }
 
 func TestUpdate_SwitchBranch(t *testing.T) {
@@ -73,37 +98,65 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+
+	// Start a repository with an arbitrary master branch.
+	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	h1, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Commit 1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	h2, err := dummyRev(ctx, env.git, env.root, "foo", "bar.txt", "Commit 2")
+	initRev, err := gittool.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = env.gg(ctx, env.root, "update", "master")
+	// Create a commit on another branch.
+	if err := env.git.Run(ctx, "checkout", "--quiet", "-b", "foo"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	h2, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check out master branch.
+	if err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to switch to foo branch.
+	_, err = env.gg(ctx, env.root.String(), "update", "foo")
 	if err != nil {
 		t.Error(err)
 	}
+
+	// Verify that HEAD was moved to foo branch.
 	if r, err := gittool.ParseRev(ctx, env.git, "HEAD"); err != nil {
 		t.Fatal(err)
 	} else {
-		if r.Commit() != h1 {
+		if r.Commit() != h2 {
 			names := map[gitobj.Hash]string{
-				h1: "first commit",
-				h2: "second commit",
+				initRev.Commit(): "first commit",
+				h2:               "second commit",
 			}
-			t.Errorf("after update master, HEAD = %s; want %s",
+			t.Errorf("after update foo, HEAD = %s; want %s",
 				prettyCommit(r.Commit(), names),
-				prettyCommit(h1, names))
+				prettyCommit(h2, names))
 		}
-		if got, want := r.Ref(), gitobj.Ref("refs/heads/master"); got != want {
-			t.Errorf("after update master, HEAD ref = %s; want %s", got, want)
+		if got, want := r.Ref(), gitobj.BranchRef("foo"); got != want {
+			t.Errorf("after update foo, HEAD ref = %s; want %s", got, want)
 		}
+	}
+
+	// Verify that foo.txt has the branch commit's content.
+	if got, err := env.root.ReadFile("foo.txt"); err != nil {
+		t.Error(err)
+	} else if want := dummyContent; got != want {
+		t.Errorf("foo.txt = %q; want %q", got, want)
 	}
 }
 
@@ -115,22 +168,36 @@ func TestUpdate_ToCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+
+	// Create a repository with two commits.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	h1, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", "Commit 1")
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Apple\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	h1, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	h2, err := dummyRev(ctx, env.git, env.root, "master", "bar.txt", "Commit 2")
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Banana\n")); err != nil {
+		t.Fatal(err)
+	}
+	h2, err := env.newCommit(ctx, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = env.gg(ctx, env.root, "update", h1.String())
+	// Call gg to update to the first commit.
+	_, err = env.gg(ctx, env.root.String(), "update", h1.String())
 	if err != nil {
 		t.Error(err)
 	}
+
+	// Verify that HEAD is the first commit.
 	if r, err := gittool.ParseRev(ctx, env.git, "HEAD"); err != nil {
 		t.Fatal(err)
 	} else {
@@ -146,5 +213,12 @@ func TestUpdate_ToCommit(t *testing.T) {
 		if got := r.Ref(); got != gitobj.Head {
 			t.Errorf("after update master, HEAD ref = %s; want %s", got, gitobj.Head)
 		}
+	}
+
+	// Verify that foo.txt has the first commit's content.
+	if got, err := env.root.ReadFile("foo.txt"); err != nil {
+		t.Error(err)
+	} else if want := "Apple\n"; got != want {
+		t.Errorf("foo.txt = %q; want %q", got, want)
 	}
 }

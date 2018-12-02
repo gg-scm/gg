@@ -18,6 +18,9 @@ import (
 	"bytes"
 	"context"
 	"testing"
+
+	"gg-scm.io/pkg/internal/filesystem"
+	"gg-scm.io/pkg/internal/gittool"
 )
 
 func TestLog(t *testing.T) {
@@ -28,20 +31,30 @@ func TestLog(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
 	const wantMsg = "First post!!"
-	h, err := dummyRev(ctx, env.git, env.root, "master", "foo.txt", wantMsg)
+	if err := env.git.Run(ctx, "commit", "-m", wantMsg); err != nil {
+		t.Fatal(err)
+	}
+	rev, err := gittool.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	out, err := env.gg(ctx, env.root, "log")
+	out, err := env.gg(ctx, env.root.String(), "log")
 	if err != nil {
 		t.Error(err)
 	}
-	if !bytes.Contains(out, []byte(h.Short())) || !bytes.Contains(out, []byte(wantMsg)) {
-		t.Errorf("log does not contain either %q or %q. Output:\n%s", h.Short(), wantMsg, out)
+	hex := rev.Commit().Short()
+	if !bytes.Contains(out, []byte(hex)) || !bytes.Contains(out, []byte(wantMsg)) {
+		t.Errorf("log does not contain either %q or %q. Output:\n%s", hex, wantMsg, out)
 	}
 }

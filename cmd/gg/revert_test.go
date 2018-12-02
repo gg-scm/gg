@@ -16,10 +16,10 @@ package main
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"testing"
 
+	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/gittool"
 )
 
@@ -53,16 +53,17 @@ func TestRevert(t *testing.T) {
 			}
 			defer env.cleanup()
 
+			// Create a working copy where both staged.txt and unstaged.txt
+			// have local modifications but only staged.txt has been "git add"ed.
 			if err := env.initEmptyRepo(ctx, "."); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.mkdir("foo"); err != nil {
-				t.Fatal(err)
-			}
-			if err := env.writeFile("staged.txt", "ohai"); err != nil {
-				t.Fatal(err)
-			}
-			if err := env.writeFile("unstaged.txt", "kthxbai"); err != nil {
+			err = env.root.Apply(
+				filesystem.Mkdir("foo"),
+				filesystem.Write("staged.txt", "ohai"),
+				filesystem.Write("unstaged.txt", "kthxbai"),
+			)
+			if err != nil {
 				t.Fatal(err)
 			}
 			if err := env.trackFiles(ctx, "staged.txt", "unstaged.txt"); err != nil {
@@ -71,44 +72,51 @@ func TestRevert(t *testing.T) {
 			if _, err := env.newCommit(ctx, "."); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.writeFile("staged.txt", "mumble mumble 1"); err != nil {
-				t.Fatal(err)
-			}
-			if err := env.writeFile("unstaged.txt", "mumble mumble 2"); err != nil {
+			err = env.root.Apply(
+				filesystem.Write("staged.txt", "mumble mumble 1"),
+				filesystem.Write("unstaged.txt", "mumble mumble 2"),
+			)
+			if err != nil {
 				t.Fatal(err)
 			}
 			if err := env.addFiles(ctx, "staged.txt"); err != nil {
 				t.Fatal(err)
 			}
 
-			if _, err := env.gg(ctx, env.rel(test.dir), "revert", test.stagedPath); err != nil {
+			// Call gg to revert the staged file.
+			if _, err := env.gg(ctx, env.root.FromSlash(test.dir), "revert", test.stagedPath); err != nil {
 				t.Fatal(err)
 			}
-			if got, err := env.readFile("staged.txt"); err != nil {
+			// Verify that staged.txt has the original content and the
+			// modified content was saved to staged.txt.orig.
+			if got, err := env.root.ReadFile("staged.txt"); err != nil {
 				t.Error(err)
 			} else if want := "ohai"; got != want {
 				t.Errorf("staged.txt content = %q after revert; want %q", got, want)
 			}
-			if got, err := env.readFile("staged.txt.orig"); err != nil {
+			if got, err := env.root.ReadFile("staged.txt.orig"); err != nil {
 				t.Error(err)
 			} else if want := "mumble mumble 1"; got != want {
 				t.Errorf("staged.txt.orig content = %q after revert; want %q", got, want)
 			}
 
-			if _, err := env.gg(ctx, env.rel(test.dir), "revert", test.unstagedPath); err != nil {
+			// Call gg to revert the unstaged file.
+			if _, err := env.gg(ctx, env.root.FromSlash(test.dir), "revert", test.unstagedPath); err != nil {
 				t.Fatal(err)
 			}
-			if got, err := env.readFile("unstaged.txt"); err != nil {
+			if got, err := env.root.ReadFile("unstaged.txt"); err != nil {
 				t.Error(err)
 			} else if want := "kthxbai"; got != want {
 				t.Errorf("unstaged.txt content = %q after revert; want %q", got, want)
 			}
-			if got, err := env.readFile("unstaged.txt.orig"); err != nil {
+			// Verify that unstaged.txt has the original content and the
+			// modified content was saved to unstaged.txt.orig.
+			if got, err := env.root.ReadFile("unstaged.txt.orig"); err != nil {
 				t.Error(err)
 			} else if want := "mumble mumble 2"; got != want {
 				t.Errorf("unstaged.txt.orig content = %q after revert; want %q", got, want)
 			}
-			if got, err := env.readFile("staged.txt"); err != nil {
+			if got, err := env.root.ReadFile("staged.txt"); err != nil {
 				t.Error(err)
 			} else if want := "ohai"; got != want {
 				t.Error("unrelated file was reverted")
@@ -154,37 +162,40 @@ func TestRevert_AddedFile(t *testing.T) {
 			}
 			defer env.cleanup()
 
+			// Create a repository with foo.txt "git add -N"ed.
 			if err := env.initRepoWithHistory(ctx, "."); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.writeFile("foo.txt", "hey there"); err != nil {
+			if err := env.root.Apply(filesystem.Write("foo.txt", "hey there")); err != nil {
 				t.Fatal(err)
 			}
 			if err := env.trackFiles(ctx, "foo.txt"); err != nil {
 				t.Fatal(err)
 			}
 
+			// Call gg to revert the added file.
 			revertArgs := []string{"revert"}
 			if !backup {
 				revertArgs = append(revertArgs, "--no-backup")
 			}
 			revertArgs = append(revertArgs, "foo.txt")
-			if _, err := env.gg(ctx, env.root, revertArgs...); err != nil {
+			if _, err := env.gg(ctx, env.root.String(), revertArgs...); err != nil {
 				t.Fatal(err)
 			}
-			if got, err := env.readFile("foo.txt"); err != nil {
+
+			// Verify that foo.txt still exists and has the same content.
+			if got, err := env.root.ReadFile("foo.txt"); err != nil {
 				t.Error(err)
 			} else if want := "hey there"; got != want {
 				t.Errorf("content = %q after revert; want %q", got, want)
 			}
-			_, err = os.Stat(env.rel("foo.txt.orig"))
-			if err == nil {
-				t.Error("foo.txt.orig was created")
-			} else if !os.IsNotExist(err) {
+			// Verify that foo.txt.orig was not created.
+			if exists, err := env.root.Exists("foo.txt.orig"); err != nil {
 				t.Error(err)
+			} else if exists {
+				t.Error("foo.txt.orig was created")
 			}
-
-			// Verify that file is untracked.
+			// Verify that foo.txt is untracked.
 			st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 			if err != nil {
 				t.Fatal(err)
@@ -199,7 +210,7 @@ func TestRevert_AddedFile(t *testing.T) {
 				switch ent.Name() {
 				case "foo.txt":
 					if got := ent.Code(); !got.IsUntracked() {
-						t.Errorf("%s status code = '%v'; want '??'", ent.Name(), got)
+						t.Errorf("foo.txt status code = '%v'; want '??'", got)
 					}
 				case "foo.txt.orig":
 					// Ignore, error already reported.
@@ -223,31 +234,35 @@ func TestRevert_AddedFileBeforeFirstCommit(t *testing.T) {
 	}
 	defer env.cleanup()
 
+	// Create a repository with foo.txt "git add -N"ed.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.writeFile("foo.txt", "ohai"); err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", "ohai")); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.trackFiles(ctx, "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "revert", "foo.txt"); err != nil {
+	// Call gg to revert foo.txt.
+	if _, err := env.gg(ctx, env.root.String(), "revert", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := env.readFile("foo.txt"); err != nil {
+
+	// Verify that foo.txt still exists and has the same content.
+	if got, err := env.root.ReadFile("foo.txt"); err != nil {
 		t.Error(err)
 	} else if want := "ohai"; got != want {
 		t.Errorf("content = %q after revert; want %q", got, want)
 	}
-	if _, err := os.Stat(env.rel("foo.txt.orig")); err == nil {
-		t.Error("foo.txt.orig was created")
-	} else if !os.IsNotExist(err) {
+	// Verify that foo.txt.orig was not created.
+	if exists, err := env.root.Exists("foo.txt.orig"); err != nil {
 		t.Error(err)
+	} else if exists {
+		t.Error("foo.txt.orig was created")
 	}
-
-	// Verify that file is untracked.
+	// Verify that foo.txt is untracked.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -284,13 +299,16 @@ func TestRevert_All(t *testing.T) {
 	}
 	defer env.cleanup()
 
+	// Create a working copy where both staged.txt and unstaged.txt
+	// have local modifications but only staged.txt has been "git add"ed.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.writeFile("staged.txt", "original stage"); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.writeFile("unstaged.txt", "original audience"); err != nil {
+	err = env.root.Apply(
+		filesystem.Write("staged.txt", "original stage"),
+		filesystem.Write("unstaged.txt", "original audience"),
+	)
+	if err != nil {
 		t.Fatal(err)
 	}
 	if err := env.addFiles(ctx, "staged.txt", "unstaged.txt"); err != nil {
@@ -299,31 +317,34 @@ func TestRevert_All(t *testing.T) {
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	// Make working tree changes.
-	if err := env.writeFile("staged.txt", "randomness"); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.writeFile("unstaged.txt", "randomness"); err != nil {
+	err = env.root.Apply(
+		filesystem.Write("staged.txt", "randomness"),
+		filesystem.Write("unstaged.txt", "randomness"),
+	)
+	if err != nil {
 		t.Fatal(err)
 	}
 	if err := env.addFiles(ctx, "staged.txt"); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "revert", "--all"); err != nil {
+	// Call gg to revert everything.
+	if _, err := env.gg(ctx, env.root.String(), "revert", "--all"); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := env.readFile("staged.txt"); err != nil {
+	// Verify that staged.txt has the original content.
+	if got, err := env.root.ReadFile("staged.txt"); err != nil {
 		t.Error(err)
 	} else if want := "original stage"; got != want {
 		t.Errorf("staged modified file content = %q after revert; want %q", got, want)
 	}
-	if got, err := env.readFile("unstaged.txt"); err != nil {
+	// Verify that unstaged.txt has the original content.
+	if got, err := env.root.ReadFile("unstaged.txt"); err != nil {
 		t.Error(err)
 	} else if want := "original audience"; got != want {
 		t.Errorf("unstaged modified file content = %q after revert; want %q", got, want)
 	}
-
+	// Verify that working copy is clean (sans backup files).
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -353,10 +374,11 @@ func TestRevert_Rev(t *testing.T) {
 	}
 	defer env.cleanup()
 
+	// Create a repository that has two commits of foo.txt.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.writeFile("foo.txt", "original content"); err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", "original content")); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.addFiles(ctx, "foo.txt"); err != nil {
@@ -365,28 +387,31 @@ func TestRevert_Rev(t *testing.T) {
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.writeFile("foo.txt", "super-fresh content"); err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", "super-fresh content")); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "revert", "-r", "HEAD^", "foo.txt"); err != nil {
+	// Call gg to revert foo.txt to the first commit's content.
+	if _, err := env.gg(ctx, env.root.String(), "revert", "-r", "HEAD^", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := env.readFile("foo.txt"); err != nil {
+
+	// Verify foo.txt now has the same content as in the first commit.
+	if got, err := env.root.ReadFile("foo.txt"); err != nil {
 		t.Error(err)
 	} else if want := "original content"; got != want {
 		t.Errorf("foo.txt content = %q after revert; want %q", got, want)
 	}
-	_, err = os.Stat(env.rel("foo.txt.orig"))
-	if err == nil {
-		t.Error("foo.txt.orig was created")
-	} else if !os.IsNotExist(err) {
+	// Verify that foo.txt.orig was not created.
+	if exists, err := env.root.Exists("foo.txt.orig"); err != nil {
 		t.Error(err)
+	} else if exists {
+		t.Error("foo.txt.orig was created")
 	}
-
+	// Verify that Git considers foo.txt locally modified.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -429,10 +454,11 @@ func TestRevert_Missing(t *testing.T) {
 	}
 	defer env.cleanup()
 
+	// Create a repository and commit foo.txt.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.writeFile("foo.txt", "original content"); err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", "original content")); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.addFiles(ctx, "foo.txt"); err != nil {
@@ -441,19 +467,23 @@ func TestRevert_Missing(t *testing.T) {
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Remove(env.rel("foo.txt")); err != nil {
+	// Remove foo.txt without informing Git.
+	if err := env.root.Apply(filesystem.Remove("foo.txt")); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "revert", "foo.txt"); err != nil {
+	// Call gg to revert foo.txt.
+	if _, err := env.gg(ctx, env.root.String(), "revert", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := env.readFile("foo.txt"); err != nil {
+
+	// Verify that foo.txt exists now.
+	if got, err := env.root.ReadFile("foo.txt"); err != nil {
 		t.Error(err)
 	} else if want := "original content"; got != want {
 		t.Errorf("file content = %q after revert; want %q", got, want)
 	}
-
+	// Verify that the working copy is clean.
 	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -480,10 +510,11 @@ func TestRevert_NoBackup(t *testing.T) {
 	}
 	defer env.cleanup()
 
+	// Create a repository with a committed foo.txt.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.writeFile("foo.txt", "original content"); err != nil {
+	if err := env.root.Apply(filesystem.Write("foo.txt", "original content")); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.addFiles(ctx, "foo.txt"); err != nil {
@@ -492,22 +523,27 @@ func TestRevert_NoBackup(t *testing.T) {
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.writeFile("foo.txt", "tears in rain"); err != nil {
+	// Modify foo.txt in the working copy.
+	if err := env.root.Apply(filesystem.Write("foo.txt", "tears in rain")); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := env.gg(ctx, env.root, "revert", "--no-backup", "foo.txt"); err != nil {
+	// Call gg to revert foo.txt without backups.
+	if _, err := env.gg(ctx, env.root.String(), "revert", "--no-backup", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := env.readFile("foo.txt"); err != nil {
+
+	// Verify that foo.txt has the committed content.
+	if got, err := env.root.ReadFile("foo.txt"); err != nil {
 		t.Error(err)
 	} else if want := "original content"; got != want {
 		t.Errorf("file content = %q after revert; want %q", got, want)
 	}
-	if _, err := os.Stat(env.rel("foo.txt.orig")); err == nil {
-		t.Error("foo.txt.orig was created")
-	} else if !os.IsNotExist(err) {
+	// Verify that foo.txt.orig was not created.
+	if exists, err := env.root.Exists("foo.txt.orig"); err != nil {
 		t.Error(err)
+	} else if exists {
+		t.Error("foo.txt.orig was created")
 	}
 }
 
@@ -534,10 +570,12 @@ func TestRevert_LocalRename(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer env.cleanup()
+
+			// Create a repository with a committed foo.txt.
 			if err := env.initEmptyRepo(ctx, "."); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.writeFile("foo.txt", "original content"); err != nil {
+			if err := env.root.Apply(filesystem.Write("foo.txt", "original content")); err != nil {
 				t.Fatal(err)
 			}
 			if err := env.addFiles(ctx, "foo.txt"); err != nil {
@@ -546,13 +584,16 @@ func TestRevert_LocalRename(t *testing.T) {
 			if _, err := env.newCommit(ctx, "."); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.Rename(env.rel("foo.txt"), env.rel("renamed.txt")); err != nil {
+			// Move from foo.txt to renamed.txt and "git add -N" renamed.txt.
+			// This effectively makes foo.txt missing.
+			if err := env.root.Apply(filesystem.Rename("foo.txt", "renamed.txt")); err != nil {
 				t.Fatal(err)
 			}
 			if err := env.trackFiles(ctx, "renamed.txt"); err != nil {
 				t.Fatal(err)
 			}
 
+			// Call gg to revert foo.txt and/or renamed.txt.
 			revertArgs := []string{"revert"}
 			if test.revertFoo {
 				revertArgs = append(revertArgs, "foo.txt")
@@ -560,30 +601,32 @@ func TestRevert_LocalRename(t *testing.T) {
 			if test.revertRenamed {
 				revertArgs = append(revertArgs, "renamed.txt")
 			}
-			if _, err := env.gg(ctx, env.root, revertArgs...); err != nil {
+			if _, err := env.gg(ctx, env.root.String(), revertArgs...); err != nil {
 				t.Fatal(err)
 			}
+
 			if test.revertFoo {
-				if got, err := env.readFile("foo.txt"); err != nil {
+				// Verify that foo.txt matches the committed content.
+				if got, err := env.root.ReadFile("foo.txt"); err != nil {
 					t.Error(err)
 				} else if want := "original content"; got != want {
 					t.Errorf("foo.txt content = %q after revert; want %q", got, want)
 				}
 			} else {
-				if _, err := os.Stat(env.rel("foo.txt")); err == nil {
-					t.Error("foo.txt was created")
-				} else if !os.IsNotExist(err) {
+				// Verify that foo.txt doesn't exist.
+				if exists, err := env.root.Exists("foo.txt"); err != nil {
 					t.Error(err)
+				} else if exists {
+					t.Error("foo.txt was created")
 				}
 			}
-			// Don't create a backup for renamed.txt.
-			_, err = os.Stat(env.rel("renamed.txt.orig"))
-			if err == nil {
-				t.Error("renamed.txt.orig was created")
-			} else if !os.IsNotExist(err) {
+			// Regardless, verify that a backup for renamed.txt was not created.
+			if exists, err := env.root.Exists("renamed.txt.orig"); err != nil {
 				t.Error(err)
+			} else if exists {
+				t.Error("renamed.txt.orig was created")
 			}
-			// Verify that renamed.txt is untracked.
+			// Verify status renamed.txt matches expectations.
 			st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
 			if err != nil {
 				t.Fatal(err)

@@ -16,11 +16,9 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 
+	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/gitobj"
 	"gg-scm.io/pkg/internal/gittool"
 )
@@ -34,42 +32,76 @@ func TestPull(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	pullEnv, err := setupPullTest(ctx, env)
+	// Create repository A with some history and clone it to repository B.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
+	rev1, err := gittool.ParseRev(ctx, gitA, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.gg(ctx, pullEnv.repoB, "pull"); err != nil {
+	commit1 := rev1.Commit()
+	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
-	gitB := env.git.WithDir(pullEnv.repoB)
+
+	// Make changes in repository A: add a tag and a new commit.
+	if err := gitA.Run(ctx, "tag", "first"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to pull from A into B.
+	repoBPath := env.root.FromSlash("repoB")
+	if _, err := env.gg(ctx, repoBPath, "pull"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify that HEAD has not moved from the first commit.
+	commitNames := map[gitobj.Hash]string{
+		commit1: "shared commit",
+		commit2: "remote commit",
+	}
+	gitB := env.git.WithDir(repoBPath)
 	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
-		if r.Commit() != pullEnv.commit1 {
-			names := pullEnv.commitNames()
+		if r.Commit() != commit1 {
 			t.Errorf("HEAD = %s; want %s",
-				prettyCommit(r.Commit(), names),
-				prettyCommit(pullEnv.commit1, names))
+				prettyCommit(r.Commit(), commitNames),
+				prettyCommit(commit1, commitNames))
 		}
 		if r.Ref() != "refs/heads/master" {
 			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
 		}
 	}
+
+	// Verify that the remote tracking branch has moved to the new commit.
 	if r, err := gittool.ParseRev(ctx, gitB, "origin/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pullEnv.commit2 {
-		names := pullEnv.commitNames()
+	} else if r.Commit() != commit2 {
 		t.Errorf("origin/master = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pullEnv.commit2, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit2, commitNames))
 	}
+
+	// Verify that the tag was mirrored in repository B.
 	if r, err := gittool.ParseRev(ctx, gitB, "first"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pullEnv.commit1 {
-		names := pullEnv.commitNames()
+	} else if r.Commit() != commit1 {
 		t.Errorf("origin/master = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pullEnv.commit1, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit1, commitNames))
 	}
 }
 
@@ -82,50 +114,90 @@ func TestPullWithArgument(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	pullEnv, err := setupPullTest(ctx, env)
+	// Create repository A with some history and clone it to repository B.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	repoAPath := env.root.FromSlash("repoA")
+	gitA := env.git.WithDir(repoAPath)
+	rev1, err := gittool.ParseRev(ctx, gitA, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Move HEAD away.  We want to check that the corresponding branch is pulled.
-	if err := env.git.WithDir(pullEnv.repoA).Run(ctx, "checkout", "--detach", "HEAD^"); err != nil {
+	commit1 := rev1.Commit()
+	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
-	repoC := filepath.Join(env.root, "repoC")
-	if err := os.Rename(pullEnv.repoA, repoC); err != nil {
+
+	// Make changes in repository A: add a tag and a new commit.
+	if err := gitA.Run(ctx, "tag", "first"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.gg(ctx, pullEnv.repoB, "pull", repoC); err != nil {
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	gitB := env.git.WithDir(pullEnv.repoB)
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Move HEAD to a different commit in repository A.
+	// We want to check that the corresponding branch is pulled independently of HEAD.
+	if err := gitA.Run(ctx, "checkout", "--quiet", "--detach", "HEAD^"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Rename repository A to repository C so that if gg attempts to pull
+	// from repository A, it will break (hopefully loudly).
+	if err := env.root.Apply(filesystem.Rename("repoA", "repoC")); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to pull from repository C into repository B.
+	repoBPath := env.root.FromSlash("repoB")
+	repoCPath := env.root.FromSlash("repoC")
+	if _, err := env.gg(ctx, repoBPath, "pull", repoCPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify that HEAD has not moved from the first commit.
+	commitNames := map[gitobj.Hash]string{
+		commit1: "shared commit",
+		commit2: "remote commit",
+	}
+	gitB := env.git.WithDir(repoBPath)
 	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
-		if r.Commit() != pullEnv.commit1 {
-			names := pullEnv.commitNames()
+		if r.Commit() != commit1 {
 			t.Errorf("HEAD = %s; want %s",
-				prettyCommit(r.Commit(), names),
-				prettyCommit(pullEnv.commit1, names))
+				prettyCommit(r.Commit(), commitNames),
+				prettyCommit(commit1, commitNames))
 		}
 		if r.Ref() != "refs/heads/master" {
 			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
 		}
 	}
+
+	// Verify that FETCH_HEAD has set to the second commit.
 	if r, err := gittool.ParseRev(ctx, gitB, "FETCH_HEAD"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pullEnv.commit2 {
-		names := pullEnv.commitNames()
+	} else if r.Commit() != commit2 {
 		t.Errorf("FETCH_HEAD = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pullEnv.commit2, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit2, commitNames))
 	}
+
+	// Verify that the tag was mirrored in repository B.
 	if r, err := gittool.ParseRev(ctx, gitB, "first"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pullEnv.commit1 {
-		names := pullEnv.commitNames()
+	} else if r.Commit() != commit1 {
 		t.Errorf("origin/master = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pullEnv.commit1, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit1, commitNames))
 	}
 }
 
@@ -138,34 +210,64 @@ func TestPullUpdate(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	pullEnv, err := setupPullTest(ctx, env)
+	// Create repository A with some history and clone it to repository B.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
+	rev1, err := gittool.ParseRev(ctx, gitA, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.gg(ctx, pullEnv.repoB, "pull", "-u"); err != nil {
+	commit1 := rev1.Commit()
+	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
-	gitB := env.git.WithDir(pullEnv.repoB)
+
+	// Make changes in repository A: add a tag and a new commit.
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to pull from A into B.
+	repoBPath := env.root.FromSlash("repoB")
+	if _, err := env.gg(ctx, repoBPath, "pull", "-u"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify that HEAD has moved to the second commit.
+	commitNames := map[gitobj.Hash]string{
+		commit1: "shared commit",
+		commit2: "remote commit",
+	}
+	gitB := env.git.WithDir(repoBPath)
 	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
-		if r.Commit() != pullEnv.commit2 {
-			names := pullEnv.commitNames()
+		if r.Commit() != commit2 {
 			t.Errorf("HEAD = %s; want %s",
-				prettyCommit(r.Commit(), names),
-				prettyCommit(pullEnv.commit1, names))
+				prettyCommit(r.Commit(), commitNames),
+				prettyCommit(commit1, commitNames))
 		}
 		if r.Ref() != "refs/heads/master" {
 			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
 		}
 	}
+
+	// Verify that the remote tracking branch has moved to the new commit.
 	if r, err := gittool.ParseRev(ctx, gitB, "origin/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != pullEnv.commit2 {
-		names := pullEnv.commitNames()
+	} else if r.Commit() != commit2 {
 		t.Errorf("origin/master = %s; want %s",
-			prettyCommit(r.Commit(), names),
-			prettyCommit(pullEnv.commit2, names))
+			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(commit2, commitNames))
 	}
 }
 
@@ -188,7 +290,7 @@ func TestInferUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
-	if err := env.git.Run(ctx, "init"); err != nil {
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 	for _, test := range tests {
@@ -213,70 +315,5 @@ func TestInferUpstream(t *testing.T) {
 		if got != test.want {
 			t.Errorf("inferUpstream(ctx, env.git, %q) (with branch.%s.merge = %q) = %q; want %q", test.localBranch, test.localBranch, test.merge, got, test.want)
 		}
-	}
-}
-
-type pullEnv struct {
-	repoA, repoB     string
-	commit1, commit2 gitobj.Hash
-}
-
-func setupPullTest(ctx context.Context, env *testEnv) (*pullEnv, error) {
-	repoA := filepath.Join(env.root, "repoA")
-	if err := env.git.Run(ctx, "init", repoA); err != nil {
-		return nil, err
-	}
-	gitA := env.git.WithDir(repoA)
-	const fileName = "foo.txt"
-	err := ioutil.WriteFile(
-		filepath.Join(repoA, fileName),
-		[]byte("Hello, World!\n"),
-		0666)
-	if err != nil {
-		return nil, err
-	}
-	if err := gitA.Run(ctx, "add", fileName); err != nil {
-		return nil, err
-	}
-	if err := gitA.Run(ctx, "commit", "-m", "initial commit"); err != nil {
-		return nil, err
-	}
-	commit1, err := gittool.ParseRev(ctx, gitA, "HEAD")
-	if err != nil {
-		return nil, err
-	}
-	repoB := filepath.Join(env.root, "repoB")
-	if err := env.git.Run(ctx, "clone", repoA, repoB); err != nil {
-		return nil, err
-	}
-	err = ioutil.WriteFile(
-		filepath.Join(repoA, fileName),
-		[]byte("Hello, World!\nI learned some things...\n"),
-		0666)
-	if err != nil {
-		return nil, err
-	}
-	if err := gitA.Run(ctx, "tag", "first"); err != nil {
-		return nil, err
-	}
-	if err := gitA.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {
-		return nil, err
-	}
-	commit2, err := gittool.ParseRev(ctx, gitA, "HEAD")
-	if err != nil {
-		return nil, err
-	}
-	return &pullEnv{
-		repoA:   repoA,
-		repoB:   repoB,
-		commit1: commit1.Commit(),
-		commit2: commit2.Commit(),
-	}, nil
-}
-
-func (env *pullEnv) commitNames() map[gitobj.Hash]string {
-	return map[gitobj.Hash]string{
-		env.commit1: "shared commit",
-		env.commit2: "remote commit",
 	}
 }

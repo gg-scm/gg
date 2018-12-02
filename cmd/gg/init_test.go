@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -30,10 +29,10 @@ func TestInit(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if _, err := env.gg(ctx, env.root, "init"); err != nil {
+	if _, err := env.gg(ctx, env.root.String(), "init"); err != nil {
 		t.Fatal(err)
 	}
-	gitDirPath := filepath.Join(env.root, ".git")
+	gitDirPath := env.root.FromSlash(".git")
 	info, err := os.Stat(gitDirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -52,11 +51,10 @@ func TestInit_Arg(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if _, err := env.gg(ctx, env.root, "init", repoPath); err != nil {
+	if _, err := env.gg(ctx, env.root.String(), "init", "repo"); err != nil {
 		t.Fatal(err)
 	}
-	gitDirPath := filepath.Join(repoPath, ".git")
+	gitDirPath := env.root.FromSlash("repo/.git")
 	info, err := os.Stat(gitDirPath)
 	if err != nil {
 		t.Fatal(err)
