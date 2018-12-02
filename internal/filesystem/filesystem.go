@@ -28,15 +28,15 @@ import (
 // An Operation describes a single step of a Dir.Apply. The zero value
 // is a no-op.
 type Operation struct {
-	code    opCode
-	name    string
-	content string
+	code opCode
+	name string
+	arg  string
 }
 
 // Write returns a new write operation. The name is a slash-separated
 // path relative to the Dir.
 func Write(name, content string) Operation {
-	return Operation{code: opWrite, name: name, content: content}
+	return Operation{code: opWrite, name: name, arg: content}
 }
 
 // Mkdir returns a new make directory operation. The name is a
@@ -46,9 +46,15 @@ func Mkdir(name string) Operation {
 }
 
 // Remove returns a new remove operation. The name is a slash-separated
-// path relative to the Dir.
+// path relative to the Dir. Remove operations on directories are recursive.
 func Remove(name string) Operation {
 	return Operation{code: opRemove, name: name}
+}
+
+// Rename returns a new rename operation. The name is a slash-separated
+// path relative to the Dir.
+func Rename(old, new string) Operation {
+	return Operation{code: opRename, name: old, arg: new}
 }
 
 // String returns a readable description of an operation like "remove foo/bar".
@@ -57,7 +63,9 @@ func (o Operation) String() string {
 	case nop:
 		return nop.String()
 	case opWrite:
-		return fmt.Sprintf("write %q to %q", o.content, o.name)
+		return fmt.Sprintf("write %q to %q", o.arg, o.name)
+	case opRename:
+		return fmt.Sprintf("rename %q to %q", o.name, o.arg)
 	default:
 		return fmt.Sprintf("%s %q", o.code, o.name)
 	}
@@ -70,6 +78,7 @@ const (
 	opWrite
 	opMkdir
 	opRemove
+	opRename
 )
 
 // String returns the human-readable name of code.
@@ -83,6 +92,8 @@ func (code opCode) String() string {
 		return "mkdir"
 	case opRemove:
 		return "remove"
+	case opRename:
+		return "rename"
 	default:
 		return fmt.Sprintf("opCode(%d)", int(code))
 	}
@@ -106,7 +117,7 @@ func (dir Dir) Apply(ops ...Operation) error {
 			if err := os.MkdirAll(filepath.Dir(p), 0777); err != nil {
 				return err
 			}
-			if err := ioutil.WriteFile(p, []byte(o.content), 0666); err != nil {
+			if err := ioutil.WriteFile(p, []byte(o.arg), 0666); err != nil {
 				return err
 			}
 		case opMkdir:
@@ -121,6 +132,14 @@ func (dir Dir) Apply(ops ...Operation) error {
 				return err
 			}
 			if err := os.RemoveAll(p); err != nil {
+				return err
+			}
+		case opRename:
+			newPath, err := dir.fromSlash(o.code.String(), o.arg)
+			if err != nil {
+				return err
+			}
+			if err := os.Rename(p, newPath); err != nil {
 				return err
 			}
 		default:
@@ -148,6 +167,23 @@ func (dir Dir) ReadFile(path string) (string, error) {
 		return "", cpErr
 	}
 	return sb.String(), closeErr
+}
+
+// Exists tests the existence of the given relative slash-separated path.
+// The path is interpreted relative to dir.
+func (dir Dir) Exists(path string) (bool, error) {
+	fpath, err := dir.fromSlash("check", path)
+	if err != nil {
+		return false, err
+	}
+	switch _, err := os.Stat(fpath); {
+	case err == nil:
+		return true, nil
+	case os.IsNotExist(err):
+		return false, nil
+	default:
+		return false, err
+	}
 }
 
 // FromSlash resolves the given slash-separated path relative to dir.
