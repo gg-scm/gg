@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/git"
 )
 
 const upstreamSynopsis = "query or set upstream branch"
@@ -45,7 +44,7 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("cannot set multiple upstreams")
 	}
 	if *branch == "" {
-		rev, err := cc.git.ParseRev(ctx, git.Head.String())
+		rev, err := cc.git.Head(ctx)
 		if err != nil {
 			return err
 		}

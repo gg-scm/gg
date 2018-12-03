@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/git"
 )
 
 const diffSynopsis = "diff repository (or selected files)"
@@ -88,7 +87,7 @@ func diff(ctx context.Context, cc *cmdContext, args []string) error {
 	case rev.r1 != "" && *change != "":
 		return usagef("can't pass both -r and -c")
 	default:
-		if rev, err := cc.git.ParseRev(ctx, git.Head.String()); err == nil {
+		if rev, err := cc.git.Head(ctx); err == nil {
 			diffArgs = append(diffArgs, rev.Commit().String())
 		} else {
 			// HEAD not found; repository has not been initialized.

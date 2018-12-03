@@ -347,7 +347,7 @@ func (env *testEnv) newCommit(ctx context.Context, dir string) (git.Hash, error)
 	if err := g.Run(ctx, "commit", "-am", "did stuff"); err != nil {
 		return git.Hash{}, err
 	}
-	r, err := g.ParseRev(ctx, "HEAD")
+	r, err := g.Head(ctx)
 	if err != nil {
 		return git.Hash{}, err
 	}
@@ -359,7 +359,7 @@ func (env *testEnv) newCommit(ctx context.Context, dir string) (git.Hash, error)
 // checked out or created.
 func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file string, msg string) (git.Hash, error) {
 	g = g.WithDir(dir)
-	curr, err := g.ParseRev(ctx, "HEAD")
+	curr, err := g.Head(ctx)
 	if err != nil {
 		// First commit
 		if branch != "master" {
@@ -389,7 +389,7 @@ func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file s
 	if err := g.Run(ctx, "commit", "-m", msg); err != nil {
 		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 	}
-	curr, err = g.ParseRev(ctx, "HEAD")
+	curr, err = g.Head(ctx)
 	if err != nil {
 		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 	}

@@ -70,7 +70,7 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 				t.Errorf("gg evolve -l = %q; want to contain %q and %q", out, want1, want2)
 			}
 		}
-		curr, err := env.git.ParseRev(ctx, "HEAD")
+		curr, err := env.git.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -82,7 +82,7 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		curr, err = env.git.ParseRev(ctx, "HEAD")
+		curr, err = env.git.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -146,7 +146,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 		} else if len(out) > 0 {
 			t.Errorf("gg evolve -l = %q; want empty", out)
 		}
-		curr, err := env.git.ParseRev(ctx, "HEAD")
+		curr, err := env.git.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -158,7 +158,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		curr, err = env.git.ParseRev(ctx, "HEAD")
+		curr, err = env.git.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -243,7 +243,7 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 				t.Errorf("gg evolve -l = %q; want to contain %q and %q", out, want1, want2)
 			}
 		}
-		curr, err := env.git.ParseRev(ctx, "HEAD")
+		curr, err := env.git.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -255,7 +255,7 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		curr, err = env.git.ParseRev(ctx, "HEAD")
+		curr, err = env.git.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -324,7 +324,7 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 				t.Errorf("gg evolve -l = %q; want to contain %q and %q", out, want1, want2)
 			}
 		}
-		curr, err := env.git.ParseRev(ctx, "HEAD")
+		curr, err := env.git.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -338,7 +338,7 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		} else if isUsage(err) {
 			t.Error("gg evolve returned usage error:", err)
 		}
-		curr, err = env.git.ParseRev(ctx, "HEAD")
+		curr, err = env.git.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -93,7 +93,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 }
 
 func currentBranch(ctx context.Context, cc *cmdContext) string {
-	r, err := cc.git.ParseRev(ctx, git.Head.String())
+	r, err := cc.git.Head(ctx)
 	if err != nil {
 		return ""
 	}

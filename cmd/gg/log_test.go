@@ -43,7 +43,7 @@ func TestLog(t *testing.T) {
 	if err := env.git.Run(ctx, "commit", "-m", wantMsg); err != nil {
 		t.Fatal(err)
 	}
-	rev, err := env.git.ParseRev(ctx, "HEAD")
+	rev, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

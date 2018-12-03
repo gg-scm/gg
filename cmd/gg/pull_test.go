@@ -36,7 +36,7 @@ func TestPull(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
-	rev1, err := gitA.ParseRev(ctx, "HEAD")
+	rev1, err := gitA.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestPull(t *testing.T) {
 		commit2: "remote commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.ParseRev(ctx, "HEAD"); err != nil {
+	if r, err := gitB.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != commit1 {
@@ -119,7 +119,7 @@ func TestPullWithArgument(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gitA.ParseRev(ctx, "HEAD")
+	rev1, err := gitA.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +168,7 @@ func TestPullWithArgument(t *testing.T) {
 		commit2: "remote commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.ParseRev(ctx, "HEAD"); err != nil {
+	if r, err := gitB.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != commit1 {
@@ -214,7 +214,7 @@ func TestPullUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
-	rev1, err := gitA.ParseRev(ctx, "HEAD")
+	rev1, err := gitA.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +247,7 @@ func TestPullUpdate(t *testing.T) {
 		commit2: "remote commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.ParseRev(ctx, "HEAD"); err != nil {
+	if r, err := gitB.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != commit2 {

@@ -39,7 +39,7 @@ func TestPush(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gitA.ParseRev(ctx, git.Head.String())
+	rev1, err := gitA.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestPush_Arg(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gitA.ParseRev(ctx, git.Head.String())
+	rev1, err := gitA.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gitA.ParseRev(ctx, git.Head.String())
+	rev1, err := gitA.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,7 +261,7 @@ func TestPush_CreateRef(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gitA.ParseRev(ctx, git.Head.String())
+	rev1, err := gitA.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -335,7 +335,7 @@ func TestPush_RewindFails(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gitA.ParseRev(ctx, git.Head.String())
+	rev1, err := gitA.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -408,7 +408,7 @@ func TestPush_RewindForce(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gitA.ParseRev(ctx, git.Head.String())
+	rev1, err := gitA.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -479,7 +479,7 @@ func TestPush_AncestorInferDst(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gitA.ParseRev(ctx, git.Head.String())
+	rev1, err := gitA.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -551,7 +551,7 @@ func TestPush_DistinctPushURL(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gitA.ParseRev(ctx, git.Head.String())
+	rev1, err := gitA.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -639,7 +639,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gitA.ParseRev(ctx, git.Head.String())
+	rev1, err := gitA.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

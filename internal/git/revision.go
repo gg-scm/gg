@@ -26,6 +26,11 @@ type Rev struct {
 	refname Ref
 }
 
+// Head returns the working copy's branch revision.
+func (g *Git) Head(ctx context.Context) (*Rev, error) {
+	return g.ParseRev(ctx, Head.String())
+}
+
 // ParseRev parses a revision.
 func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 	if strings.HasPrefix(refspec, "-") {

@@ -33,7 +33,7 @@ func TestMerge(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	baseRev, err := env.git.ParseRev(ctx, "HEAD")
+	baseRev, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestMerge(t *testing.T) {
 	}
 
 	// Verify that HEAD is still the upstream commit. gg should not create a new commit.
-	curr, err := env.git.ParseRev(ctx, "HEAD")
+	curr, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestMerge_Conflict(t *testing.T) {
 	}
 
 	// Verify that HEAD is still the upstream commit. gg should not create a new commit.
-	curr, err := env.git.ParseRev(ctx, "HEAD")
+	curr, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

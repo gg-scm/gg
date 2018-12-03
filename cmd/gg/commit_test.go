@@ -81,7 +81,7 @@ func TestCommit_NoArgs(t *testing.T) {
 	}
 
 	// Verify that a new commit was created and is parented to the first commit.
-	r2, err := env.git.ParseRev(ctx, "HEAD")
+	r2, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +174,7 @@ func TestCommit_Selective(t *testing.T) {
 	}
 
 	// Verify that a new commit was created and is parented to the first commit.
-	r2, err := env.git.ParseRev(ctx, "HEAD")
+	r2, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +224,7 @@ func TestCommit_SelectiveWrongFile(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	r, err := env.git.ParseRev(ctx, "HEAD")
+	r, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +240,7 @@ func TestCommit_SelectiveWrongFile(t *testing.T) {
 	} else if isUsage(err) {
 		t.Fatal(err)
 	}
-	curr, err := env.git.ParseRev(ctx, "HEAD")
+	curr, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +319,7 @@ func TestCommit_Amend(t *testing.T) {
 		parent: "parent commit",
 		r1:     "tip",
 	}
-	r2, err := env.git.ParseRev(ctx, "HEAD")
+	r2, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,7 +371,7 @@ func TestCommit_NoChanges(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	r1, err := env.git.ParseRev(ctx, "HEAD")
+	r1, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -381,7 +381,7 @@ func TestCommit_NoChanges(t *testing.T) {
 	} else if isUsage(err) {
 		t.Errorf("commit with no changes returned usage error: %v", err)
 	}
-	r2, err := env.git.ParseRev(ctx, "HEAD")
+	r2, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -442,7 +442,7 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 		parent: "parent commit",
 		r1:     "tip",
 	}
-	r2, err := env.git.ParseRev(ctx, "HEAD")
+	r2, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -552,7 +552,7 @@ func TestCommit_InSubdir(t *testing.T) {
 			}
 
 			// Verify that a new commit was created with the parent of the working copy's commit.
-			r2, err := env.git.ParseRev(ctx, "HEAD")
+			r2, err := env.git.Head(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -673,7 +673,7 @@ func TestCommit_Merge(t *testing.T) {
 
 	// Verify that a new commit was created with the master commit as the first
 	// parent and the feature commit as the second parent.
-	curr, err := env.git.ParseRev(ctx, "HEAD")
+	curr, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

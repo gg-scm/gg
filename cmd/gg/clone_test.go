@@ -54,7 +54,7 @@ func TestClone(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(env.root.FromSlash("repoB"))
-	if r, err := gitB.ParseRev(ctx, "HEAD"); err != nil {
+	if r, err := gitB.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != head {
@@ -117,7 +117,7 @@ func TestClone_Branch(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(env.root.FromSlash("repoB"))
-	if r, err := gitB.ParseRev(ctx, "HEAD"); err != nil {
+	if r, err := gitB.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != head {

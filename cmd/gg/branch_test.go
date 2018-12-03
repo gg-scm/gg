@@ -31,7 +31,7 @@ func TestBranch(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	first, err := env.git.ParseRev(ctx, "HEAD")
+	first, err := env.git.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestBranch(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "branch", "foo", "bar"); err != nil {
 		t.Fatal(err)
 	}
-	if r, err := env.git.ParseRev(ctx, "HEAD"); err != nil {
+	if r, err := env.git.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != first.Commit() {
@@ -74,7 +74,7 @@ func TestBranch_Upstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	git1 := env.git.WithDir(env.root.FromSlash("repo1"))
-	first, err := git1.ParseRev(ctx, "HEAD")
+	first, err := git1.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestBranch_Upstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	git2 := env.git.WithDir(repoPath2)
-	if r, err := git2.ParseRev(ctx, "HEAD"); err != nil {
+	if r, err := git2.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != first.Commit() {
