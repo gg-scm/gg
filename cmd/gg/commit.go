@@ -49,11 +49,10 @@ aliases: ci
 	// git does not always operate correctly on specified files when
 	// running from a subdirectory (see https://github.com/zombiezen/gg/issues/10).
 	// To work around, we always run commit from the top directory.
-	topBytes, err := cc.git.RunOneLiner(ctx, '\n', "rev-parse", "--show-toplevel")
+	top, err := cc.git.WorkTree(ctx)
 	if err != nil {
 		return err
 	}
-	top := string(topBytes)
 	var commitArgs []string
 	commitArgs = append(commitArgs, "commit", "--quiet")
 	if *amend {

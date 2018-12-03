@@ -111,11 +111,10 @@ func uninstallGerritHook(ctx context.Context, cc *cmdContext) error {
 }
 
 func commitMsgHookPath(ctx context.Context, cc *cmdContext) (string, error) {
-	commonBytes, err := cc.git.RunOneLiner(ctx, '\n', "rev-parse", "--git-common-dir")
+	common, err := cc.git.CommonDir(ctx)
 	if err != nil {
 		return "", err
 	}
-	common := cc.abs(string(commonBytes))
 	return filepath.Join(common, "hooks", "commit-msg"), nil
 }
 

@@ -306,24 +306,31 @@ func (g *Git) Start(ctx context.Context, args ...string) (*Process, error) {
 	}, nil
 }
 
-// GitDir determines the absolute path of the ".git" directory given the
-// tool's configuration, resolving any symlinks.
-func (g *Git) GitDir(ctx context.Context) (string, error) {
-	line, err := g.RunOneLiner(ctx, '\n', "rev-parse", "--absolute-git-dir")
-	if err != nil {
-		return "", err
-	}
-	return filepath.EvalSymlinks(string(line))
-}
-
-// WorkTree determines the absolute path of the root of the working
-// tree given the tool's configuration, resolving any symlinks.
+// WorkTree determines the absolute path of the root of the current
+// working tree given the configuration. Any symlinks are resolved.
 func (g *Git) WorkTree(ctx context.Context) (string, error) {
 	line, err := g.RunOneLiner(ctx, '\n', "rev-parse", "--show-toplevel")
 	if err != nil {
 		return "", err
 	}
 	return filepath.EvalSymlinks(string(line))
+}
+
+// CommonDir determines the absolute path of the Git directory, possibly
+// shared among different working trees, given the configuration. Any
+// symlinks are resolved.
+func (g *Git) CommonDir(ctx context.Context) (string, error) {
+	line, err := g.RunOneLiner(ctx, '\n', "rev-parse", "--git-common-dir")
+	if err != nil {
+		return "", err
+	}
+	path := string(line)
+	if filepath.IsAbs(path) {
+		path = filepath.Clean(path)
+	} else {
+		path = filepath.Join(g.dir, path)
+	}
+	return filepath.EvalSymlinks(path)
 }
 
 // Process is a running Git subprocess that can be read from.

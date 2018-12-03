@@ -165,11 +165,10 @@ func backupForRevert(ctx context.Context, cc *cmdContext, modified []git.Pathspe
 		return nil
 	}
 
-	topBytes, err := cc.git.RunOneLiner(ctx, '\n', "rev-parse", "--show-toplevel")
+	top, err := cc.git.WorkTree(ctx)
 	if err != nil {
 		return fmt.Errorf("backing up files: %v", err)
 	}
-	top := string(topBytes)
 	for _, name := range names {
 		path := filepath.Join(top, filepath.FromSlash(name.String()))
 		if err := os.Rename(path, path+".orig"); err != nil {
