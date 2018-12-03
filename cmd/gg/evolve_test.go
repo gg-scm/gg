@@ -111,7 +111,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer env.cleanup()
-		if err := env.git.Run(ctx, "init"); err != nil {
+		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
 		base, err := dummyRev(ctx, env.git, env.root.String(), "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
@@ -199,7 +199,7 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer env.cleanup()
-		if err := env.git.Run(ctx, "init"); err != nil {
+		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
 		base, err := dummyRev(ctx, env.git, env.root.String(), "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
@@ -285,7 +285,7 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer env.cleanup()
-		if err := env.git.Run(ctx, "init"); err != nil {
+		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
 		base, err := dummyRev(ctx, env.git, env.root.String(), "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")

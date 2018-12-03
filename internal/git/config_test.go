@@ -16,11 +16,11 @@ package git
 
 import (
 	"context"
-	"io/ioutil"
-	"path/filepath"
 	"strings"
 	"testing"
 	"testing/iotest"
+
+	"gg-scm.io/pkg/internal/filesystem"
 )
 
 func TestParseConfig(t *testing.T) {
@@ -117,11 +117,7 @@ func TestConfigValue(t *testing.T) {
 	defer env.cleanup()
 
 	for _, test := range tests {
-		err := ioutil.WriteFile(
-			filepath.Join(env.root, ".gitconfig"),
-			[]byte(test.config),
-			0666)
-		if err != nil {
+		if err := env.top.Apply(filesystem.Write(".gitconfig", test.config)); err != nil {
 			t.Error(err)
 			continue
 		}
@@ -177,11 +173,7 @@ func TestConfigBool(t *testing.T) {
 	defer env.cleanup()
 
 	for _, test := range tests {
-		err := ioutil.WriteFile(
-			filepath.Join(env.root, ".gitconfig"),
-			[]byte(test.config),
-			0666)
-		if err != nil {
+		if err := env.top.Apply(filesystem.Write(".gitconfig", test.config)); err != nil {
 			t.Error(err)
 			continue
 		}
@@ -244,8 +236,7 @@ func BenchmarkReadConfig(b *testing.B) {
 	pending = codereview pending
 	submit = codereview submit
 	sync = codereview sync` + "\n"
-	err = ioutil.WriteFile(filepath.Join(env.root, ".gitconfig"), []byte(config), 0666)
-	if err != nil {
+	if err := env.top.Apply(filesystem.Write(".gitconfig", config)); err != nil {
 		b.Fatal(err)
 	}
 	b.SetBytes(int64(len(config)))
@@ -282,8 +273,7 @@ func BenchmarkOneConfigLine(b *testing.B) {
 	pending = codereview pending
 	submit = codereview submit
 	sync = codereview sync` + "\n"
-	err = ioutil.WriteFile(filepath.Join(env.root, ".gitconfig"), []byte(config), 0666)
-	if err != nil {
+	if err := env.top.Apply(filesystem.Write(".gitconfig", config)); err != nil {
 		b.Fatal(err)
 	}
 	b.SetBytes(29) // first two lines

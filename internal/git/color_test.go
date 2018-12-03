@@ -20,9 +20,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"testing"
+
+	"gg-scm.io/pkg/internal/filesystem"
 )
 
 func TestConfigColor(t *testing.T) {
@@ -202,11 +202,7 @@ func TestConfigColorBool(t *testing.T) {
 	defer env.cleanup()
 
 	for _, test := range tests {
-		err := ioutil.WriteFile(
-			filepath.Join(env.root, ".gitconfig"),
-			[]byte(test.config),
-			0666)
-		if err != nil {
+		if err := env.top.Apply(filesystem.Write(".gitconfig", test.config)); err != nil {
 			t.Error(err)
 			continue
 		}

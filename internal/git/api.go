@@ -72,3 +72,41 @@ func (g *Git) IsMerging(ctx context.Context) (bool, error) {
 	}
 	return true, nil
 }
+
+// Init creates a new empty repository at the given path. Any relative
+// paths are interpreted relative to the Git process's working
+// directory. If any of the repository's parent directories don't exist,
+// they will be created.
+func (g *Git) Init(ctx context.Context, dir string) error {
+	c := g.Command(ctx, "init", "--quiet", "--", dir)
+	buf := new(bytes.Buffer)
+	c.Stdout = &limitWriter{w: buf, n: 4096}
+	c.Stderr = c.Stdout
+	err := sigterm.Run(ctx, c)
+	if err != nil {
+		if buf.Len() == 0 {
+			return fmt.Errorf("git init %q: %v", dir, err)
+		}
+		return fmt.Errorf("git init %q: %v\n%s", dir, err, buf)
+	}
+	return nil
+}
+
+// InitBare creates a new empty, bare repository at the given path. Any
+// relative paths are interpreted relative to the Git process's working
+// directory. If any of the repository's parent directories don't exist,
+// they will be created.
+func (g *Git) InitBare(ctx context.Context, dir string) error {
+	c := g.Command(ctx, "init", "--quiet", "--bare", "--", dir)
+	buf := new(bytes.Buffer)
+	c.Stdout = &limitWriter{w: buf, n: 4096}
+	c.Stderr = c.Stdout
+	err := sigterm.Run(ctx, c)
+	if err != nil {
+		if buf.Len() == 0 {
+			return fmt.Errorf("git init %q: %v", dir, err)
+		}
+		return fmt.Errorf("git init %q: %v\n%s", dir, err, buf)
+	}
+	return nil
+}

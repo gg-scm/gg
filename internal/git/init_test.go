@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package git
 
 import (
 	"context"
@@ -21,16 +21,19 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	t.Parallel()
 	ctx := context.Background()
-	env, err := newTestEnv(ctx, t)
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	env, err := newTestEnv(ctx, gitPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
 
-	if _, err := env.gg(ctx, env.root.String(), "init"); err != nil {
-		t.Error(err)
+	if err := env.g.Init(ctx, "."); err != nil {
+		t.Error("Init returned error:", err)
 	}
 	gitDirPath := env.root.FromSlash(".git")
 	info, err := os.Stat(gitDirPath)
@@ -42,24 +45,24 @@ func TestInit(t *testing.T) {
 	}
 }
 
-func TestInit_Arg(t *testing.T) {
-	t.Parallel()
+func TestInitBare(t *testing.T) {
 	ctx := context.Background()
-	env, err := newTestEnv(ctx, t)
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	env, err := newTestEnv(ctx, gitPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer env.cleanup()
 
-	if _, err := env.gg(ctx, env.root.String(), "init", "repo"); err != nil {
+	if err := env.g.InitBare(ctx, "."); err != nil {
+		t.Error("Init returned error:", err)
+	}
+	if exists, err := env.root.Exists("HEAD"); err != nil {
 		t.Error(err)
-	}
-	gitDirPath := env.root.FromSlash("repo/.git")
-	info, err := os.Stat(gitDirPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !info.IsDir() {
-		t.Errorf("%s is not a directory", gitDirPath)
+	} else if !exists {
+		t.Error("HEAD file does not exist")
 	}
 }

@@ -16,9 +16,9 @@ package git
 
 import (
 	"context"
-	"io/ioutil"
-	"path/filepath"
 	"testing"
+
+	"gg-scm.io/pkg/internal/filesystem"
 )
 
 func TestParseRev(t *testing.T) {
@@ -36,17 +36,15 @@ func TestParseRev(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	repoPath := filepath.Join(env.root, "repo")
-	if err := env.g.Run(ctx, "init", repoPath); err != nil {
+	repoPath := env.root.FromSlash("repo")
+	if err := env.g.Init(ctx, repoPath); err != nil {
 		t.Fatal(err)
 	}
 	g := env.g.WithDir(repoPath)
 
 	// First commit
 	const fileName = "foo.txt"
-	filePath := filepath.Join(repoPath, fileName)
-	err = ioutil.WriteFile(filePath, []byte("Hello, World!\n"), 0666)
-	if err != nil {
+	if err := env.root.Apply(filesystem.Write("repo/foo.txt", "Hello, World!\n")); err != nil {
 		t.Fatal(err)
 	}
 	if err := g.Run(ctx, "add", fileName); err != nil {
@@ -68,8 +66,7 @@ func TestParseRev(t *testing.T) {
 	}
 
 	// Second commit
-	err = ioutil.WriteFile(filePath, []byte("Some more thoughts...\n"), 0666)
-	if err != nil {
+	if err := env.root.Apply(filesystem.Write("repo/foo.txt", "Some more thoughts...\n")); err != nil {
 		t.Fatal(err)
 	}
 	if err := g.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {

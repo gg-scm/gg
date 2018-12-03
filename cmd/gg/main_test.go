@@ -265,7 +265,7 @@ func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte,
 // initEmptyRepo creates a repository at the slash-separated path
 // relative to env.root.
 func (env *testEnv) initEmptyRepo(ctx context.Context, dir string) error {
-	return env.git.Run(ctx, "init", env.root.FromSlash(dir))
+	return env.git.Init(ctx, env.root.FromSlash(dir))
 }
 
 // initRepoWithHistory creates a repository with some dummy commits but
@@ -273,7 +273,7 @@ func (env *testEnv) initEmptyRepo(ctx context.Context, dir string) error {
 // to env.root.
 func (env *testEnv) initRepoWithHistory(ctx context.Context, dir string) error {
 	repoDir := env.root.FromSlash(dir)
-	if err := env.git.Run(ctx, "init", repoDir); err != nil {
+	if err := env.git.Init(ctx, repoDir); err != nil {
 		return err
 	}
 	err := env.root.Apply(filesystem.Write(dir+"/.dummy", ""))

@@ -25,6 +25,7 @@ import (
 	"sync"
 	"testing"
 
+	"gg-scm.io/pkg/internal/filesystem"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -120,7 +121,7 @@ func TestRun(t *testing.T) {
 	if err := env.g.Run(ctx, "init", "repo"); err != nil {
 		t.Fatal(err)
 	}
-	gitDir := filepath.Join(env.root, "repo", ".git")
+	gitDir := env.root.FromSlash("repo/.git")
 	info, err := os.Stat(gitDir)
 	if err != nil {
 		t.Fatal(err)
@@ -148,9 +149,8 @@ func TestQuery(t *testing.T) {
 	if err := env.g.Run(ctx, "init", "repo"); err != nil {
 		t.Fatal(err)
 	}
-	g := env.g.WithDir(filepath.Join(env.root, "repo"))
-	err = ioutil.WriteFile(filepath.Join(env.root, "repo", "foo.txt"), []byte("Hi!\n"), 0666)
-	if err != nil {
+	g := env.g.WithDir(env.root.FromSlash("repo"))
+	if err := env.root.Apply(filesystem.Write("repo/foo.txt", "Hi!\n")); err != nil {
 		t.Fatal(err)
 	}
 	if err := g.Run(ctx, "add", "foo.txt"); err != nil {
@@ -183,37 +183,43 @@ func TestQuery(t *testing.T) {
 }
 
 type testEnv struct {
-	root string
+	top  filesystem.Dir
+	root filesystem.Dir
 	g    *Git
 }
 
 func newTestEnv(ctx context.Context, gitPath string) (*testEnv, error) {
-	root, err := ioutil.TempDir("", "gg_gittool_test")
+	topPath, err := ioutil.TempDir("", "gg_git_test")
 	if err != nil {
 		return nil, err
 	}
-	g, err := New(gitPath, root, &Options{
+	top := filesystem.Dir(topPath)
+	if err := top.Apply(filesystem.Mkdir("scratch")); err != nil {
+		os.RemoveAll(topPath)
+		return nil, err
+	}
+	root := filesystem.Dir(top.FromSlash("scratch"))
+	g, err := New(gitPath, root.String(), &Options{
 		Env: []string{
 			"GIT_CONFIG_NOSYSTEM=1",
-			"HOME=" + root,
+			"HOME=" + topPath,
 			"TERM=xterm-color", // stops git from assuming output is to a "dumb" terminal
 		},
 	})
 	if err != nil {
-		os.Remove(root)
+		os.RemoveAll(topPath)
 		return nil, err
 	}
-	gitConfigPath := filepath.Join(root, ".gitconfig")
-	gitConfig := []byte("[user]\nname = User\nemail = foo@example.com\n")
-	if err := ioutil.WriteFile(gitConfigPath, gitConfig, 0666); err != nil {
-		os.RemoveAll(root)
+	const miniConfig = "[user]\nname = User\nemail = foo@example.com\n"
+	if err := top.Apply(filesystem.Write(".gitconfig", miniConfig)); err != nil {
+		os.RemoveAll(topPath)
 		return nil, err
 	}
-	return &testEnv{root: root, g: g}, nil
+	return &testEnv{top: top, root: root, g: g}, nil
 }
 
 func (env *testEnv) cleanup() {
-	os.RemoveAll(env.root)
+	os.RemoveAll(env.top.String())
 }
 
 var gitPathCache struct {

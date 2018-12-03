@@ -35,5 +35,9 @@ func init_(ctx context.Context, cc *cmdContext, args []string) error {
 	if f.NArg() > 1 {
 		return usagef("cannot pass more than one argument to init")
 	}
-	return cc.git.Run(ctx, append([]string{"init", "--"}, f.Args()...)...)
+	dst := f.Arg(0)
+	if dst == "" {
+		dst = "."
+	}
+	return cc.git.Init(ctx, dst)
 }

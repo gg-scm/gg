@@ -117,7 +117,7 @@ func (g *Git) Command(ctx context.Context, args ...string) *exec.Cmd {
 		g.log(ctx, args)
 	}
 	c := exec.Command(g.exe, args...)
-	c.Env = g.env
+	c.Env = append([]string(nil), g.env...)
 	c.Dir = g.dir
 	return c
 }

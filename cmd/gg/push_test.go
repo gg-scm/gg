@@ -45,7 +45,7 @@ func TestPush(t *testing.T) {
 	}
 
 	// Push from repo A to repo B.
-	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+	if err := env.git.InitBare(ctx, env.root.FromSlash("repoB")); err != nil {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
@@ -109,7 +109,7 @@ func TestPush_Arg(t *testing.T) {
 	}
 
 	// Push from repo A to repo B.
-	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+	if err := env.git.InitBare(ctx, "repoB"); err != nil {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
@@ -191,7 +191,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 	}
 
 	// Push from repo A to repo B.
-	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+	if err := env.git.InitBare(ctx, "repoB"); err != nil {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
@@ -267,7 +267,7 @@ func TestPush_CreateRef(t *testing.T) {
 	}
 
 	// Push from repo A to repo B.
-	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+	if err := env.git.InitBare(ctx, "repoB"); err != nil {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
@@ -341,7 +341,7 @@ func TestPush_RewindFails(t *testing.T) {
 	}
 
 	// Push from repo A to repo B.
-	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+	if err := env.git.InitBare(ctx, "repoB"); err != nil {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
@@ -414,7 +414,7 @@ func TestPush_RewindForce(t *testing.T) {
 	}
 
 	// Push from repo A to repo B.
-	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+	if err := env.git.InitBare(ctx, "repoB"); err != nil {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
@@ -485,7 +485,7 @@ func TestPush_AncestorInferDst(t *testing.T) {
 	}
 
 	// Push from repo A to repo B.
-	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+	if err := env.git.InitBare(ctx, "repoB"); err != nil {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
@@ -557,7 +557,7 @@ func TestPush_DistinctPushURL(t *testing.T) {
 	}
 
 	// Push from repo A to repo B.
-	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+	if err := env.git.InitBare(ctx, "repoB"); err != nil {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
@@ -645,7 +645,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	}
 
 	// Push from repo A to repo B.
-	if err := env.git.Run(ctx, "init", "--bare", "repoB"); err != nil {
+	if err := env.git.InitBare(ctx, "repoB"); err != nil {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
