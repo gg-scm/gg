@@ -19,9 +19,37 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 
 	"gg-scm.io/pkg/internal/sigterm"
 )
+
+// WorkTree determines the absolute path of the root of the current
+// working tree given the configuration. Any symlinks are resolved.
+func (g *Git) WorkTree(ctx context.Context) (string, error) {
+	line, err := g.RunOneLiner(ctx, '\n', "rev-parse", "--show-toplevel")
+	if err != nil {
+		return "", err
+	}
+	return filepath.EvalSymlinks(string(line))
+}
+
+// CommonDir determines the absolute path of the Git directory, possibly
+// shared among different working trees, given the configuration. Any
+// symlinks are resolved.
+func (g *Git) CommonDir(ctx context.Context) (string, error) {
+	line, err := g.RunOneLiner(ctx, '\n', "rev-parse", "--git-common-dir")
+	if err != nil {
+		return "", err
+	}
+	path := string(line)
+	if filepath.IsAbs(path) {
+		path = filepath.Clean(path)
+	} else {
+		path = filepath.Join(g.dir, path)
+	}
+	return filepath.EvalSymlinks(path)
+}
 
 // IsMerging reports whether the index has a pending merge commit.
 func (g *Git) IsMerging(ctx context.Context) (bool, error) {
