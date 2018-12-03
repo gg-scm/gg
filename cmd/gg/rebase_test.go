@@ -40,7 +40,7 @@ func TestRebase(t *testing.T) {
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
+		baseRev, err := env.git.ParseRev(ctx, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -97,7 +97,7 @@ func TestRebase(t *testing.T) {
 			t.Error(err)
 		}
 
-		curr, err := git.ParseRev(ctx, env.git, "HEAD")
+		curr, err := env.git.ParseRev(ctx, "HEAD")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -120,7 +120,7 @@ func TestRebase(t *testing.T) {
 			t.Error("mainline.txt not in second rebased change:", err)
 		}
 
-		parent, err := git.ParseRev(ctx, env.git, "HEAD~1")
+		parent, err := env.git.ParseRev(ctx, "HEAD~1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -140,7 +140,7 @@ func TestRebase(t *testing.T) {
 		}
 
 		// Verify that the grandparent is the diverged upstream commit.
-		grandparent, err := git.ParseRev(ctx, env.git, "HEAD~2")
+		grandparent, err := env.git.ParseRev(ctx, "HEAD~2")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -164,7 +164,7 @@ func TestRebase_Src(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
+	baseRev, err := env.git.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +216,7 @@ func TestRebase_Src(t *testing.T) {
 		t.Error(err)
 	}
 
-	curr, err := git.ParseRev(ctx, env.git, "HEAD")
+	curr, err := env.git.ParseRev(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +240,7 @@ func TestRebase_Src(t *testing.T) {
 	}
 
 	// Verify that the parent commit is the diverged master commit.
-	parent, err := git.ParseRev(ctx, env.git, "HEAD~1")
+	parent, err := env.git.ParseRev(ctx, "HEAD~1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +262,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
+	baseRev, err := env.git.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -303,7 +303,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 		t.Error(err)
 	}
 
-	curr, err := git.ParseRev(ctx, env.git, "HEAD")
+	curr, err := env.git.ParseRev(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -324,7 +324,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	}
 
 	// Verify that the parent is the initial commit.
-	parent, err := git.ParseRev(ctx, env.git, "HEAD~1")
+	parent, err := env.git.ParseRev(ctx, "HEAD~1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,7 +352,7 @@ func TestRebase_Base(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
+	baseRev, err := env.git.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -436,7 +436,7 @@ func TestRebase_Base(t *testing.T) {
 		t.Error(err)
 	}
 
-	curr, err := git.ParseRev(ctx, env.git, "HEAD")
+	curr, err := env.git.ParseRev(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -466,7 +466,7 @@ func TestRebase_Base(t *testing.T) {
 	}
 
 	// Verify that the parent commit is the diverged upstream commit.
-	parent, err := git.ParseRev(ctx, env.git, "HEAD~1")
+	parent, err := env.git.ParseRev(ctx, "HEAD~1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -490,7 +490,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
+		baseRev, err := env.git.ParseRev(ctx, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -545,7 +545,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 			t.Error(err)
 		}
 
-		curr, err := git.ParseRev(ctx, env.git, "HEAD")
+		curr, err := env.git.ParseRev(ctx, "HEAD")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -565,7 +565,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 			t.Error("bar.txt not in rebased change:", err)
 		}
 		// Verify that the parent commit is the diverged upstream commit.
-		parent, err := git.ParseRev(ctx, env.git, "HEAD~")
+		parent, err := env.git.ParseRev(ctx, "HEAD~")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -588,7 +588,7 @@ func TestHistedit(t *testing.T) {
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
+		baseRev, err := env.git.ParseRev(ctx, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -647,7 +647,7 @@ func TestHistedit(t *testing.T) {
 			t.Fatalf("failed: %v; output:\n%s", err, out)
 		}
 
-		curr, err := git.ParseRev(ctx, env.git, "HEAD")
+		curr, err := env.git.ParseRev(ctx, "HEAD")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -674,7 +674,7 @@ func TestHistedit(t *testing.T) {
 		}
 
 		// Verify that the parent commit is the base commit.
-		parent, err := git.ParseRev(ctx, env.git, "HEAD~1")
+		parent, err := env.git.ParseRev(ctx, "HEAD~1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -697,7 +697,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
+		baseRev, err := env.git.ParseRev(ctx, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -729,7 +729,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err := env.git.Run(ctx, "commit", "--quiet", "-m", "Divergence 1"); err != nil {
 			t.Fatal(err)
 		}
-		rev1, err := git.ParseRev(ctx, env.git, git.Head.String())
+		rev1, err := env.git.ParseRev(ctx, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -743,7 +743,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err := env.git.Run(ctx, "commit", "--quiet", "-m", wantMessage2); err != nil {
 			t.Fatal(err)
 		}
-		rev2, err := git.ParseRev(ctx, env.git, git.Head.String())
+		rev2, err := env.git.ParseRev(ctx, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -778,7 +778,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 
 		// Stopped for amending after applying the first commit.
 		// Verify that the parent commit is the base commit.
-		parent, err := git.ParseRev(ctx, env.git, "HEAD~")
+		parent, err := env.git.ParseRev(ctx, "HEAD~")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -800,7 +800,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		}
 
 		// Verify that the grandparent commit is the base commit.
-		grandparent, err := git.ParseRev(ctx, env.git, "HEAD~2")
+		grandparent, err := env.git.ParseRev(ctx, "HEAD~2")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -859,7 +859,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
+		baseRev, err := env.git.ParseRev(ctx, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -892,7 +892,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err := env.git.Run(ctx, "commit", "--quiet", "-m", wantMessage1); err != nil {
 			t.Fatal(err)
 		}
-		rev1, err := git.ParseRev(ctx, env.git, git.Head.String())
+		rev1, err := env.git.ParseRev(ctx, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -906,7 +906,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err := env.git.Run(ctx, "commit", "--quiet", "-m", wantMessage2); err != nil {
 			t.Fatal(err)
 		}
-		rev2, err := git.ParseRev(ctx, env.git, git.Head.String())
+		rev2, err := env.git.ParseRev(ctx, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -940,7 +940,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 
 		// Stopped for amending after applying the first commit.
 		// Verify that the parent commit is the base commit.
-		parent, err := git.ParseRev(ctx, env.git, "HEAD~")
+		parent, err := env.git.ParseRev(ctx, "HEAD~")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -949,7 +949,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 				prettyCommit(parent.Commit(), names),
 				prettyCommit(baseRev.Commit(), names))
 		}
-		rebased1, err := git.ParseRev(ctx, env.git, "HEAD")
+		rebased1, err := env.git.ParseRev(ctx, "HEAD")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -961,7 +961,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Fatalf("failed: %v; output:\n%s", err, out)
 		}
 		// Verify that the grandparent commit is the base commit.
-		grandparent, err := git.ParseRev(ctx, env.git, "HEAD~2")
+		grandparent, err := env.git.ParseRev(ctx, "HEAD~2")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -978,7 +978,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		}
 		// Verify that the first edited commit hash is the same as what was
 		// observed during the rebase operation.
-		if r, err := git.ParseRev(ctx, env.git, "HEAD~"); err != nil {
+		if r, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
 			t.Errorf("Rebased change 1: %v", err)
 		} else if r.Commit() != rebased1.Commit() {
 			t.Errorf("After continuing, HEAD~ = %s; want %s",

@@ -69,7 +69,7 @@ func TestUpdate_NoArgsFastForward(t *testing.T) {
 	}
 
 	// Verify that HEAD moved to the second commit.
-	if r, err := git.ParseRev(ctx, env.git, "HEAD"); err != nil {
+	if r, err := env.git.ParseRev(ctx, "HEAD"); err != nil {
 		t.Fatal(err)
 	} else if r.Commit() != h2 {
 		names := map[git.Hash]string{
@@ -102,7 +102,7 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	initRev, err := git.ParseRev(ctx, env.git, "HEAD")
+	initRev, err := env.git.ParseRev(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 	}
 
 	// Verify that HEAD was moved to foo branch.
-	if r, err := git.ParseRev(ctx, env.git, "HEAD"); err != nil {
+	if r, err := env.git.ParseRev(ctx, "HEAD"); err != nil {
 		t.Fatal(err)
 	} else {
 		if r.Commit() != h2 {
@@ -197,7 +197,7 @@ func TestUpdate_ToCommit(t *testing.T) {
 	}
 
 	// Verify that HEAD is the first commit.
-	if r, err := git.ParseRev(ctx, env.git, "HEAD"); err != nil {
+	if r, err := env.git.ParseRev(ctx, "HEAD"); err != nil {
 		t.Fatal(err)
 	} else {
 		if r.Commit() != h1 {

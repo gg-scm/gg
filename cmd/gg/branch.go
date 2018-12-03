@@ -86,13 +86,13 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		if *rev != "" {
 			target = *rev
 		}
-		r, err := git.ParseRev(ctx, cc.git, target)
+		r, err := cc.git.ParseRev(ctx, target)
 		if err != nil {
 			return err
 		}
 		var upstream string
 		if b := r.Ref().Branch(); b != "" {
-			cfg, err := git.ReadConfig(ctx, cc.git)
+			cfg, err := cc.git.ReadConfig(ctx)
 			if err != nil {
 				return err
 			}
@@ -117,7 +117,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 				// since branch would fail otherwise. We need to check for
 				// existence because we don't want to clobber upstream.
 				// TODO(someday): write test that exercises this.
-				_, err := git.ParseRev(ctx, cc.git, git.BranchRef(b).String())
+				_, err := cc.git.ParseRev(ctx, git.BranchRef(b).String())
 				exists = err == nil
 			}
 			branchArgs[len(branchArgs)-2] = b

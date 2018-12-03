@@ -28,8 +28,8 @@ type Config struct {
 	next  [][]byte
 }
 
-// ReadConfig reads all the configuration settings from git.
-func ReadConfig(ctx context.Context, g *Git) (*Config, error) {
+// ReadConfig reads all the configuration settings from Git.
+func (g *Git) ReadConfig(ctx context.Context) (*Config, error) {
 	p, err := g.Start(ctx, "config", "-z", "--list")
 	if err != nil {
 		return nil, fmt.Errorf("read git config: %v", err)

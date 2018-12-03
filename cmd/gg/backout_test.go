@@ -59,7 +59,7 @@ func TestBackout(t *testing.T) {
 	} else if want := "Hello, World!\n"; got != want {
 		t.Errorf("After backout, content = %q; want %q", got, want)
 	}
-	curr, err := git.ParseRev(ctx, env.git, "HEAD")
+	curr, err := env.git.ParseRev(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestBackout(t *testing.T) {
 		t.Errorf("After backout, HEAD = %s; want new commit", prettyCommit(got, names))
 	}
 
-	parent, err := git.ParseRev(ctx, env.git, "HEAD~")
+	parent, err := env.git.ParseRev(ctx, "HEAD~")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func TestBackout_NoCommit(t *testing.T) {
 	} else if want := "Hello, World!\n"; got != want {
 		t.Errorf("After backout, content = %q; want %q", got, want)
 	}
-	curr, err := git.ParseRev(ctx, env.git, "HEAD")
+	curr, err := env.git.ParseRev(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}

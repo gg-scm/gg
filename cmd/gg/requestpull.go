@@ -81,7 +81,7 @@ aliases: pr
 	if *bodyFlag != "" && *titleFlag == "" {
 		return usagef("cannot specify --body without specifying --title")
 	}
-	cfg, err := git.ReadConfig(ctx, cc.git)
+	cfg, err := cc.git.ReadConfig(ctx)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ aliases: pr
 			return errors.New("no branch currently checked out")
 		}
 	} else {
-		rev, err := git.ParseRev(ctx, cc.git, branchArg)
+		rev, err := cc.git.ParseRev(ctx, branchArg)
 		if err != nil {
 			return err
 		}

@@ -210,7 +210,7 @@ func TestConfigColorBool(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		cfg, err := ReadConfig(ctx, env.g)
+		cfg, err := env.g.ReadConfig(ctx)
 		if err != nil {
 			t.Errorf("For %q: %v", test.config, err)
 			continue

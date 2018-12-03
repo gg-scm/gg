@@ -138,7 +138,7 @@ func TestParseRev(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		rev, err := ParseRev(ctx, g, test.refspec)
+		rev, err := g.ParseRev(ctx, test.refspec)
 		if err != nil {
 			if !test.err {
 				t.Errorf("ParseRev(ctx, g, %q) error: %v", test.refspec, err)

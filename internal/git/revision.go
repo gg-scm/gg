@@ -27,7 +27,7 @@ type Rev struct {
 }
 
 // ParseRev parses a revision.
-func ParseRev(ctx context.Context, g *Git, refspec string) (*Rev, error) {
+func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 	if strings.HasPrefix(refspec, "-") {
 		return nil, fmt.Errorf("parse revision %q: cannot start with '-'", refspec)
 	}

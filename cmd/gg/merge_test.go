@@ -33,7 +33,7 @@ func TestMerge(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	baseRev, err := git.ParseRev(ctx, env.git, "HEAD")
+	baseRev, err := env.git.ParseRev(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestMerge(t *testing.T) {
 	}
 
 	// Verify that HEAD is still the upstream commit. gg should not create a new commit.
-	curr, err := git.ParseRev(ctx, env.git, "HEAD")
+	curr, err := env.git.ParseRev(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestMerge(t *testing.T) {
 	}
 
 	// Verify that the to-be-merged commit is the feature branch.
-	mergeHead, err := git.ParseRev(ctx, env.git, "MERGE_HEAD")
+	mergeHead, err := env.git.ParseRev(ctx, "MERGE_HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestMerge_Conflict(t *testing.T) {
 	}
 
 	// Verify that HEAD is still the upstream commit. gg should not create a new commit.
-	curr, err := git.ParseRev(ctx, env.git, "HEAD")
+	curr, err := env.git.ParseRev(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,7 +192,7 @@ func TestMerge_Conflict(t *testing.T) {
 	}
 
 	// Verify that the to-be-merged commit is the feature branch.
-	mergeHead, err := git.ParseRev(ctx, env.git, "MERGE_HEAD")
+	mergeHead, err := env.git.ParseRev(ctx, "MERGE_HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}

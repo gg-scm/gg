@@ -51,7 +51,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	if f.NArg() > 1 {
 		return usagef("can't pass multiple sources")
 	}
-	cfg, err := git.ReadConfig(ctx, cc.git)
+	cfg, err := cc.git.ReadConfig(ctx)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 }
 
 func currentBranch(ctx context.Context, cc *cmdContext) string {
-	r, err := git.ParseRev(ctx, cc.git, git.Head.String())
+	r, err := cc.git.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		return ""
 	}

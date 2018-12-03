@@ -125,7 +125,7 @@ func TestConfigValue(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		cfg, err := ReadConfig(ctx, env.g)
+		cfg, err := env.g.ReadConfig(ctx)
 		if err != nil {
 			t.Errorf("For %q: %v", test.config, err)
 			continue
@@ -185,7 +185,7 @@ func TestConfigBool(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		cfg, err := ReadConfig(ctx, env.g)
+		cfg, err := env.g.ReadConfig(ctx)
 		if err != nil {
 			t.Errorf("For %q: %v", test.config, err)
 			continue
@@ -252,7 +252,7 @@ func BenchmarkReadConfig(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		ReadConfig(ctx, env.g)
+		env.g.ReadConfig(ctx)
 	}
 }
 

@@ -39,7 +39,7 @@ func TestPush(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
+	rev1, err := gitA.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestPush(t *testing.T) {
 
 	// Verify that repo B has the new commit.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		names := map[git.Hash]string{
@@ -103,7 +103,7 @@ func TestPush_Arg(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
+	rev1, err := gitA.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func TestPush_Arg(t *testing.T) {
 		commit2: "local commit",
 	}
 	gitC := env.git.WithDir(repoCPath)
-	if r, err := git.ParseRev(ctx, gitC, "refs/heads/master"); err != nil {
+	if r, err := gitC.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("named remote refs/heads/master = %s; want %s",
@@ -161,7 +161,7 @@ func TestPush_Arg(t *testing.T) {
 
 	// Verify that repo B's master branch has stayed the same.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("origin refs/heads/master = %s; want %s",
@@ -185,7 +185,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
+	rev1, err := gitA.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +229,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 		commit2: "local commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("refs/heads/master = %s; want %s",
@@ -238,7 +238,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 	}
 
 	// Verify that repo B did not gain a foo branch.
-	if r, err := git.ParseRev(ctx, gitB, "foo"); err == nil {
+	if r, err := gitB.ParseRev(ctx, "foo"); err == nil {
 		if ref := r.Ref(); ref != "" {
 			t.Logf("foo resolved to %s", ref)
 		}
@@ -261,7 +261,7 @@ func TestPush_CreateRef(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
+	rev1, err := gitA.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -302,7 +302,7 @@ func TestPush_CreateRef(t *testing.T) {
 		commit2: "local commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := git.ParseRev(ctx, gitB, "refs/heads/foo"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/foo"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("refs/heads/foo = %s; want %s",
@@ -311,7 +311,7 @@ func TestPush_CreateRef(t *testing.T) {
 	}
 
 	// Verify that repo B's master branch has not changed.
-	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("refs/heads/master = %s; want %s",
@@ -335,7 +335,7 @@ func TestPush_RewindFails(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
+	rev1, err := gitA.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -384,7 +384,7 @@ func TestPush_RewindFails(t *testing.T) {
 		commit2: "local commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("refs/heads/master = %s; want %s",
@@ -408,7 +408,7 @@ func TestPush_RewindForce(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
+	rev1, err := gitA.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -455,7 +455,7 @@ func TestPush_RewindForce(t *testing.T) {
 		commit2: "local commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("refs/heads/master = %s; want %s",
@@ -479,7 +479,7 @@ func TestPush_AncestorInferDst(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
+	rev1, err := gitA.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -522,7 +522,7 @@ func TestPush_AncestorInferDst(t *testing.T) {
 
 	// Verify that repo B's master has moved to the first new commit.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		commitNames := map[git.Hash]string{
@@ -551,7 +551,7 @@ func TestPush_DistinctPushURL(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
+	rev1, err := gitA.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -601,7 +601,7 @@ func TestPush_DistinctPushURL(t *testing.T) {
 		commit2: "local commit",
 	}
 	gitC := env.git.WithDir(repoCPath)
-	if r, err := git.ParseRev(ctx, gitC, "master"); err != nil {
+	if r, err := gitC.ParseRev(ctx, "master"); err != nil {
 		t.Error("In push repo:", err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("master in push repo = %s; want %s",
@@ -611,7 +611,7 @@ func TestPush_DistinctPushURL(t *testing.T) {
 
 	// Verify that repo B's master branch has not changed.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := git.ParseRev(ctx, gitB, "master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "master"); err != nil {
 		t.Error("In fetch repo:", err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("master in fetch repo = %s; want %s",
@@ -639,7 +639,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
+	rev1, err := gitA.ParseRev(ctx, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -696,7 +696,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 		rev1.Commit(): "shared commit",
 		commit2:       "local commit",
 	}
-	if r, err := git.ParseRev(ctx, gitC, "newbranch"); err != nil {
+	if r, err := gitC.ParseRev(ctx, "newbranch"); err != nil {
 		t.Error("In push repo:", err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("newbranch in push repo = %s; want %s",
@@ -706,7 +706,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 
 	// Verify that repo B's branch "newbranch" was not created.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := git.ParseRev(ctx, gitB, "newbranch"); err == nil {
+	if r, err := gitB.ParseRev(ctx, "newbranch"); err == nil {
 		t.Errorf("newbranch in fetch repo = %s; want to not exist", prettyCommit(r.Commit(), commitNames))
 	}
 }

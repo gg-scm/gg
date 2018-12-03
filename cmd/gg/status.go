@@ -45,7 +45,7 @@ aliases: st, check`)
 		untrackedColor []byte
 		unmergedColor  []byte
 	)
-	cfg, err := git.ReadConfig(ctx, cc.git)
+	cfg, err := cc.git.ReadConfig(ctx)
 	if err != nil {
 		return err
 	}

@@ -70,7 +70,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	if f.NArg() > 1 {
 		return usagef("can't pass multiple destinations")
 	}
-	src, err := git.ParseRev(ctx, cc.git, *rev)
+	src, err := cc.git.ParseRev(ctx, *rev)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	dstRepo := f.Arg(0)
 	if dstRepo == "" {
-		cfg, err := git.ReadConfig(ctx, cc.git)
+		cfg, err := cc.git.ReadConfig(ctx)
 		if err != nil {
 			return err
 		}
@@ -157,7 +157,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	if gopts.notify != "" && gopts.notify != "NONE" && gopts.notify != "OWNER" && gopts.notify != "OWNER_REVIEWERS" && gopts.notify != "ALL" {
 		return usagef(`--notify must be one of "none", "owner", "owner_reviewers", or "all"`)
 	}
-	src, err := git.ParseRev(ctx, cc.git, *rev)
+	src, err := cc.git.ParseRev(ctx, *rev)
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	var cfg *git.Config
 	if dstRepo == "" || *dstBranch == "" {
 		var err error
-		cfg, err = git.ReadConfig(ctx, cc.git)
+		cfg, err = cc.git.ReadConfig(ctx)
 		if err != nil {
 			return err
 		}

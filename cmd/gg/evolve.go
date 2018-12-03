@@ -49,13 +49,13 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 	var dstRev *git.Rev
 	if *dst == "" {
 		var err error
-		dstRev, err = git.ParseRev(ctx, cc.git, "@{upstream}")
+		dstRev, err = cc.git.ParseRev(ctx, "@{upstream}")
 		if err != nil {
 			return fmt.Errorf("no upstream found: %v", err)
 		}
 	} else {
 		var err error
-		dstRev, err = git.ParseRev(ctx, cc.git, *dst)
+		dstRev, err = cc.git.ParseRev(ctx, *dst)
 		if err != nil {
 			return err
 		}

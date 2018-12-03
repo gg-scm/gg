@@ -38,7 +38,7 @@ func cat(ctx context.Context, cc *cmdContext, args []string) error {
 	if f.NArg() == 0 {
 		return usagef("must pass one or more files to cat")
 	}
-	rev, err := git.ParseRev(ctx, cc.git, *r)
+	rev, err := cc.git.ParseRev(ctx, *r)
 	if err != nil {
 		return err
 	}

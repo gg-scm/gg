@@ -36,7 +36,7 @@ func TestPull(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
-	rev1, err := git.ParseRev(ctx, gitA, "HEAD")
+	rev1, err := gitA.ParseRev(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestPull(t *testing.T) {
 		commit2: "remote commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := git.ParseRev(ctx, gitB, "HEAD"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != commit1 {
@@ -86,7 +86,7 @@ func TestPull(t *testing.T) {
 	}
 
 	// Verify that the remote tracking branch has moved to the new commit.
-	if r, err := git.ParseRev(ctx, gitB, "origin/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "origin/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("origin/master = %s; want %s",
@@ -95,7 +95,7 @@ func TestPull(t *testing.T) {
 	}
 
 	// Verify that the tag was mirrored in repository B.
-	if r, err := git.ParseRev(ctx, gitB, "first"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "first"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("origin/master = %s; want %s",
@@ -119,7 +119,7 @@ func TestPullWithArgument(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := git.ParseRev(ctx, gitA, "HEAD")
+	rev1, err := gitA.ParseRev(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +168,7 @@ func TestPullWithArgument(t *testing.T) {
 		commit2: "remote commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := git.ParseRev(ctx, gitB, "HEAD"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != commit1 {
@@ -182,7 +182,7 @@ func TestPullWithArgument(t *testing.T) {
 	}
 
 	// Verify that FETCH_HEAD has set to the second commit.
-	if r, err := git.ParseRev(ctx, gitB, "FETCH_HEAD"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "FETCH_HEAD"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("FETCH_HEAD = %s; want %s",
@@ -191,7 +191,7 @@ func TestPullWithArgument(t *testing.T) {
 	}
 
 	// Verify that the tag was mirrored in repository B.
-	if r, err := git.ParseRev(ctx, gitB, "first"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "first"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("origin/master = %s; want %s",
@@ -214,7 +214,7 @@ func TestPullUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
-	rev1, err := git.ParseRev(ctx, gitA, "HEAD")
+	rev1, err := gitA.ParseRev(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +247,7 @@ func TestPullUpdate(t *testing.T) {
 		commit2: "remote commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := git.ParseRev(ctx, gitB, "HEAD"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != commit2 {
@@ -261,7 +261,7 @@ func TestPullUpdate(t *testing.T) {
 	}
 
 	// Verify that the remote tracking branch has moved to the new commit.
-	if r, err := git.ParseRev(ctx, gitB, "origin/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "origin/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("origin/master = %s; want %s",
@@ -299,7 +299,7 @@ func TestInferUpstream(t *testing.T) {
 				continue
 			}
 		}
-		cfg, err := git.ReadConfig(ctx, env.git)
+		cfg, err := env.git.ReadConfig(ctx)
 		if test.merge != "" {
 			// Cleanup
 			if err := env.git.Run(ctx, "config", "--local", "--unset", "branch."+test.localBranch+".merge"); err != nil {

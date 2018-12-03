@@ -88,7 +88,7 @@ func diff(ctx context.Context, cc *cmdContext, args []string) error {
 	case rev.r1 != "" && *change != "":
 		return usagef("can't pass both -r and -c")
 	default:
-		if rev, err := git.ParseRev(ctx, cc.git, git.Head.String()); err == nil {
+		if rev, err := cc.git.ParseRev(ctx, git.Head.String()); err == nil {
 			diffArgs = append(diffArgs, rev.Commit().String())
 		} else {
 			// HEAD not found; repository has not been initialized.

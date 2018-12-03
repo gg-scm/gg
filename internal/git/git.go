@@ -33,7 +33,9 @@ import (
 	"gg-scm.io/pkg/internal/sigterm"
 )
 
-// Git is an installed copy of Git.
+// Git is a context for performing Git version control operations.
+// Broadly, it consists of a path to an installed copy of Git and a
+// working directory path.
 type Git struct {
 	exe string
 	dir string
@@ -67,7 +69,7 @@ type Options struct {
 	Stdout io.Writer
 }
 
-// New creates a new instance of the API.
+// New creates a new Git context.
 func New(path string, wd string, opts *Options) (*Git, error) {
 	if !filepath.IsAbs(path) {
 		return nil, fmt.Errorf("path to git must be absolute (got %q)", path)
@@ -306,7 +308,7 @@ func (g *Git) Start(ctx context.Context, args ...string) (*Process, error) {
 
 // GitDir determines the absolute path of the ".git" directory given the
 // tool's configuration, resolving any symlinks.
-func GitDir(ctx context.Context, g *Git) (string, error) {
+func (g *Git) GitDir(ctx context.Context) (string, error) {
 	line, err := g.RunOneLiner(ctx, '\n', "rev-parse", "--absolute-git-dir")
 	if err != nil {
 		return "", err
@@ -316,7 +318,7 @@ func GitDir(ctx context.Context, g *Git) (string, error) {
 
 // WorkTree determines the absolute path of the root of the working
 // tree given the tool's configuration, resolving any symlinks.
-func WorkTree(ctx context.Context, g *Git) (string, error) {
+func (g *Git) WorkTree(ctx context.Context) (string, error) {
 	line, err := g.RunOneLiner(ctx, '\n', "rev-parse", "--show-toplevel")
 	if err != nil {
 		return "", err

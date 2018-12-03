@@ -45,7 +45,7 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("cannot set multiple upstreams")
 	}
 	if *branch == "" {
-		rev, err := git.ParseRev(ctx, cc.git, git.Head.String())
+		rev, err := cc.git.ParseRev(ctx, git.Head.String())
 		if err != nil {
 			return err
 		}
@@ -55,7 +55,7 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	if f.Arg(0) == "" {
-		rev, err := git.ParseRev(ctx, cc.git, *branch+"@{upstream}")
+		rev, err := cc.git.ParseRev(ctx, *branch+"@{upstream}")
 		if err != nil {
 			return err
 		}

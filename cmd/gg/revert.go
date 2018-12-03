@@ -49,7 +49,7 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("no arguments given.  Use -all to revert entire repository.")
 	}
 
-	revObj, err := git.ParseRev(ctx, cc.git, *rev)
+	revObj, err := cc.git.ParseRev(ctx, *rev)
 	if err != nil {
 		if *rev == git.Head.String() {
 			// If HEAD fails to parse (empty repo), then just use reset.

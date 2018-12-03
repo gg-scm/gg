@@ -44,13 +44,13 @@ func backout(ctx context.Context, cc *cmdContext, args []string) error {
 	switch {
 	case f.NArg() == 0 && *rev != "":
 		var err error
-		r, err = git.ParseRev(ctx, cc.git, *rev)
+		r, err = cc.git.ParseRev(ctx, *rev)
 		if err != nil {
 			return err
 		}
 	case f.NArg() == 1 && *rev == "":
 		var err error
-		r, err = git.ParseRev(ctx, cc.git, f.Arg(0))
+		r, err = cc.git.ParseRev(ctx, f.Arg(0))
 		if err != nil {
 			return err
 		}
