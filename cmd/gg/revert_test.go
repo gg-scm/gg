@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestRevert(t *testing.T) {
@@ -123,7 +123,7 @@ func TestRevert(t *testing.T) {
 			}
 
 			// Verify that working copy is clean (sans backup files).
-			st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+			st, err := git.Status(ctx, env.git, git.StatusOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -196,7 +196,7 @@ func TestRevert_AddedFile(t *testing.T) {
 				t.Error("foo.txt.orig was created")
 			}
 			// Verify that foo.txt is untracked.
-			st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+			st, err := git.Status(ctx, env.git, git.StatusOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -263,7 +263,7 @@ func TestRevert_AddedFileBeforeFirstCommit(t *testing.T) {
 		t.Error("foo.txt.orig was created")
 	}
 	// Verify that foo.txt is untracked.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -345,7 +345,7 @@ func TestRevert_All(t *testing.T) {
 		t.Errorf("unstaged modified file content = %q after revert; want %q", got, want)
 	}
 	// Verify that working copy is clean (sans backup files).
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -412,7 +412,7 @@ func TestRevert_Rev(t *testing.T) {
 		t.Error("foo.txt.orig was created")
 	}
 	// Verify that Git considers foo.txt locally modified.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -484,7 +484,7 @@ func TestRevert_Missing(t *testing.T) {
 		t.Errorf("file content = %q after revert; want %q", got, want)
 	}
 	// Verify that the working copy is clean.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -627,7 +627,7 @@ func TestRevert_LocalRename(t *testing.T) {
 				t.Error("renamed.txt.orig was created")
 			}
 			// Verify status renamed.txt matches expectations.
-			st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+			st, err := git.Status(ctx, env.git, git.StatusOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}

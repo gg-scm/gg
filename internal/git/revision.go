@@ -12,54 +12,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gittool
+package git
 
 import (
 	"context"
 	"fmt"
 	"strings"
-
-	"gg-scm.io/pkg/internal/gitobj"
 )
 
 // Rev is a parsed reference to a single commit.
 type Rev struct {
-	commit  gitobj.Hash
-	refname gitobj.Ref
+	commit  Hash
+	refname Ref
 }
 
 // ParseRev parses a revision.
-func ParseRev(ctx context.Context, git *Tool, refspec string) (*Rev, error) {
+func ParseRev(ctx context.Context, g *Git, refspec string) (*Rev, error) {
 	if strings.HasPrefix(refspec, "-") {
 		return nil, fmt.Errorf("parse revision %q: cannot start with '-'", refspec)
 	}
 
-	commitHex, err := git.RunOneLiner(ctx, '\n', "rev-parse", "-q", "--verify", "--revs-only", refspec)
+	commitHex, err := g.RunOneLiner(ctx, '\n', "rev-parse", "-q", "--verify", "--revs-only", refspec)
 	if err != nil {
 		return nil, fmt.Errorf("parse revision %q: %v", refspec, err)
 	}
-	h, err := gitobj.ParseHash(string(commitHex))
+	h, err := ParseHash(string(commitHex))
 	if err != nil {
 		return nil, fmt.Errorf("parse revision %q: %v", refspec, err)
 	}
 
-	refname, err := git.RunOneLiner(ctx, '\n', "rev-parse", "-q", "--verify", "--revs-only", "--symbolic-full-name", refspec)
+	refname, err := g.RunOneLiner(ctx, '\n', "rev-parse", "-q", "--verify", "--revs-only", "--symbolic-full-name", refspec)
 	if err != nil {
 		return nil, fmt.Errorf("parse revision %q: %v", refspec, err)
 	}
 	return &Rev{
 		commit:  h,
-		refname: gitobj.Ref(refname),
+		refname: Ref(refname),
 	}, nil
 }
 
 // Commit returns the commit hash.
-func (r *Rev) Commit() gitobj.Hash {
+func (r *Rev) Commit() Hash {
 	return r.commit
 }
 
 // Ref returns the full refname or empty if r is not a symbolic revision.
-func (r *Rev) Ref() gitobj.Ref {
+func (r *Rev) Ref() Ref {
 	return r.refname
 }
 

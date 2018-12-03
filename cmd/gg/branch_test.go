@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestBranch(t *testing.T) {
@@ -33,7 +33,7 @@ func TestBranch(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	first, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	first, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestBranch(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "branch", "foo", "bar"); err != nil {
 		t.Fatal(err)
 	}
-	if r, err := gittool.ParseRev(ctx, env.git, "HEAD"); err != nil {
+	if r, err := git.ParseRev(ctx, env.git, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != first.Commit() {
@@ -51,7 +51,7 @@ func TestBranch(t *testing.T) {
 			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref())
 		}
 	}
-	if r, err := gittool.ParseRev(ctx, env.git, "bar"); err != nil {
+	if r, err := git.ParseRev(ctx, env.git, "bar"); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != first.Commit() {
@@ -76,7 +76,7 @@ func TestBranch_Upstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	git1 := env.git.WithDir(env.root.FromSlash("repo1"))
-	first, err := gittool.ParseRev(ctx, git1, "HEAD")
+	first, err := git.ParseRev(ctx, git1, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestBranch_Upstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	git2 := env.git.WithDir(repoPath2)
-	if r, err := gittool.ParseRev(ctx, git2, "HEAD"); err != nil {
+	if r, err := git.ParseRev(ctx, git2, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != first.Commit() {
@@ -99,7 +99,7 @@ func TestBranch_Upstream(t *testing.T) {
 			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref())
 		}
 	}
-	cfg, err := gittool.ReadConfig(ctx, git2)
+	cfg, err := git.ReadConfig(ctx, git2)
 	if err != nil {
 		t.Fatal(err)
 	}

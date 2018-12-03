@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestLog(t *testing.T) {
@@ -44,7 +44,7 @@ func TestLog(t *testing.T) {
 	if err := env.git.Run(ctx, "commit", "-m", wantMsg); err != nil {
 		t.Fatal(err)
 	}
-	rev, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	rev, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}

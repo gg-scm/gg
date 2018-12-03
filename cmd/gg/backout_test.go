@@ -19,8 +19,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestBackout(t *testing.T) {
@@ -60,11 +59,11 @@ func TestBackout(t *testing.T) {
 	} else if want := "Hello, World!\n"; got != want {
 		t.Errorf("After backout, content = %q; want %q", got, want)
 	}
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	curr, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := map[gitobj.Hash]string{
+	names := map[git.Hash]string{
 		c1: "commit 1",
 		c2: "commit 2",
 	}
@@ -72,7 +71,7 @@ func TestBackout(t *testing.T) {
 		t.Errorf("After backout, HEAD = %s; want new commit", prettyCommit(got, names))
 	}
 
-	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~")
+	parent, err := git.ParseRev(ctx, env.git, "HEAD~")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,11 +117,11 @@ func TestBackout_NoCommit(t *testing.T) {
 	} else if want := "Hello, World!\n"; got != want {
 		t.Errorf("After backout, content = %q; want %q", got, want)
 	}
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	curr, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := map[gitobj.Hash]string{
+	names := map[git.Hash]string{
 		c1: "commit 1",
 		c2: "commit 2",
 	}

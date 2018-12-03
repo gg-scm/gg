@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gittool provides a high-level interface for interacting with
-// a git subprocess.
-package gittool // import "gg-scm.io/pkg/internal/gittool"
+// Package git provides a high-level interface for interacting with
+// a Git subprocess.
+package git // import "gg-scm.io/pkg/internal/git"
 
 import (
 	"bufio"
@@ -33,8 +33,8 @@ import (
 	"gg-scm.io/pkg/internal/sigterm"
 )
 
-// Tool is an installed copy of git.
-type Tool struct {
+// Git is an installed copy of Git.
+type Git struct {
 	exe string
 	dir string
 
@@ -51,24 +51,24 @@ type Tool struct {
 
 // Options specifies optional parameters to New.
 type Options struct {
-	// LogHook is a function that will be called at the start of every git
+	// LogHook is a function that will be called at the start of every Git
 	// subprocess.
 	LogHook func(ctx context.Context, args []string)
 
 	// Env specifies the environment of the subprocess.
 	Env []string
 
-	// Stderr will receive the stderr from the git subprocess.
+	// Stderr will receive the stderr from the Git subprocess.
 	Stderr io.Writer
 
-	// Stdin and Stdout are hooked up to the git subprocess during
+	// Stdin and Stdout are hooked up to the Git subprocess during
 	// RunInteractive.
 	Stdin  io.Reader
 	Stdout io.Writer
 }
 
-// New creates a new tool.
-func New(path string, wd string, opts *Options) (*Tool, error) {
+// New creates a new instance of the API.
+func New(path string, wd string, opts *Options) (*Git, error) {
 	if !filepath.IsAbs(path) {
 		return nil, fmt.Errorf("path to git must be absolute (got %q)", path)
 	}
@@ -91,116 +91,116 @@ func New(path string, wd string, opts *Options) (*Tool, error) {
 		return nil, fmt.Errorf("init git: resolve working directory: %v", err)
 	}
 
-	t := &Tool{
+	g := &Git{
 		exe: path,
 		dir: wd,
 	}
 	if opts != nil {
-		t.log = opts.LogHook
-		t.env = append([]string(nil), opts.Env...)
-		t.stdin = opts.Stdin
-		t.stdout = opts.Stdout
-		t.stderr = opts.Stderr
+		g.log = opts.LogHook
+		g.env = append([]string(nil), opts.Env...)
+		g.stdin = opts.Stdin
+		g.stdout = opts.Stdout
+		g.stderr = opts.Stderr
 	} else {
-		t.env = []string{}
+		g.env = []string{}
 	}
-	return t, nil
+	return g, nil
 }
 
 // Command creates a new *exec.Cmd that will invoke Git with the given
 // arguments. The returned command does not obey the given Context's deadline
 // or cancelation.
-func (t *Tool) Command(ctx context.Context, args ...string) *exec.Cmd {
-	if t.log != nil {
-		t.log(ctx, args)
+func (g *Git) Command(ctx context.Context, args ...string) *exec.Cmd {
+	if g.log != nil {
+		g.log(ctx, args)
 	}
-	c := exec.Command(t.exe, args...)
-	c.Env = t.env
-	c.Dir = t.dir
+	c := exec.Command(g.exe, args...)
+	c.Env = g.env
+	c.Dir = g.dir
 	return c
 }
 
-func (t *Tool) cmd(ctx context.Context, args []string) *exec.Cmd {
-	c := t.Command(ctx, args...)
-	c.Stderr = t.stderr
+func (g *Git) cmd(ctx context.Context, args []string) *exec.Cmd {
+	c := g.Command(ctx, args...)
+	c.Stderr = g.stderr
 	return c
 }
 
-func (t *Tool) getVersion(ctx context.Context) (string, error) {
-	t.versionMu.Lock()
-	for t.versionCond != nil {
-		c := t.versionCond
-		t.versionMu.Unlock()
+func (g *Git) getVersion(ctx context.Context) (string, error) {
+	g.versionMu.Lock()
+	for g.versionCond != nil {
+		c := g.versionCond
+		g.versionMu.Unlock()
 		select {
 		case <-c:
-			t.versionMu.Lock()
+			g.versionMu.Lock()
 		case <-ctx.Done():
 			return "", wrapError("git --version", ctx.Err())
 		}
 	}
-	if t.version != "" {
+	if g.version != "" {
 		// Cached version string available.
-		v := t.version
-		t.versionMu.Unlock()
+		v := g.version
+		g.versionMu.Unlock()
 		return v, nil
 	}
-	t.versionCond = make(chan struct{})
-	t.versionMu.Unlock()
+	g.versionCond = make(chan struct{})
+	g.versionMu.Unlock()
 
 	// Run git --version.
 	args := []string{"--version"}
-	c := t.cmd(ctx, args)
+	c := g.cmd(ctx, args)
 	sb := new(strings.Builder)
 	c.Stdout = &limitWriter{w: sb, n: 4096}
 	if err := sigterm.Run(ctx, c); err != nil {
-		t.versionMu.Lock()
-		close(t.versionCond)
-		t.versionCond = nil
-		t.versionMu.Unlock()
+		g.versionMu.Lock()
+		close(g.versionCond)
+		g.versionCond = nil
+		g.versionMu.Unlock()
 		return "", wrapError("git --version", err)
 	}
 	v := sb.String()
 
-	t.versionMu.Lock()
-	t.version = v
-	close(t.versionCond)
-	t.versionCond = nil
-	t.versionMu.Unlock()
+	g.versionMu.Lock()
+	g.version = v
+	close(g.versionCond)
+	g.versionCond = nil
+	g.versionMu.Unlock()
 	return v, nil
 }
 
 // Path returns the absolute path to the Git executable.
-func (t *Tool) Path() string {
-	return t.exe
+func (g *Git) Path() string {
+	return g.exe
 }
 
-// WithDir returns a new tool that is changed to use dir as its working directory.
-func (t *Tool) WithDir(dir string) *Tool {
-	t2 := new(Tool)
-	*t2 = *t
-	t2.dir = dir
-	return t2
+// WithDir returns a new instance that is changed to use dir as its working directory.
+func (g *Git) WithDir(dir string) *Git {
+	g2 := new(Git)
+	*g2 = *g
+	g2.dir = dir
+	return g2
 }
 
-// Run starts the specified git subcommand and waits for it to finish.
+// Run starts the specified Git subcommand and waits for it to finish.
 //
 // stderr will be sent to the writer specified in the tool's options.
 // stdin and stdout will be connected to the null device.
-func (t *Tool) Run(ctx context.Context, args ...string) error {
-	if err := sigterm.Run(ctx, t.cmd(ctx, args)); err != nil {
+func (g *Git) Run(ctx context.Context, args ...string) error {
+	if err := sigterm.Run(ctx, g.cmd(ctx, args)); err != nil {
 		return wrapError(errorSubject(args), err)
 	}
 	return nil
 }
 
-// Query starts the specified git subcommand and waits for it to exit
+// Query starts the specified Git subcommand and waits for it to exit
 // with code zero (returns true) or one (returns false).
 //
 // stderr will be buffered, being returned as part of the error if the
 // tool does not exit with zero or one. stdin and stdout will be
 // connected to the null device.
-func (t *Tool) Query(ctx context.Context, args ...string) (bool, error) {
-	c := t.cmd(ctx, args)
+func (g *Git) Query(ctx context.Context, args ...string) (bool, error) {
+	c := g.cmd(ctx, args)
 	stderr := new(bytes.Buffer)
 	c.Stderr = stderr
 	if err := sigterm.Run(ctx, c); err != nil {
@@ -225,20 +225,20 @@ func (t *Tool) Query(ctx context.Context, args ...string) (bool, error) {
 	return true, nil
 }
 
-// RunInteractive starts the specified git subcommand and waits for it
+// RunInteractive starts the specified Git subcommand and waits for it
 // to finish.  All standard streams will be attached to the
 // corresponding streams specified in the tool's options.
-func (t *Tool) RunInteractive(ctx context.Context, args ...string) error {
-	c := t.cmd(ctx, args)
-	c.Stdin = t.stdin
-	c.Stdout = t.stdout
+func (g *Git) RunInteractive(ctx context.Context, args ...string) error {
+	c := g.cmd(ctx, args)
+	c.Stdin = g.stdin
+	c.Stdout = g.stdout
 	if err := sigterm.Run(ctx, c); err != nil {
 		return wrapError(errorSubject(args), err)
 	}
 	return nil
 }
 
-// RunOneLiner starts the specified git subcommand, reads a single
+// RunOneLiner starts the specified Git subcommand, reads a single
 // "line" delimited by the given byte from stdout, and waits for it to
 // finish.
 //
@@ -248,9 +248,9 @@ func (t *Tool) RunInteractive(ctx context.Context, args ...string) error {
 //
 // stderr will be sent to the writer specified in the tool's options.
 // stdin will be connected to the null device.
-func (t *Tool) RunOneLiner(ctx context.Context, delim byte, args ...string) ([]byte, error) {
+func (g *Git) RunOneLiner(ctx context.Context, delim byte, args ...string) ([]byte, error) {
 	const max = 4096
-	p, err := t.Start(ctx, args...)
+	p, err := g.Start(ctx, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -283,12 +283,12 @@ func (t *Tool) RunOneLiner(ctx context.Context, delim byte, args ...string) ([]b
 	return out, waitErr
 }
 
-// Start starts the specified git subcommand and pipes its stdout.
+// Start starts the specified Git subcommand and pipes its stdout.
 //
 // stderr will be sent to the writer specified in the tool's options.
 // stdin will be connected to the null device.
-func (t *Tool) Start(ctx context.Context, args ...string) (*Process, error) {
-	c := t.cmd(ctx, args)
+func (g *Git) Start(ctx context.Context, args ...string) (*Process, error) {
+	c := g.cmd(ctx, args)
 	rc, err := c.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("run %s: %v", errorSubject(args), err)
@@ -306,8 +306,8 @@ func (t *Tool) Start(ctx context.Context, args ...string) (*Process, error) {
 
 // GitDir determines the absolute path of the ".git" directory given the
 // tool's configuration, resolving any symlinks.
-func GitDir(ctx context.Context, git *Tool) (string, error) {
-	line, err := git.RunOneLiner(ctx, '\n', "rev-parse", "--absolute-git-dir")
+func GitDir(ctx context.Context, g *Git) (string, error) {
+	line, err := g.RunOneLiner(ctx, '\n', "rev-parse", "--absolute-git-dir")
 	if err != nil {
 		return "", err
 	}
@@ -316,15 +316,15 @@ func GitDir(ctx context.Context, git *Tool) (string, error) {
 
 // WorkTree determines the absolute path of the root of the working
 // tree given the tool's configuration, resolving any symlinks.
-func WorkTree(ctx context.Context, git *Tool) (string, error) {
-	line, err := git.RunOneLiner(ctx, '\n', "rev-parse", "--show-toplevel")
+func WorkTree(ctx context.Context, g *Git) (string, error) {
+	line, err := g.RunOneLiner(ctx, '\n', "rev-parse", "--show-toplevel")
 	if err != nil {
 		return "", err
 	}
 	return filepath.EvalSymlinks(string(line))
 }
 
-// Process is a running git subprocess that can be read from.
+// Process is a running Git subprocess that can be read from.
 type Process struct {
 	wait    func() error
 	pipe    io.ReadCloser
@@ -336,7 +336,7 @@ func (p *Process) Read(b []byte) (int, error) {
 	return p.pipe.Read(b)
 }
 
-// Wait waits for the git subprocess to exit and consumes any remaining
+// Wait waits for the Git subprocess to exit and consumes any remaining
 // data from the subprocess's stdout.
 func (p *Process) Wait() error {
 	io.Copy(ioutil.Discard, p.pipe)
@@ -364,7 +364,7 @@ func wrapError(subject string, e error) error {
 }
 
 // IsExitError reports whether e indicates an unsuccessful exit by a
-// git command.
+// Git command.
 func IsExitError(e error) bool {
 	_, ok := e.(*exitError)
 	return ok

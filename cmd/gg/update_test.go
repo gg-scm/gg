@@ -19,8 +19,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestUpdate_NoArgsFastForward(t *testing.T) {
@@ -70,10 +69,10 @@ func TestUpdate_NoArgsFastForward(t *testing.T) {
 	}
 
 	// Verify that HEAD moved to the second commit.
-	if r, err := gittool.ParseRev(ctx, env.git, "HEAD"); err != nil {
+	if r, err := git.ParseRev(ctx, env.git, "HEAD"); err != nil {
 		t.Fatal(err)
 	} else if r.Commit() != h2 {
-		names := map[gitobj.Hash]string{
+		names := map[git.Hash]string{
 			h1: "first commit",
 			h2: "second commit",
 		}
@@ -103,7 +102,7 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	initRev, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	initRev, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,11 +134,11 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 	}
 
 	// Verify that HEAD was moved to foo branch.
-	if r, err := gittool.ParseRev(ctx, env.git, "HEAD"); err != nil {
+	if r, err := git.ParseRev(ctx, env.git, "HEAD"); err != nil {
 		t.Fatal(err)
 	} else {
 		if r.Commit() != h2 {
-			names := map[gitobj.Hash]string{
+			names := map[git.Hash]string{
 				initRev.Commit(): "first commit",
 				h2:               "second commit",
 			}
@@ -147,7 +146,7 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 				prettyCommit(r.Commit(), names),
 				prettyCommit(h2, names))
 		}
-		if got, want := r.Ref(), gitobj.BranchRef("foo"); got != want {
+		if got, want := r.Ref(), git.BranchRef("foo"); got != want {
 			t.Errorf("after update foo, HEAD ref = %s; want %s", got, want)
 		}
 	}
@@ -198,11 +197,11 @@ func TestUpdate_ToCommit(t *testing.T) {
 	}
 
 	// Verify that HEAD is the first commit.
-	if r, err := gittool.ParseRev(ctx, env.git, "HEAD"); err != nil {
+	if r, err := git.ParseRev(ctx, env.git, "HEAD"); err != nil {
 		t.Fatal(err)
 	} else {
 		if r.Commit() != h1 {
-			names := map[gitobj.Hash]string{
+			names := map[git.Hash]string{
 				h1: "first commit",
 				h2: "second commit",
 			}
@@ -210,8 +209,8 @@ func TestUpdate_ToCommit(t *testing.T) {
 				prettyCommit(r.Commit(), names),
 				prettyCommit(h1, names))
 		}
-		if got := r.Ref(); got != gitobj.Head {
-			t.Errorf("after update master, HEAD ref = %s; want %s", got, gitobj.Head)
+		if got := r.Ref(); got != git.Head {
+			t.Errorf("after update master, HEAD ref = %s; want %s", got, git.Head)
 		}
 	}
 

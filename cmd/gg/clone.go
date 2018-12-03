@@ -22,15 +22,14 @@ import (
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 const cloneSynopsis = "make a copy of an existing repository"
 
 func clone(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg clone [-b BRANCH] SOURCE [DEST]", cloneSynopsis)
-	branch := f.String("b", gitobj.Head.String(), "`branch` to check out")
+	branch := f.String("b", git.Head.String(), "`branch` to check out")
 	f.Alias("b", "branch")
 	gerrit := f.Bool("gerrit", false, "install Gerrit hook")
 	gerritHookURL := f.String("gerrit-hook-url", commitMsgHookDefaultURL, "URL of hook script to download")
@@ -50,7 +49,7 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 	if dst == "" {
 		dst = defaultCloneDest(src)
 	}
-	if *branch == gitobj.Head.String() {
+	if *branch == git.Head.String() {
 		if err := cc.git.RunInteractive(ctx, "clone", "--", src, dst); err != nil {
 			return err
 		}
@@ -78,7 +77,7 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 			continue
 		}
 		name := string(r.name[len(originPrefix):])
-		if name == gitobj.Head.String() {
+		if name == git.Head.String() {
 			continue
 		}
 		if _, hasLocal := branches[string(name)]; !hasLocal {
@@ -98,12 +97,12 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 type refList []refListEntry
 
 type refListEntry struct {
-	name   gitobj.Ref
-	commit gitobj.Hash
+	name   git.Ref
+	commit git.Hash
 }
 
-func listRefs(ctx context.Context, git *gittool.Tool) (refList, error) {
-	p, err := git.Start(ctx, "show-ref")
+func listRefs(ctx context.Context, g *git.Git) (refList, error) {
+	p, err := g.Start(ctx, "show-ref")
 	if err != nil {
 		return nil, err
 	}
@@ -121,12 +120,12 @@ func listRefs(ctx context.Context, git *gittool.Tool) (refList, error) {
 		if spaceLoc >= len(line) || line[spaceLoc] != ' ' {
 			return refs, errors.New("parse git show-ref: line must start with commit hash")
 		}
-		h, err := gitobj.ParseHash(string(line[:spaceLoc]))
+		h, err := git.ParseHash(string(line[:spaceLoc]))
 		if err != nil {
 			return refs, fmt.Errorf("parse git show-ref: %v", err)
 		}
 		refs = append(refs, refListEntry{
-			name:   gitobj.Ref(line[spaceLoc+1:]),
+			name:   git.Ref(line[spaceLoc+1:]),
 			commit: h,
 		})
 	}

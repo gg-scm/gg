@@ -29,7 +29,7 @@ import (
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 const requestPullSynopsis = "create a GitHub pull request"
@@ -81,7 +81,7 @@ aliases: pr
 	if *bodyFlag != "" && *titleFlag == "" {
 		return usagef("cannot specify --body without specifying --title")
 	}
-	cfg, err := gittool.ReadConfig(ctx, cc.git)
+	cfg, err := git.ReadConfig(ctx, cc.git)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ aliases: pr
 			return errors.New("no branch currently checked out")
 		}
 	} else {
-		rev, err := gittool.ParseRev(ctx, cc.git, branchArg)
+		rev, err := git.ParseRev(ctx, cc.git, branchArg)
 		if err != nil {
 			return err
 		}
@@ -194,14 +194,14 @@ aliases: pr
 		}
 	}
 	prNum, prURL, err := createPullRequest(ctx, cc.httpClient, pullRequestParams{
-		authToken:  string(token),
-		baseOwner:  baseOwner,
-		baseRepo:   baseRepo,
-		baseBranch: baseBranch,
-		headOwner:  headOwner,
-		headBranch: branch,
-		title:      title,
-		body:       body,
+		authToken:              string(token),
+		baseOwner:              baseOwner,
+		baseRepo:               baseRepo,
+		baseBranch:             baseBranch,
+		headOwner:              headOwner,
+		headBranch:             branch,
+		title:                  title,
+		body:                   body,
 		disableMaintainerEdits: !*maintainerEdits,
 	})
 	if err != nil {
@@ -226,7 +226,7 @@ aliases: pr
 	return nil
 }
 
-func inferPullRequestMessage(ctx context.Context, git *gittool.Tool, base, head string) (title, body string, _ error) {
+func inferPullRequestMessage(ctx context.Context, git *git.Git, base, head string) (title, body string, _ error) {
 	// Read commit messages of divergent commits.
 	const logFormat = "%B"
 	p, err := git.Start(ctx, "log",

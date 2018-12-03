@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/singleclose"
 )
 
@@ -114,15 +114,15 @@ func isdir(name string) bool {
 
 // findAddFiles finds the files described by the arguments and groups
 // them based on how they should be handled by add.
-func findAddFiles(ctx context.Context, git *gittool.Tool, args []string, includeIgnored bool) (untracked, unmerged []gittool.TopPath, _ error) {
+func findAddFiles(ctx context.Context, g *git.Git, args []string, includeIgnored bool) (untracked, unmerged []git.TopPath, _ error) {
 	if len(args) == 0 {
 		return nil, nil, nil
 	}
-	statusArgs := make([]gittool.Pathspec, len(args))
+	statusArgs := make([]git.Pathspec, len(args))
 	for i := range args {
-		statusArgs[i] = gittool.LiteralPath(args[i])
+		statusArgs[i] = git.LiteralPath(args[i])
 	}
-	st, err := gittool.Status(ctx, git, gittool.StatusOptions{
+	st, err := git.Status(ctx, g, git.StatusOptions{
 		Pathspecs:      statusArgs,
 		IncludeIgnored: includeIgnored,
 	})

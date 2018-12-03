@@ -19,8 +19,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestPull(t *testing.T) {
@@ -37,7 +36,7 @@ func TestPull(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
-	rev1, err := gittool.ParseRev(ctx, gitA, "HEAD")
+	rev1, err := git.ParseRev(ctx, gitA, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,12 +67,12 @@ func TestPull(t *testing.T) {
 	}
 
 	// Verify that HEAD has not moved from the first commit.
-	commitNames := map[gitobj.Hash]string{
+	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "remote commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != commit1 {
@@ -87,7 +86,7 @@ func TestPull(t *testing.T) {
 	}
 
 	// Verify that the remote tracking branch has moved to the new commit.
-	if r, err := gittool.ParseRev(ctx, gitB, "origin/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "origin/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("origin/master = %s; want %s",
@@ -96,7 +95,7 @@ func TestPull(t *testing.T) {
 	}
 
 	// Verify that the tag was mirrored in repository B.
-	if r, err := gittool.ParseRev(ctx, gitB, "first"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "first"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("origin/master = %s; want %s",
@@ -120,7 +119,7 @@ func TestPullWithArgument(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gittool.ParseRev(ctx, gitA, "HEAD")
+	rev1, err := git.ParseRev(ctx, gitA, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,12 +163,12 @@ func TestPullWithArgument(t *testing.T) {
 	}
 
 	// Verify that HEAD has not moved from the first commit.
-	commitNames := map[gitobj.Hash]string{
+	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "remote commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != commit1 {
@@ -183,7 +182,7 @@ func TestPullWithArgument(t *testing.T) {
 	}
 
 	// Verify that FETCH_HEAD has set to the second commit.
-	if r, err := gittool.ParseRev(ctx, gitB, "FETCH_HEAD"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "FETCH_HEAD"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("FETCH_HEAD = %s; want %s",
@@ -192,7 +191,7 @@ func TestPullWithArgument(t *testing.T) {
 	}
 
 	// Verify that the tag was mirrored in repository B.
-	if r, err := gittool.ParseRev(ctx, gitB, "first"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "first"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("origin/master = %s; want %s",
@@ -215,7 +214,7 @@ func TestPullUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
-	rev1, err := gittool.ParseRev(ctx, gitA, "HEAD")
+	rev1, err := git.ParseRev(ctx, gitA, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,12 +242,12 @@ func TestPullUpdate(t *testing.T) {
 	}
 
 	// Verify that HEAD has moved to the second commit.
-	commitNames := map[gitobj.Hash]string{
+	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "remote commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != commit2 {
@@ -262,7 +261,7 @@ func TestPullUpdate(t *testing.T) {
 	}
 
 	// Verify that the remote tracking branch has moved to the new commit.
-	if r, err := gittool.ParseRev(ctx, gitB, "origin/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "origin/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("origin/master = %s; want %s",
@@ -275,8 +274,8 @@ func TestInferUpstream(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		localBranch string
-		merge       gitobj.Ref
-		want        gitobj.Ref
+		merge       git.Ref
+		want        git.Ref
 	}{
 		{localBranch: "", want: "HEAD"},
 		{localBranch: "master", want: "refs/heads/master"},
@@ -300,7 +299,7 @@ func TestInferUpstream(t *testing.T) {
 				continue
 			}
 		}
-		cfg, err := gittool.ReadConfig(ctx, env.git)
+		cfg, err := git.ReadConfig(ctx, env.git)
 		if test.merge != "" {
 			// Cleanup
 			if err := env.git.Run(ctx, "config", "--local", "--unset", "branch."+test.localBranch+".merge"); err != nil {

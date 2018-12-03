@@ -22,8 +22,7 @@ import (
 
 	"gg-scm.io/pkg/internal/escape"
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestRebase(t *testing.T) {
@@ -41,7 +40,7 @@ func TestRebase(t *testing.T) {
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+		baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -81,7 +80,7 @@ func TestRebase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		names := map[gitobj.Hash]string{
+		names := map[git.Hash]string{
 			baseRev.Commit(): "initial import",
 			c1:               "change 1",
 			c2:               "change 2",
@@ -98,7 +97,7 @@ func TestRebase(t *testing.T) {
 			t.Error(err)
 		}
 
-		curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+		curr, err := git.ParseRev(ctx, env.git, "HEAD")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -107,7 +106,7 @@ func TestRebase(t *testing.T) {
 			t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 		}
 		// Verify that HEAD is on the topic branch.
-		if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
+		if want := git.Ref("refs/heads/topic"); curr.Ref() != want {
 			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 		}
 		// Verify that HEAD contains all the files.
@@ -121,7 +120,7 @@ func TestRebase(t *testing.T) {
 			t.Error("mainline.txt not in second rebased change:", err)
 		}
 
-		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
+		parent, err := git.ParseRev(ctx, env.git, "HEAD~1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -141,7 +140,7 @@ func TestRebase(t *testing.T) {
 		}
 
 		// Verify that the grandparent is the diverged upstream commit.
-		grandparent, err := gittool.ParseRev(ctx, env.git, "HEAD~2")
+		grandparent, err := git.ParseRev(ctx, env.git, "HEAD~2")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -165,7 +164,7 @@ func TestRebase_Src(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+	baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +204,7 @@ func TestRebase_Src(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := map[gitobj.Hash]string{
+	names := map[git.Hash]string{
 		baseRev.Commit(): "initial import",
 		c1:               "change 1",
 		c2:               "change 2",
@@ -217,7 +216,7 @@ func TestRebase_Src(t *testing.T) {
 		t.Error(err)
 	}
 
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	curr, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +225,7 @@ func TestRebase_Src(t *testing.T) {
 		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 	}
 	// Verify that HEAD is on the topic branch.
-	if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
+	if want := git.Ref("refs/heads/topic"); curr.Ref() != want {
 		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 	}
 	// Verify that HEAD contains all the files except the first topic change.
@@ -241,7 +240,7 @@ func TestRebase_Src(t *testing.T) {
 	}
 
 	// Verify that the parent commit is the diverged master commit.
-	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
+	parent, err := git.ParseRev(ctx, env.git, "HEAD~1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,7 +262,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+	baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +289,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := map[gitobj.Hash]string{
+	names := map[git.Hash]string{
 		baseRev.Commit(): "initial import",
 		c1:               "change 1",
 		c2:               "change 2",
@@ -304,7 +303,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 		t.Error(err)
 	}
 
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	curr, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,7 +312,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 	}
 	// Verify that HEAD is on the master branch.
-	if want := gitobj.Ref("refs/heads/master"); curr.Ref() != want {
+	if want := git.Ref("refs/heads/master"); curr.Ref() != want {
 		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 	}
 	// Verify that HEAD contains the file from the second change but not from the first change.
@@ -325,7 +324,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	}
 
 	// Verify that the parent is the initial commit.
-	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
+	parent, err := git.ParseRev(ctx, env.git, "HEAD~1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -353,7 +352,7 @@ func TestRebase_Base(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+	baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -419,7 +418,7 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := map[gitobj.Hash]string{
+	names := map[git.Hash]string{
 		baseRev.Commit(): "initial import",
 		c1:               "change 1",
 		c2:               "change 2",
@@ -437,7 +436,7 @@ func TestRebase_Base(t *testing.T) {
 		t.Error(err)
 	}
 
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	curr, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -446,7 +445,7 @@ func TestRebase_Base(t *testing.T) {
 		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 	}
 	// Verify that HEAD is on the topic branch.
-	if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
+	if want := git.Ref("refs/heads/topic"); curr.Ref() != want {
 		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 	}
 	// Verify that HEAD contains the mainline file and the change 3 file, but no others.
@@ -467,7 +466,7 @@ func TestRebase_Base(t *testing.T) {
 	}
 
 	// Verify that the parent commit is the diverged upstream commit.
-	parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
+	parent, err := git.ParseRev(ctx, env.git, "HEAD~1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,7 +490,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+		baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -526,7 +525,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		names := map[gitobj.Hash]string{
+		names := map[git.Hash]string{
 			baseRev.Commit(): "initial import",
 			feature:          "feature change",
 			upstream:         "upstream change",
@@ -546,7 +545,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 			t.Error(err)
 		}
 
-		curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+		curr, err := git.ParseRev(ctx, env.git, "HEAD")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -555,7 +554,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 			t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 		}
 		// Verify that HEAD is on the topic branch.
-		if want := gitobj.Ref("refs/heads/topic"); curr.Ref() != want {
+		if want := git.Ref("refs/heads/topic"); curr.Ref() != want {
 			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 		}
 		// Verify that HEAD contains both of the files.
@@ -566,7 +565,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 			t.Error("bar.txt not in rebased change:", err)
 		}
 		// Verify that the parent commit is the diverged upstream commit.
-		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~")
+		parent, err := git.ParseRev(ctx, env.git, "HEAD~")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -589,7 +588,7 @@ func TestHistedit(t *testing.T) {
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+		baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -622,7 +621,7 @@ func TestHistedit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		names := map[gitobj.Hash]string{
+		names := map[git.Hash]string{
 			baseRev.Commit(): "initial import",
 			c:                "branch change",
 			head:             "mainline change",
@@ -648,7 +647,7 @@ func TestHistedit(t *testing.T) {
 			t.Fatalf("failed: %v; output:\n%s", err, out)
 		}
 
-		curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+		curr, err := git.ParseRev(ctx, env.git, "HEAD")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -657,7 +656,7 @@ func TestHistedit(t *testing.T) {
 			t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 		}
 		// Verify that HEAD is on the foo branch.
-		if want := gitobj.Ref("refs/heads/foo"); curr.Ref() != want {
+		if want := git.Ref("refs/heads/foo"); curr.Ref() != want {
 			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 		}
 		// Verify that HEAD contains foo.txt but not upstream.txt.
@@ -675,7 +674,7 @@ func TestHistedit(t *testing.T) {
 		}
 
 		// Verify that the parent commit is the base commit.
-		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~1")
+		parent, err := git.ParseRev(ctx, env.git, "HEAD~1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -698,7 +697,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+		baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -730,7 +729,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err := env.git.Run(ctx, "commit", "--quiet", "-m", "Divergence 1"); err != nil {
 			t.Fatal(err)
 		}
-		rev1, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+		rev1, err := git.ParseRev(ctx, env.git, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -744,11 +743,11 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err := env.git.Run(ctx, "commit", "--quiet", "-m", wantMessage2); err != nil {
 			t.Fatal(err)
 		}
-		rev2, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+		rev2, err := git.ParseRev(ctx, env.git, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
-		names := map[gitobj.Hash]string{
+		names := map[git.Hash]string{
 			baseRev.Commit(): "initial import",
 			rev1.Commit():    "branch change 1",
 			rev2.Commit():    "branch change 2",
@@ -779,7 +778,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 
 		// Stopped for amending after applying the first commit.
 		// Verify that the parent commit is the base commit.
-		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~")
+		parent, err := git.ParseRev(ctx, env.git, "HEAD~")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -801,7 +800,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		}
 
 		// Verify that the grandparent commit is the base commit.
-		grandparent, err := gittool.ParseRev(ctx, env.git, "HEAD~2")
+		grandparent, err := git.ParseRev(ctx, env.git, "HEAD~2")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -860,7 +859,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		baseRev, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+		baseRev, err := git.ParseRev(ctx, env.git, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -893,7 +892,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err := env.git.Run(ctx, "commit", "--quiet", "-m", wantMessage1); err != nil {
 			t.Fatal(err)
 		}
-		rev1, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+		rev1, err := git.ParseRev(ctx, env.git, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -907,11 +906,11 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err := env.git.Run(ctx, "commit", "--quiet", "-m", wantMessage2); err != nil {
 			t.Fatal(err)
 		}
-		rev2, err := gittool.ParseRev(ctx, env.git, gitobj.Head.String())
+		rev2, err := git.ParseRev(ctx, env.git, git.Head.String())
 		if err != nil {
 			t.Fatal(err)
 		}
-		names := map[gitobj.Hash]string{
+		names := map[git.Hash]string{
 			baseRev.Commit(): "initial import",
 			rev1.Commit():    "branch change 1",
 			rev2.Commit():    "branch change 2",
@@ -941,7 +940,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 
 		// Stopped for amending after applying the first commit.
 		// Verify that the parent commit is the base commit.
-		parent, err := gittool.ParseRev(ctx, env.git, "HEAD~")
+		parent, err := git.ParseRev(ctx, env.git, "HEAD~")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -950,7 +949,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 				prettyCommit(parent.Commit(), names),
 				prettyCommit(baseRev.Commit(), names))
 		}
-		rebased1, err := gittool.ParseRev(ctx, env.git, "HEAD")
+		rebased1, err := git.ParseRev(ctx, env.git, "HEAD")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -962,7 +961,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Fatalf("failed: %v; output:\n%s", err, out)
 		}
 		// Verify that the grandparent commit is the base commit.
-		grandparent, err := gittool.ParseRev(ctx, env.git, "HEAD~2")
+		grandparent, err := git.ParseRev(ctx, env.git, "HEAD~2")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -979,7 +978,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		}
 		// Verify that the first edited commit hash is the same as what was
 		// observed during the rebase operation.
-		if r, err := gittool.ParseRev(ctx, env.git, "HEAD~"); err != nil {
+		if r, err := git.ParseRev(ctx, env.git, "HEAD~"); err != nil {
 			t.Errorf("Rebased change 1: %v", err)
 		} else if r.Commit() != rebased1.Commit() {
 			t.Errorf("After continuing, HEAD~ = %s; want %s",
@@ -1002,21 +1001,21 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 	})
 }
 
-type rebaseArgFunc = func(masterCommit gitobj.Hash) string
+type rebaseArgFunc = func(masterCommit git.Hash) string
 
 func runRebaseArgVariants(t *testing.T, f func(*testing.T, rebaseArgFunc)) {
 	t.Run("NoArg", func(t *testing.T) {
-		f(t, func(_ gitobj.Hash) string {
+		f(t, func(_ git.Hash) string {
 			return ""
 		})
 	})
 	t.Run("BranchName", func(t *testing.T) {
-		f(t, func(_ gitobj.Hash) string {
+		f(t, func(_ git.Hash) string {
 			return "master"
 		})
 	})
 	t.Run("CommitHex", func(t *testing.T) {
-		f(t, func(masterCommit gitobj.Hash) string {
+		f(t, func(masterCommit git.Hash) string {
 			return masterCommit.String()
 		})
 	})

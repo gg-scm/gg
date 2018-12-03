@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/singleclose"
 )
 
@@ -96,12 +96,12 @@ aliases: ci
 }
 
 // argsToFiles finds the files named by the arguments.
-func argsToFiles(ctx context.Context, git *gittool.Tool, args []string) ([]gittool.TopPath, error) {
-	statusArgs := make([]gittool.Pathspec, len(args))
+func argsToFiles(ctx context.Context, g *git.Git, args []string) ([]git.TopPath, error) {
+	statusArgs := make([]git.Pathspec, len(args))
 	for i := range args {
-		statusArgs[i] = gittool.LiteralPath(args[i])
+		statusArgs[i] = git.LiteralPath(args[i])
 	}
-	st, err := gittool.Status(ctx, git, gittool.StatusOptions{
+	st, err := git.Status(ctx, g, git.StatusOptions{
 		Pathspecs: statusArgs,
 	})
 	if err != nil {
@@ -109,7 +109,7 @@ func argsToFiles(ctx context.Context, git *gittool.Tool, args []string) ([]gitto
 	}
 	stClose := singleclose.For(st)
 	defer stClose.Close()
-	var files []gittool.TopPath
+	var files []git.TopPath
 	for st.Scan() {
 		files = append(files, st.Entry().Name())
 	}
@@ -122,15 +122,15 @@ func argsToFiles(ctx context.Context, git *gittool.Tool, args []string) ([]gitto
 	return files, nil
 }
 
-func inferCommitFiles(ctx context.Context, git *gittool.Tool) ([]gittool.TopPath, error) {
+func inferCommitFiles(ctx context.Context, g *git.Git) ([]git.TopPath, error) {
 	missing, missingStaged, unmerged := 0, 0, 0
-	st, err := gittool.Status(ctx, git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, g, git.StatusOptions{})
 	if err != nil {
 		return nil, err
 	}
 	stClose := singleclose.For(st)
 	defer stClose.Close()
-	var files []gittool.TopPath
+	var files []git.TopPath
 	for st.Scan() {
 		ent := st.Entry()
 		switch {

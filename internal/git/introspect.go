@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gittool
+package git
 
 import (
 	"bytes"
@@ -24,8 +24,8 @@ import (
 )
 
 // IsMerging reports whether the index has a pending merge commit.
-func (t *Tool) IsMerging(ctx context.Context) (bool, error) {
-	c := t.Command(ctx, "cat-file", "-e", "MERGE_HEAD")
+func (g *Git) IsMerging(ctx context.Context) (bool, error) {
+	c := g.Command(ctx, "cat-file", "-e", "MERGE_HEAD")
 	stderr := new(bytes.Buffer)
 	c.Stderr = stderr
 	if err := sigterm.Run(ctx, c); err != nil {

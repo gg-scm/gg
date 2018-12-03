@@ -23,8 +23,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestCommit_NoArgs(t *testing.T) {
@@ -82,7 +81,7 @@ func TestCommit_NoArgs(t *testing.T) {
 	}
 
 	// Verify that a new commit was created and is parented to the first commit.
-	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	r2, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +91,7 @@ func TestCommit_NoArgs(t *testing.T) {
 	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
-	if parent, err := gittool.ParseRev(ctx, env.git, "HEAD~"); err != nil {
+	if parent, err := git.ParseRev(ctx, env.git, "HEAD~"); err != nil {
 		t.Error(err)
 	} else if parent.Commit() != r1 {
 		t.Errorf("HEAD~ = %v; want %v", parent.Commit(), r1)
@@ -175,7 +174,7 @@ func TestCommit_Selective(t *testing.T) {
 	}
 
 	// Verify that a new commit was created and is parented to the first commit.
-	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	r2, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +184,7 @@ func TestCommit_Selective(t *testing.T) {
 	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
-	if parent, err := gittool.ParseRev(ctx, env.git, "HEAD~"); err != nil {
+	if parent, err := git.ParseRev(ctx, env.git, "HEAD~"); err != nil {
 		t.Error(err)
 	} else if parent.Commit() != r1 {
 		t.Errorf("HEAD~ = %v; want %v", parent.Commit(), r1)
@@ -225,7 +224,7 @@ func TestCommit_SelectiveWrongFile(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	r, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	r, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +240,7 @@ func TestCommit_SelectiveWrongFile(t *testing.T) {
 	} else if isUsage(err) {
 		t.Fatal(err)
 	}
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	curr, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,11 +315,11 @@ func TestCommit_Amend(t *testing.T) {
 	}
 
 	// Verify that a new commit was created and has a parent of HEAD~.
-	changes := map[gitobj.Hash]string{
+	changes := map[git.Hash]string{
 		parent: "parent commit",
 		r1:     "tip",
 	}
-	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	r2, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -330,7 +329,7 @@ func TestCommit_Amend(t *testing.T) {
 	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
-	if newParent, err := gittool.ParseRev(ctx, env.git, "HEAD~"); err != nil {
+	if newParent, err := git.ParseRev(ctx, env.git, "HEAD~"); err != nil {
 		t.Error(err)
 	} else if newParent.Commit() != parent {
 		t.Errorf("HEAD~ after amend = %s; want %s",
@@ -372,7 +371,7 @@ func TestCommit_NoChanges(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	r1, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	r1, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -382,7 +381,7 @@ func TestCommit_NoChanges(t *testing.T) {
 	} else if isUsage(err) {
 		t.Errorf("commit with no changes returned usage error: %v", err)
 	}
-	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	r2, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -439,11 +438,11 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 
 	// Verify that a new commit was created with the parent set to the parent of
 	// the working copy's commit.
-	changes := map[gitobj.Hash]string{
+	changes := map[git.Hash]string{
 		parent: "parent commit",
 		r1:     "tip",
 	}
-	r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	r2, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -453,7 +452,7 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 	if ref := r2.Ref(); ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
-	if newParent, err := gittool.ParseRev(ctx, env.git, "HEAD~"); err != nil {
+	if newParent, err := git.ParseRev(ctx, env.git, "HEAD~"); err != nil {
 		t.Error(err)
 	} else if newParent.Commit() != parent {
 		t.Errorf("HEAD~ after amend = %s; want %s",
@@ -553,7 +552,7 @@ func TestCommit_InSubdir(t *testing.T) {
 			}
 
 			// Verify that a new commit was created with the parent of the working copy's commit.
-			r2, err := gittool.ParseRev(ctx, env.git, "HEAD")
+			r2, err := git.ParseRev(ctx, env.git, "HEAD")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -563,7 +562,7 @@ func TestCommit_InSubdir(t *testing.T) {
 			if ref := r2.Ref(); ref != "refs/heads/master" {
 				t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 			}
-			if parent, err := gittool.ParseRev(ctx, env.git, "HEAD~"); err != nil {
+			if parent, err := git.ParseRev(ctx, env.git, "HEAD~"); err != nil {
 				t.Error(err)
 			} else if parent.Commit() != r1 {
 				t.Errorf("HEAD~ = %v; want %v", parent.Commit(), r1)
@@ -674,11 +673,11 @@ func TestCommit_Merge(t *testing.T) {
 
 	// Verify that a new commit was created with the master commit as the first
 	// parent and the feature commit as the second parent.
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	curr, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := map[gitobj.Hash]string{
+	names := map[git.Hash]string{
 		base: "initial commit",
 		r1:   "master commit",
 		r2:   "branch commit",
@@ -687,7 +686,7 @@ func TestCommit_Merge(t *testing.T) {
 		t.Errorf("after merge commit, HEAD = %s; want new commit",
 			prettyCommit(curr.Commit(), names))
 	}
-	parent1, err := gittool.ParseRev(ctx, env.git, "HEAD^1")
+	parent1, err := git.ParseRev(ctx, env.git, "HEAD^1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -696,7 +695,7 @@ func TestCommit_Merge(t *testing.T) {
 			prettyCommit(parent1.Commit(), names),
 			prettyCommit(r1, names))
 	}
-	parent2, err := gittool.ParseRev(ctx, env.git, "HEAD^2")
+	parent2, err := git.ParseRev(ctx, env.git, "HEAD^2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -707,7 +706,7 @@ func TestCommit_Merge(t *testing.T) {
 	}
 }
 
-func catBlob(ctx context.Context, git *gittool.Tool, rev string, path string) ([]byte, error) {
+func catBlob(ctx context.Context, git *git.Git, rev string, path string) ([]byte, error) {
 	p, err := git.Start(ctx, "cat-file", "blob", rev+":"+path)
 	if err != nil {
 		return nil, fmt.Errorf("cat %s @ %s: %v", path, rev, err)
@@ -723,7 +722,7 @@ func catBlob(ctx context.Context, git *gittool.Tool, rev string, path string) ([
 	return data, nil
 }
 
-func readCommitMessage(ctx context.Context, git *gittool.Tool, rev string) ([]byte, error) {
+func readCommitMessage(ctx context.Context, git *git.Git, rev string) ([]byte, error) {
 	p, err := git.Start(ctx, "show", "-s", "--format=%B", rev)
 	if err != nil {
 		return nil, fmt.Errorf("log %s: %v", rev, err)
@@ -739,7 +738,7 @@ func readCommitMessage(ctx context.Context, git *gittool.Tool, rev string) ([]by
 	return data, nil
 }
 
-func objectExists(ctx context.Context, git *gittool.Tool, obj string) error {
+func objectExists(ctx context.Context, git *git.Git, obj string) error {
 	exists, err := git.Query(ctx, "cat-file", "-e", obj)
 	if err != nil {
 		return fmt.Errorf("object %s does not exist: %v", obj, err)

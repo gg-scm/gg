@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestAdd(t *testing.T) {
@@ -40,7 +40,7 @@ func TestAdd(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestAdd_DoesNotStageModified(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func TestAdd_WholeRepo(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "."); err != nil {
 		t.Error(err)
 	}
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +220,7 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +298,7 @@ func TestAdd_Directory(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -359,7 +359,7 @@ func TestAdd_IgnoredFile(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -416,7 +416,7 @@ func TestAdd_IgnoredFileInDirectory(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -19,8 +19,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestMerge(t *testing.T) {
@@ -34,7 +33,7 @@ func TestMerge(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	baseRev, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	baseRev, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,11 +78,11 @@ func TestMerge(t *testing.T) {
 	}
 
 	// Verify that HEAD is still the upstream commit. gg should not create a new commit.
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	curr, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := map[gitobj.Hash]string{
+	names := map[git.Hash]string{
 		baseRev.Commit(): "initial commit",
 		upstream:         "master commit",
 		feature:          "branch commit",
@@ -95,7 +94,7 @@ func TestMerge(t *testing.T) {
 	}
 
 	// Verify that the to-be-merged commit is the feature branch.
-	mergeHead, err := gittool.ParseRev(ctx, env.git, "MERGE_HEAD")
+	mergeHead, err := git.ParseRev(ctx, env.git, "MERGE_HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,11 +176,11 @@ func TestMerge_Conflict(t *testing.T) {
 	}
 
 	// Verify that HEAD is still the upstream commit. gg should not create a new commit.
-	curr, err := gittool.ParseRev(ctx, env.git, "HEAD")
+	curr, err := git.ParseRev(ctx, env.git, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := map[gitobj.Hash]string{
+	names := map[git.Hash]string{
 		base:     "initial commit",
 		upstream: "master commit",
 		feature:  "branch commit",
@@ -193,7 +192,7 @@ func TestMerge_Conflict(t *testing.T) {
 	}
 
 	// Verify that the to-be-merged commit is the feature branch.
-	mergeHead, err := gittool.ParseRev(ctx, env.git, "MERGE_HEAD")
+	mergeHead, err := git.ParseRev(ctx, env.git, "MERGE_HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}

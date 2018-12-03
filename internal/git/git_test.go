@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gittool
+package git
 
 import (
 	"context"
@@ -117,7 +117,7 @@ func TestRun(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := env.git.Run(ctx, "init", "repo"); err != nil {
+	if err := env.g.Run(ctx, "init", "repo"); err != nil {
 		t.Fatal(err)
 	}
 	gitDir := filepath.Join(env.root, "repo", ".git")
@@ -145,18 +145,18 @@ func TestQuery(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := env.git.Run(ctx, "init", "repo"); err != nil {
+	if err := env.g.Run(ctx, "init", "repo"); err != nil {
 		t.Fatal(err)
 	}
-	git := env.git.WithDir(filepath.Join(env.root, "repo"))
+	g := env.g.WithDir(filepath.Join(env.root, "repo"))
 	err = ioutil.WriteFile(filepath.Join(env.root, "repo", "foo.txt"), []byte("Hi!\n"), 0666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "add", "foo.txt"); err != nil {
+	if err := g.Run(ctx, "add", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "commit", "-m", "first commit"); err != nil {
+	if err := g.Run(ctx, "commit", "-m", "first commit"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -171,20 +171,20 @@ func TestQuery(t *testing.T) {
 		{obj: "xyzzy", err: true, errMsg: "Not a valid object name xyzzy"},
 	}
 	for _, test := range tests {
-		got, err := git.Query(ctx, "cat-file", "-e", test.obj)
+		got, err := g.Query(ctx, "cat-file", "-e", test.obj)
 		if got != test.want || (err != nil) != test.err || !strings.Contains(fmt.Sprint(err), test.errMsg) {
 			errStr := "<nil>"
 			if test.err {
 				errStr = fmt.Sprintf("<error containing %q>", test.errMsg)
 			}
-			t.Errorf("git.Query(ctx, \"cat-file\", \"-e\", %q) = %t, %v; want %t, %s", test.obj, got, err, test.want, errStr)
+			t.Errorf("g.Query(ctx, \"cat-file\", \"-e\", %q) = %t, %v; want %t, %s", test.obj, got, err, test.want, errStr)
 		}
 	}
 }
 
 type testEnv struct {
 	root string
-	git  *Tool
+	g    *Git
 }
 
 func newTestEnv(ctx context.Context, gitPath string) (*testEnv, error) {
@@ -192,7 +192,7 @@ func newTestEnv(ctx context.Context, gitPath string) (*testEnv, error) {
 	if err != nil {
 		return nil, err
 	}
-	git, err := New(gitPath, root, &Options{
+	g, err := New(gitPath, root, &Options{
 		Env: []string{
 			"GIT_CONFIG_NOSYSTEM=1",
 			"HOME=" + root,
@@ -209,7 +209,7 @@ func newTestEnv(ctx context.Context, gitPath string) (*testEnv, error) {
 		os.RemoveAll(root)
 		return nil, err
 	}
-	return &testEnv{root: root, git: git}, nil
+	return &testEnv{root: root, g: g}, nil
 }
 
 func (env *testEnv) cleanup() {

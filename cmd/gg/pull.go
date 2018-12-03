@@ -21,8 +21,7 @@ import (
 	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 const pullSynopsis = "pull changes from the specified source"
@@ -52,7 +51,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	if f.NArg() > 1 {
 		return usagef("can't pass multiple sources")
 	}
-	cfg, err := gittool.ReadConfig(ctx, cc.git)
+	cfg, err := git.ReadConfig(ctx, cc.git)
 	if err != nil {
 		return err
 	}
@@ -70,11 +69,11 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 			repo = "origin"
 		}
 	}
-	var remoteRef gitobj.Ref
+	var remoteRef git.Ref
 	if *remoteRefArg == "" {
 		remoteRef = inferUpstream(cfg, branch)
 	} else {
-		remoteRef = gitobj.Ref(*remoteRefArg)
+		remoteRef = git.Ref(*remoteRefArg)
 		if !remoteRef.IsValid() {
 			return fmt.Errorf("invalid ref %q", *remoteRefArg)
 		}
@@ -94,7 +93,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 }
 
 func currentBranch(ctx context.Context, cc *cmdContext) string {
-	r, err := gittool.ParseRev(ctx, cc.git, gitobj.Head.String())
+	r, err := git.ParseRev(ctx, cc.git, git.Head.String())
 	if err != nil {
 		return ""
 	}
@@ -103,18 +102,18 @@ func currentBranch(ctx context.Context, cc *cmdContext) string {
 
 // inferUpstream returns the default remote ref to pull from.
 // localBranch may be empty.
-func inferUpstream(cfg *gittool.Config, localBranch string) gitobj.Ref {
+func inferUpstream(cfg *git.Config, localBranch string) git.Ref {
 	if localBranch == "" {
-		return gitobj.Head
+		return git.Head
 	}
 	merge := cfg.Value("branch." + localBranch + ".merge")
 	if merge != "" {
-		return gitobj.Ref(merge)
+		return git.Ref(merge)
 	}
-	return gitobj.BranchRef(localBranch)
+	return git.BranchRef(localBranch)
 }
 
-func listRemotes(ctx context.Context, git *gittool.Tool) (map[string]struct{}, error) {
+func listRemotes(ctx context.Context, git *git.Git) (map[string]struct{}, error) {
 	p, err := git.Start(ctx, "remote")
 	if err != nil {
 		return nil, err

@@ -22,8 +22,7 @@ import (
 	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 const evolveSynopsis = "sync with Gerrit changes in upstream"
@@ -47,26 +46,26 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("%v", err)
 	}
 	// Find our upstream
-	var dstRev *gittool.Rev
+	var dstRev *git.Rev
 	if *dst == "" {
 		var err error
-		dstRev, err = gittool.ParseRev(ctx, cc.git, "@{upstream}")
+		dstRev, err = git.ParseRev(ctx, cc.git, "@{upstream}")
 		if err != nil {
 			return fmt.Errorf("no upstream found: %v", err)
 		}
 	} else {
 		var err error
-		dstRev, err = gittool.ParseRev(ctx, cc.git, *dst)
+		dstRev, err = git.ParseRev(ctx, cc.git, *dst)
 		if err != nil {
 			return err
 		}
 	}
-	mergeBaseBytes, err := cc.git.RunOneLiner(ctx, '\n', "merge-base", dstRev.Commit().String(), gitobj.Head.String())
+	mergeBaseBytes, err := cc.git.RunOneLiner(ctx, '\n', "merge-base", dstRev.Commit().String(), git.Head.String())
 	if err != nil {
 		return err
 	}
 	mergeBase := string(mergeBaseBytes)
-	featureChanges, err := readChanges(ctx, cc.git, gitobj.Head.String(), mergeBase)
+	featureChanges, err := readChanges(ctx, cc.git, git.Head.String(), mergeBase)
 	if err != nil {
 		return err
 	}
@@ -119,7 +118,7 @@ type change struct {
 // readChanges lists the commits in head that are not base or its
 // ancestors.  The commits will be in topological order: children to
 // ancestors.
-func readChanges(ctx context.Context, git *gittool.Tool, head, base string) ([]change, error) {
+func readChanges(ctx context.Context, git *git.Git, head, base string) ([]change, error) {
 	// TODO(soon): this should probably throw an error if there are merge commits.
 
 	// Can't use %(trailers) because it's not supported on 2.7.4.

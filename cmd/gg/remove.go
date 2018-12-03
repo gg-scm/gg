@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 const removeSynopsis = "remove the specified files on the next commit"
@@ -60,12 +60,12 @@ func remove(ctx context.Context, cc *cmdContext, args []string) error {
 	return cc.git.Run(ctx, rmArgs...)
 }
 
-func verifyPresent(ctx context.Context, git *gittool.Tool, args []string) error {
-	statusArgs := make([]gittool.Pathspec, len(args))
+func verifyPresent(ctx context.Context, g *git.Git, args []string) error {
+	statusArgs := make([]git.Pathspec, len(args))
 	for i := range args {
-		statusArgs[i] = gittool.LiteralPath(args[i])
+		statusArgs[i] = git.LiteralPath(args[i])
 	}
-	st, err := gittool.Status(ctx, git, gittool.StatusOptions{
+	st, err := git.Status(ctx, g, git.StatusOptions{
 		Pathspecs: statusArgs,
 	})
 	if err != nil {

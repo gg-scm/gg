@@ -23,8 +23,7 @@ import (
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/singleclose"
 )
 
@@ -61,7 +60,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	force := f.Bool("f", false, "allow overwriting ref if it is not an ancestor, as long as it matches the remote-tracking branch")
 	dryRun := f.Bool("n", false, "do everything except send the changes")
 	f.Alias("n", "dry-run")
-	rev := f.String("r", gitobj.Head.String(), "source `rev`ision")
+	rev := f.String("r", git.Head.String(), "source `rev`ision")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -71,7 +70,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	if f.NArg() > 1 {
 		return usagef("can't pass multiple destinations")
 	}
-	src, err := gittool.ParseRev(ctx, cc.git, *rev)
+	src, err := git.ParseRev(ctx, cc.git, *rev)
 	if err != nil {
 		return err
 	}
@@ -84,7 +83,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	dstRepo := f.Arg(0)
 	if dstRepo == "" {
-		cfg, err := gittool.ReadConfig(ctx, cc.git)
+		cfg, err := git.ReadConfig(ctx, cc.git)
 		if err != nil {
 			return err
 		}
@@ -93,7 +92,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 			return err
 		}
 	}
-	var dstRef gitobj.Ref
+	var dstRef git.Ref
 	switch {
 	case *dstRefArg == "":
 		if !srcRef.IsValid() {
@@ -101,9 +100,9 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		dstRef = srcRef
 	case strings.HasPrefix(*dstRefArg, "refs/"):
-		dstRef = gitobj.Ref(*dstRefArg)
+		dstRef = git.Ref(*dstRefArg)
 	default:
-		dstRef = gitobj.BranchRef(*dstRefArg)
+		dstRef = git.BranchRef(*dstRefArg)
 	}
 	if !*create {
 		if err := verifyPushRemoteRef(ctx, cc.git, dstRepo, dstRef); err != nil {
@@ -129,7 +128,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	allowDirty := f.Bool("allow-dirty", false, "allow mailing when working copy has uncommitted changes")
 	dstBranch := f.String("d", "", "destination `branch`")
 	f.Alias("d", "dest", "for")
-	rev := f.String("r", gitobj.Head.String(), "source `rev`ision")
+	rev := f.String("r", git.Head.String(), "source `rev`ision")
 	gopts := new(gerritOptions)
 	f.MultiStringVar(&gopts.reviewers, "R", "reviewer `email`")
 	f.Alias("R", "reviewer")
@@ -158,7 +157,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	if gopts.notify != "" && gopts.notify != "NONE" && gopts.notify != "OWNER" && gopts.notify != "OWNER_REVIEWERS" && gopts.notify != "ALL" {
 		return usagef(`--notify must be one of "none", "owner", "owner_reviewers", or "all"`)
 	}
-	src, err := gittool.ParseRev(ctx, cc.git, *rev)
+	src, err := git.ParseRev(ctx, cc.git, *rev)
 	if err != nil {
 		return err
 	}
@@ -180,10 +179,10 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	dstRepo := f.Arg(0)
-	var cfg *gittool.Config
+	var cfg *git.Config
 	if dstRepo == "" || *dstBranch == "" {
 		var err error
-		cfg, err = gittool.ReadConfig(ctx, cc.git)
+		cfg, err = git.ReadConfig(ctx, cc.git)
 		if err != nil {
 			return err
 		}
@@ -224,7 +223,7 @@ type gerritOptions struct {
 	notifyBCC []string
 }
 
-func gerritPushRef(branch string, opts *gerritOptions) gitobj.Ref {
+func gerritPushRef(branch string, opts *gerritOptions) git.Ref {
 	sb := new(strings.Builder)
 	sb.WriteString("refs/for/")
 	sb.WriteString(branch)
@@ -268,7 +267,7 @@ func gerritPushRef(branch string, opts *gerritOptions) gitobj.Ref {
 			sb.WriteString(bcc)
 		}
 	}
-	return gitobj.Ref(sb.String())
+	return git.Ref(sb.String())
 }
 
 func escapeGerritMessage(sb *strings.Builder, msg string) {
@@ -291,7 +290,7 @@ func escapeGerritMessage(sb *strings.Builder, msg string) {
 // verifyPushRemoteRef returns nil if the given ref exists in the
 // remote. remote may either be a URL or the name of a remote, in
 // which case the remote's push URL will be queried.
-func verifyPushRemoteRef(ctx context.Context, git *gittool.Tool, remote string, ref gitobj.Ref) error {
+func verifyPushRemoteRef(ctx context.Context, git *git.Git, remote string, ref git.Ref) error {
 	remotes, _ := listRemotes(ctx, git)
 	if _, isRemote := remotes[remote]; isRemote {
 		pushURL, err := git.RunOneLiner(ctx, '\n', "remote", "get-url", "--push", "--", remote)
@@ -333,7 +332,7 @@ func verifyPushRemoteRef(ctx context.Context, git *gittool.Tool, remote string, 
 	return fmt.Errorf("remote %s does not have ref %s", remote, ref)
 }
 
-func inferPushRepo(ctx context.Context, git *gittool.Tool, cfg *gittool.Config, branch string) (string, error) {
+func inferPushRepo(ctx context.Context, git *git.Git, cfg *git.Config, branch string) (string, error) {
 	if branch != "" {
 		r := cfg.Value("branch." + branch + ".pushRemote")
 		if r != "" {
@@ -359,8 +358,8 @@ func inferPushRepo(ctx context.Context, git *gittool.Tool, cfg *gittool.Config, 
 
 // isClean returns true iff all tracked files are unmodified in the
 // working copy.  Untracked and ignored files are not considered.
-func isClean(ctx context.Context, git *gittool.Tool) (bool, error) {
-	st, err := gittool.Status(ctx, git, gittool.StatusOptions{})
+func isClean(ctx context.Context, g *git.Git) (bool, error) {
+	st, err := git.Status(ctx, g, git.StatusOptions{})
 	if err != nil {
 		return false, err
 	}

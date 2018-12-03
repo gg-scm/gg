@@ -21,8 +21,7 @@ import (
 	"path/filepath"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/singleclose"
 )
 
@@ -39,7 +38,7 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 	all := f.Bool("all", false, "revert all changes when no arguments given")
 	noBackups := f.Bool("C", false, "do not save backup copies of files")
 	f.Alias("C", "no-backup")
-	rev := f.String("r", gitobj.Head.String(), "revert to specified `rev`ision")
+	rev := f.String("r", git.Head.String(), "revert to specified `rev`ision")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -50,13 +49,13 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("no arguments given.  Use -all to revert entire repository.")
 	}
 
-	revObj, err := gittool.ParseRev(ctx, cc.git, *rev)
+	revObj, err := git.ParseRev(ctx, cc.git, *rev)
 	if err != nil {
-		if *rev == gitobj.Head.String() {
+		if *rev == git.Head.String() {
 			// If HEAD fails to parse (empty repo), then just use reset.
 			rmArgs := []string{"reset", "--"}
 			for _, f := range f.Args() {
-				rmArgs = append(rmArgs, gittool.LiteralPath(f).String())
+				rmArgs = append(rmArgs, git.LiteralPath(f).String())
 			}
 			return cc.git.Run(ctx, rmArgs...)
 		}
@@ -65,11 +64,11 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 
 	// Find the list of files that have changed between the revision and
 	// the working tree.
-	var pathspecs []gittool.Pathspec
+	var pathspecs []git.Pathspec
 	for _, f := range f.Args() {
-		pathspecs = append(pathspecs, gittool.LiteralPath(f))
+		pathspecs = append(pathspecs, git.LiteralPath(f))
 	}
-	dr, err := gittool.DiffStatus(ctx, cc.git, gittool.DiffStatusOptions{
+	dr, err := git.DiffStatus(ctx, cc.git, git.DiffStatusOptions{
 		Commit1:        revObj.Commit().String(),
 		Pathspecs:      pathspecs,
 		DisableRenames: true,
@@ -79,16 +78,16 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	drCloser := singleclose.For(dr)
 	defer drCloser.Close()
-	var adds, deletes, mods, chmods []gittool.Pathspec
+	var adds, deletes, mods, chmods []git.Pathspec
 	for dr.Scan() {
 		switch dr.Entry().Code() {
-		case gittool.DiffStatusAdded:
+		case git.DiffStatusAdded:
 			adds = append(adds, dr.Entry().Name().Pathspec())
-		case gittool.DiffStatusDeleted:
+		case git.DiffStatusDeleted:
 			deletes = append(deletes, dr.Entry().Name().Pathspec())
-		case gittool.DiffStatusModified:
+		case git.DiffStatusModified:
 			mods = append(mods, dr.Entry().Name().Pathspec())
-		case gittool.DiffStatusChangedMode:
+		case git.DiffStatusChangedMode:
 			chmods = append(chmods, dr.Entry().Name().Pathspec())
 		}
 	}
@@ -138,11 +137,11 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 
 // backupForRevert creates ".orig" files for any modified files that
 // have local modifications.
-func backupForRevert(ctx context.Context, cc *cmdContext, modified []gittool.Pathspec) error {
+func backupForRevert(ctx context.Context, cc *cmdContext, modified []git.Pathspec) error {
 	if len(modified) == 0 {
 		return nil
 	}
-	sr, err := gittool.Status(ctx, cc.git, gittool.StatusOptions{
+	sr, err := git.Status(ctx, cc.git, git.StatusOptions{
 		DisableRenames: true,
 		Pathspecs:      modified,
 	})
@@ -151,7 +150,7 @@ func backupForRevert(ctx context.Context, cc *cmdContext, modified []gittool.Pat
 	}
 	srCloser := singleclose.For(sr)
 	defer srCloser.Close()
-	var names []gittool.TopPath
+	var names []git.TopPath
 	for sr.Scan() {
 		names = append(names, sr.Entry().Name())
 	}
@@ -182,9 +181,9 @@ func backupForRevert(ctx context.Context, cc *cmdContext, modified []gittool.Pat
 
 // appendLiteralPaths converts the arguments into literal pathspecs
 // for Git.
-func appendLiteralPaths(dst []gittool.Pathspec, files []string) []gittool.Pathspec {
+func appendLiteralPaths(dst []git.Pathspec, files []string) []git.Pathspec {
 	for _, f := range files {
-		dst = append(dst, gittool.LiteralPath(f))
+		dst = append(dst, git.LiteralPath(f))
 	}
 	return dst
 }

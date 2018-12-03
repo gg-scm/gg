@@ -21,8 +21,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestPush(t *testing.T) {
@@ -40,7 +39,7 @@ func TestPush(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
+	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,10 +75,10 @@ func TestPush(t *testing.T) {
 
 	// Verify that repo B has the new commit.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
-		names := map[gitobj.Hash]string{
+		names := map[git.Hash]string{
 			rev1.Commit(): "shared commit",
 			commit2:       "local commit",
 		}
@@ -104,7 +103,7 @@ func TestPush_Arg(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
+	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,12 +146,12 @@ func TestPush_Arg(t *testing.T) {
 
 	// Ensure that repo C's master branch has moved to the new commit.
 	commit1 := rev1.Commit()
-	commitNames := map[gitobj.Hash]string{
+	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
 	}
 	gitC := env.git.WithDir(repoCPath)
-	if r, err := gittool.ParseRev(ctx, gitC, "refs/heads/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitC, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("named remote refs/heads/master = %s; want %s",
@@ -162,7 +161,7 @@ func TestPush_Arg(t *testing.T) {
 
 	// Verify that repo B's master branch has stayed the same.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("origin refs/heads/master = %s; want %s",
@@ -186,7 +185,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
+	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,12 +224,12 @@ func TestPush_FailUnknownRef(t *testing.T) {
 
 	// Verify that repo B's master branch has not changed.
 	commit1 := rev1.Commit()
-	commitNames := map[gitobj.Hash]string{
+	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("refs/heads/master = %s; want %s",
@@ -239,7 +238,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 	}
 
 	// Verify that repo B did not gain a foo branch.
-	if r, err := gittool.ParseRev(ctx, gitB, "foo"); err == nil {
+	if r, err := git.ParseRev(ctx, gitB, "foo"); err == nil {
 		if ref := r.Ref(); ref != "" {
 			t.Logf("foo resolved to %s", ref)
 		}
@@ -262,7 +261,7 @@ func TestPush_CreateRef(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
+	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,12 +297,12 @@ func TestPush_CreateRef(t *testing.T) {
 
 	// Verify that repo B's foo branch has moved to the new commit.
 	commit1 := rev1.Commit()
-	commitNames := map[gitobj.Hash]string{
+	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/foo"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/heads/foo"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("refs/heads/foo = %s; want %s",
@@ -312,7 +311,7 @@ func TestPush_CreateRef(t *testing.T) {
 	}
 
 	// Verify that repo B's master branch has not changed.
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("refs/heads/master = %s; want %s",
@@ -336,7 +335,7 @@ func TestPush_RewindFails(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
+	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -380,12 +379,12 @@ func TestPush_RewindFails(t *testing.T) {
 	}
 
 	// Verify that repo B's master branch has not changed.
-	commitNames := map[gitobj.Hash]string{
+	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("refs/heads/master = %s; want %s",
@@ -409,7 +408,7 @@ func TestPush_RewindForce(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
+	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -451,12 +450,12 @@ func TestPush_RewindForce(t *testing.T) {
 	}
 
 	// Verify that repo B's master branch has moved to the new commit.
-	commitNames := map[gitobj.Hash]string{
+	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("refs/heads/master = %s; want %s",
@@ -480,7 +479,7 @@ func TestPush_AncestorInferDst(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
+	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -523,10 +522,10 @@ func TestPush_AncestorInferDst(t *testing.T) {
 
 	// Verify that repo B's master has moved to the first new commit.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != commit2 {
-		commitNames := map[gitobj.Hash]string{
+		commitNames := map[git.Hash]string{
 			rev1.Commit(): "first commit",
 			commit2:       "second commit",
 			commit3:       "third commit",
@@ -552,7 +551,7 @@ func TestPush_DistinctPushURL(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
+	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -597,12 +596,12 @@ func TestPush_DistinctPushURL(t *testing.T) {
 
 	// Verify that repo C's master branch has moved to the new commit.
 	commit1 := rev1.Commit()
-	commitNames := map[gitobj.Hash]string{
+	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
 	}
 	gitC := env.git.WithDir(repoCPath)
-	if r, err := gittool.ParseRev(ctx, gitC, "master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitC, "master"); err != nil {
 		t.Error("In push repo:", err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("master in push repo = %s; want %s",
@@ -612,7 +611,7 @@ func TestPush_DistinctPushURL(t *testing.T) {
 
 	// Verify that repo B's master branch has not changed.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gittool.ParseRev(ctx, gitB, "master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "master"); err != nil {
 		t.Error("In fetch repo:", err)
 	} else if r.Commit() != commit1 {
 		t.Errorf("master in fetch repo = %s; want %s",
@@ -640,7 +639,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	}
 	repoAPath := env.root.FromSlash("repoA")
 	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gittool.ParseRev(ctx, gitA, gitobj.Head.String())
+	rev1, err := git.ParseRev(ctx, gitA, git.Head.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -693,11 +692,11 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	}
 
 	// Verify that repo C's branch "newbranch" was moved to the new commit.
-	commitNames := map[gitobj.Hash]string{
+	commitNames := map[git.Hash]string{
 		rev1.Commit(): "shared commit",
 		commit2:       "local commit",
 	}
-	if r, err := gittool.ParseRev(ctx, gitC, "newbranch"); err != nil {
+	if r, err := git.ParseRev(ctx, gitC, "newbranch"); err != nil {
 		t.Error("In push repo:", err)
 	} else if r.Commit() != commit2 {
 		t.Errorf("newbranch in push repo = %s; want %s",
@@ -707,7 +706,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 
 	// Verify that repo B's branch "newbranch" was not created.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gittool.ParseRev(ctx, gitB, "newbranch"); err == nil {
+	if r, err := git.ParseRev(ctx, gitB, "newbranch"); err == nil {
 		t.Errorf("newbranch in fetch repo = %s; want to not exist", prettyCommit(r.Commit(), commitNames))
 	}
 }
@@ -718,7 +717,7 @@ func TestGerritPushRef(t *testing.T) {
 		branch string
 		opts   *gerritOptions
 
-		wantRef  gitobj.Ref
+		wantRef  git.Ref
 		wantOpts map[string][]string
 	}{
 		{
@@ -805,8 +804,8 @@ func TestGerritPushRef(t *testing.T) {
 func TestParseGerritRef(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		ref  gitobj.Ref
-		base gitobj.Ref
+		ref  git.Ref
+		base git.Ref
 		opts map[string][]string
 	}{
 		{
@@ -866,7 +865,7 @@ func TestParseGerritRef(t *testing.T) {
 	}
 }
 
-func parseGerritRef(ref gitobj.Ref) (gitobj.Ref, map[string][]string, error) {
+func parseGerritRef(ref git.Ref) (git.Ref, map[string][]string, error) {
 	start := strings.IndexByte(string(ref), '%')
 	if start == -1 {
 		return ref, nil, nil

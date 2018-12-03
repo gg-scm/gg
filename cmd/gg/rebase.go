@@ -23,8 +23,7 @@ import (
 
 	"gg-scm.io/pkg/internal/escape"
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 const rebaseSynopsis = "move revision (and descendants) to a different branch"
@@ -72,7 +71,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		if strings.HasPrefix(*src, "-") {
 			return fmt.Errorf("revision cannot start with '-'")
 		}
-		ancestor, err := cc.git.Query(ctx, "merge-base", "--is-ancestor", *src, gitobj.Head.String())
+		ancestor, err := cc.git.Query(ctx, "merge-base", "--is-ancestor", *src, git.Head.String())
 		if err != nil {
 			return err
 		}
@@ -104,7 +103,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 			"-i",
 			"--onto="+*dst,
 			"--no-fork-point",
-			gitobj.Head.String())
+			git.Head.String())
 	default:
 		return cc.git.RunInteractive(ctx, "rebase", "--onto="+*dst, "--no-fork-point")
 	}
@@ -145,11 +144,11 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		if upstream == "" {
 			upstream = "@{upstream}"
 		}
-		mergeBaseBytes, err := cc.git.RunOneLiner(ctx, '\n', "merge-base", upstream, gitobj.Head.String())
+		mergeBaseBytes, err := cc.git.RunOneLiner(ctx, '\n', "merge-base", upstream, git.Head.String())
 		if err != nil {
 			return err
 		}
-		mergeBase, err := gitobj.ParseHash(string(mergeBaseBytes))
+		mergeBase, err := git.ParseHash(string(mergeBaseBytes))
 		if err != nil {
 			return fmt.Errorf("parse merge base: %v", err)
 		}
@@ -181,7 +180,7 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 
 // continueRebase adds any modified files to the index and then runs
 // `git rebase --continue`.
-func continueRebase(ctx context.Context, git *gittool.Tool) error {
+func continueRebase(ctx context.Context, git *git.Git) error {
 	addFiles, err := inferCommitFiles(ctx, git)
 	if err != nil {
 		return err
@@ -200,7 +199,7 @@ func continueRebase(ctx context.Context, git *gittool.Tool) error {
 
 // findDescendants returns the set of distinct heads under refs/heads/
 // that contain the given commit object.
-func findDescendants(ctx context.Context, git *gittool.Tool, object string) ([]gitobj.Ref, error) {
+func findDescendants(ctx context.Context, git *git.Git, object string) ([]git.Ref, error) {
 	refs, err := branchesContaining(ctx, git, object)
 	if err != nil {
 		return nil, fmt.Errorf("find descendants of %s: %v", object, err)
@@ -228,8 +227,8 @@ func findDescendants(ctx context.Context, git *gittool.Tool, object string) ([]g
 
 // branchesContaining returns the set of refs under refs/heads/ that
 // contain the given commit object. The order is undefined.
-func branchesContaining(ctx context.Context, git *gittool.Tool, object string) ([]gitobj.Ref, error) {
-	p, err := git.Start(ctx, "for-each-ref", "--contains="+object, "--format=%(refname)", "--", "refs/heads/*")
+func branchesContaining(ctx context.Context, g *git.Git, object string) ([]git.Ref, error) {
+	p, err := g.Start(ctx, "for-each-ref", "--contains="+object, "--format=%(refname)", "--", "refs/heads/*")
 	if err != nil {
 		return nil, fmt.Errorf("list branches: %v", err)
 	}
@@ -240,9 +239,9 @@ func branchesContaining(ctx context.Context, git *gittool.Tool, object string) (
 		}
 	}()
 	s := bufio.NewScanner(p)
-	var refs []gitobj.Ref
+	var refs []git.Ref
 	for s.Scan() {
-		refs = append(refs, gitobj.Ref(s.Text()))
+		refs = append(refs, git.Ref(s.Text()))
 	}
 	calledWait = true
 	if err := p.Wait(); err != nil {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gittool
+package git
 
 import (
 	"bufio"
@@ -46,9 +46,9 @@ type StatusOptions struct {
 }
 
 // Status starts a `git status` subprocess.
-func Status(ctx context.Context, git *Tool, opts StatusOptions) (*StatusReader, error) {
+func Status(ctx context.Context, g *Git, opts StatusOptions) (*StatusReader, error) {
 	renameBug := false
-	if version, err := git.getVersion(ctx); err == nil && affectedByStatusRenameBug(version) {
+	if version, err := g.getVersion(ctx); err == nil && affectedByStatusRenameBug(version) {
 		renameBug = true
 	}
 	ctx, cancel := context.WithCancel(ctx)
@@ -66,7 +66,7 @@ func Status(ctx context.Context, git *Tool, opts StatusOptions) (*StatusReader, 
 			args = append(args, string(spec))
 		}
 	}
-	p, err := git.Start(ctx, args...)
+	p, err := g.Start(ctx, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +242,7 @@ func (ent *StatusEntry) String() string {
 	return ent.code.String() + " " + ent.name.String()
 }
 
-// Code returns the two-letter code from the git status short format.
+// Code returns the two-letter code from the Git status short format.
 //
 // More details in the Output section of git-status(1).
 func (ent *StatusEntry) Code() StatusCode {
@@ -389,7 +389,7 @@ type DiffStatusOptions struct {
 
 // DiffStatus compares the working copy with a commit,
 // optionally restricting to the given pathspec.
-func DiffStatus(ctx context.Context, git *Tool, opts DiffStatusOptions) (*DiffStatusReader, error) {
+func DiffStatus(ctx context.Context, g *Git, opts DiffStatusOptions) (*DiffStatusReader, error) {
 	if opts.Commit1 == "" && opts.Commit2 != "" {
 		panic("Commit2 set without Commit1 being set")
 	}
@@ -417,7 +417,7 @@ func DiffStatus(ctx context.Context, git *Tool, opts DiffStatusOptions) (*DiffSt
 			args = append(args, string(p))
 		}
 	}
-	p, err := git.Start(ctx, args...)
+	p, err := g.Start(ctx, args...)
 	if err != nil {
 		return nil, err
 	}

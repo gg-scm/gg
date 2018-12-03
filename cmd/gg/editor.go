@@ -24,13 +24,13 @@ import (
 	"path/filepath"
 
 	"gg-scm.io/pkg/internal/escape"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/sigterm"
 )
 
 // editor allows editing text content interactively.
 type editor struct {
-	git      *gittool.Tool
+	git      *git.Git
 	log      func(error)
 	tempRoot string
 

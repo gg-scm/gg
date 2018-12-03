@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gittool
+package git
 
 import (
 	"context"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
-
-	"gg-scm.io/pkg/internal/gitobj"
 )
 
 func TestParseRev(t *testing.T) {
@@ -39,10 +37,10 @@ func TestParseRev(t *testing.T) {
 	defer env.cleanup()
 
 	repoPath := filepath.Join(env.root, "repo")
-	if err := env.git.Run(ctx, "init", repoPath); err != nil {
+	if err := env.g.Run(ctx, "init", repoPath); err != nil {
 		t.Fatal(err)
 	}
-	git := env.git.WithDir(repoPath)
+	g := env.g.WithDir(repoPath)
 
 	// First commit
 	const fileName = "foo.txt"
@@ -51,21 +49,21 @@ func TestParseRev(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "add", fileName); err != nil {
+	if err := g.Run(ctx, "add", fileName); err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "commit", "-m", "first commit"); err != nil {
+	if err := g.Run(ctx, "commit", "-m", "first commit"); err != nil {
 		t.Fatal(err)
 	}
-	commit1Hex, err := git.RunOneLiner(ctx, '\n', "rev-parse", "HEAD")
+	commit1Hex, err := g.RunOneLiner(ctx, '\n', "rev-parse", "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	commit1, err := gitobj.ParseHash(string(commit1Hex))
+	commit1, err := ParseHash(string(commit1Hex))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "tag", "initial"); err != nil {
+	if err := g.Run(ctx, "tag", "initial"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -74,28 +72,28 @@ func TestParseRev(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := git.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {
+	if err := g.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {
 		t.Fatal(err)
 	}
-	commit2Hex, err := git.RunOneLiner(ctx, '\n', "rev-parse", "HEAD")
+	commit2Hex, err := g.RunOneLiner(ctx, '\n', "rev-parse", "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	commit2, err := gitobj.ParseHash(string(commit2Hex))
+	commit2, err := ParseHash(string(commit2Hex))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Run fetch (to write FETCH_HEAD)
-	if err := git.Run(ctx, "fetch", repoPath, "HEAD"); err != nil {
+	if err := g.Run(ctx, "fetch", repoPath, "HEAD"); err != nil {
 		t.Fatal(err)
 	}
 
 	// Now verify:
 	tests := []struct {
 		refspec string
-		commit  gitobj.Hash
-		ref     gitobj.Ref
+		commit  Hash
+		ref     Ref
 		err     bool
 	}{
 		{
@@ -140,22 +138,22 @@ func TestParseRev(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		rev, err := ParseRev(ctx, git, test.refspec)
+		rev, err := ParseRev(ctx, g, test.refspec)
 		if err != nil {
 			if !test.err {
-				t.Errorf("ParseRev(ctx, git, %q) error: %v", test.refspec, err)
+				t.Errorf("ParseRev(ctx, g, %q) error: %v", test.refspec, err)
 			}
 			continue
 		}
 		if test.err {
-			t.Errorf("ParseRev(ctx, git, %q) = %v; want error", test.refspec, rev)
+			t.Errorf("ParseRev(ctx, g, %q) = %v; want error", test.refspec, rev)
 			continue
 		}
 		if got := rev.Commit(); got != test.commit {
-			t.Errorf("ParseRev(ctx, git, %q).Commit() = %v; want %v", test.refspec, got, test.commit)
+			t.Errorf("ParseRev(ctx, g, %q).Commit() = %v; want %v", test.refspec, got, test.commit)
 		}
 		if got := rev.Ref(); got != test.ref {
-			t.Errorf("ParseRev(ctx, git, %q).RefName() = %q; want %q", test.refspec, got, test.ref)
+			t.Errorf("ParseRev(ctx, g, %q).RefName() = %q; want %q", test.refspec, got, test.ref)
 		}
 	}
 }

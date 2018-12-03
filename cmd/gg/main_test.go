@@ -30,8 +30,7 @@ import (
 
 	"gg-scm.io/pkg/internal/escape"
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -104,7 +103,7 @@ type testEnv struct {
 	root filesystem.Dir
 
 	// git is a Git tool configured to operate in root.
-	git *gittool.Tool
+	git *git.Git
 
 	// roundTripper is the HTTP transport to use when invoking gg.
 	// It defaults to a stub.
@@ -153,7 +152,7 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	root := topFS.FromSlash("scratch")
 	xdgConfigDir := topFS.FromSlash("xdgconfig")
 	stderr := new(bytes.Buffer)
-	git, err := gittool.New(gitPath, root, &gittool.Options{
+	git, err := git.New(gitPath, root, &git.Options{
 		Env: append(os.Environ(),
 			"GIT_CONFIG_NOSYSTEM=1",
 			"HOME="+topDir,
@@ -343,14 +342,14 @@ func (env *testEnv) trackFiles(ctx context.Context, files ...string) error {
 
 // newCommit runs `git commit -a` with some dummy commit message at the
 // slash-separated path relative to env.root.
-func (env *testEnv) newCommit(ctx context.Context, dir string) (gitobj.Hash, error) {
-	git := env.git.WithDir(env.root.FromSlash(dir))
-	if err := git.Run(ctx, "commit", "-am", "did stuff"); err != nil {
-		return gitobj.Hash{}, err
+func (env *testEnv) newCommit(ctx context.Context, dir string) (git.Hash, error) {
+	g := env.git.WithDir(env.root.FromSlash(dir))
+	if err := g.Run(ctx, "commit", "-am", "did stuff"); err != nil {
+		return git.Hash{}, err
 	}
-	r, err := gittool.ParseRev(ctx, git, "HEAD")
+	r, err := git.ParseRev(ctx, g, "HEAD")
 	if err != nil {
-		return gitobj.Hash{}, err
+		return git.Hash{}, err
 	}
 	return r.Commit(), nil
 }
@@ -358,48 +357,48 @@ func (env *testEnv) newCommit(ctx context.Context, dir string) (gitobj.Hash, err
 // dummyRev creates a new revision in a repository that adds the given file.
 // If the branch is not the same as the current branch, that branch is either
 // checked out or created.
-func dummyRev(ctx context.Context, git *gittool.Tool, dir string, branch string, file string, msg string) (gitobj.Hash, error) {
-	git = git.WithDir(dir)
-	curr, err := gittool.ParseRev(ctx, git, "HEAD")
+func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file string, msg string) (git.Hash, error) {
+	g = g.WithDir(dir)
+	curr, err := git.ParseRev(ctx, g, "HEAD")
 	if err != nil {
 		// First commit
 		if branch != "master" {
-			return gitobj.Hash{}, fmt.Errorf("make dummy rev: %v", err)
+			return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 		}
 	} else if curr.Ref().Branch() != branch {
-		if _, err := gittool.ParseRev(ctx, git, "refs/heads/"+branch); err != nil {
+		if _, err := git.ParseRev(ctx, g, "refs/heads/"+branch); err != nil {
 			// Branch doesn't exist, create it.
-			if err := git.Run(ctx, "branch", "--", branch); err != nil {
-				return gitobj.Hash{}, fmt.Errorf("make dummy rev: %v", err)
+			if err := g.Run(ctx, "branch", "--", branch); err != nil {
+				return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 			}
-			if err := git.Run(ctx, "branch", "--set-upstream-to="+curr.Ref().String(), "--", branch); err != nil {
-				return gitobj.Hash{}, fmt.Errorf("make dummy rev: %v", err)
+			if err := g.Run(ctx, "branch", "--set-upstream-to="+curr.Ref().String(), "--", branch); err != nil {
+				return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 			}
 		}
-		if err := git.Run(ctx, "checkout", "--quiet", branch); err != nil {
-			return gitobj.Hash{}, fmt.Errorf("make dummy rev: %v", err)
+		if err := g.Run(ctx, "checkout", "--quiet", branch); err != nil {
+			return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 		}
 	}
 	err = ioutil.WriteFile(filepath.Join(dir, file), []byte("dummy content"), 0666)
 	if err != nil {
-		return gitobj.Hash{}, fmt.Errorf("make dummy rev: %v", err)
+		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 	}
-	if err := git.Run(ctx, "add", file); err != nil {
-		return gitobj.Hash{}, fmt.Errorf("make dummy rev: %v", err)
+	if err := g.Run(ctx, "add", file); err != nil {
+		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 	}
-	if err := git.Run(ctx, "commit", "-m", msg); err != nil {
-		return gitobj.Hash{}, fmt.Errorf("make dummy rev: %v", err)
+	if err := g.Run(ctx, "commit", "-m", msg); err != nil {
+		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 	}
-	curr, err = gittool.ParseRev(ctx, git, "HEAD")
+	curr, err = git.ParseRev(ctx, g, "HEAD")
 	if err != nil {
-		return gitobj.Hash{}, fmt.Errorf("make dummy rev: %v", err)
+		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 	}
 	return curr.Commit(), nil
 }
 
 // prettyCommit annotates the hex-encoded hash with a name if present
 // in the given map.
-func prettyCommit(h gitobj.Hash, names map[gitobj.Hash]string) string {
+func prettyCommit(h git.Hash, names map[git.Hash]string) string {
 	n := names[h]
 	if n == "" {
 		return h.String()

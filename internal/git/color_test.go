@@ -14,7 +14,7 @@
 
 //+build darwin dragonfly freebsd linux netbsd openbsd plan9 solaris
 
-package gittool
+package git
 
 import (
 	"bytes"
@@ -210,14 +210,14 @@ func TestConfigColorBool(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		cfg, err := ReadConfig(ctx, env.git)
+		cfg, err := ReadConfig(ctx, env.g)
 		if err != nil {
 			t.Errorf("For %q: %v", test.config, err)
 			continue
 		}
 		for _, isTerm := range []bool{false, true} {
 			got, gotErr := cfg.ColorBool(test.name, isTerm)
-			out, wantErr := env.git.RunOneLiner(ctx, '\n', "config", "--get-colorbool", test.name, fmt.Sprint(isTerm))
+			out, wantErr := env.g.RunOneLiner(ctx, '\n', "config", "--get-colorbool", test.name, fmt.Sprint(isTerm))
 			if wantErr != nil {
 				if gotErr == nil {
 					t.Errorf("For %q, cfg.ColorBool(%q, %t) = _, <nil>; want error", test.config, test.name, isTerm)

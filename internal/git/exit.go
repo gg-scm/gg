@@ -12,13 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//+build !go1.9
+//+build darwin dragonfly freebsd linux netbsd openbsd plan9 solaris windows
 
-package gittool
+package git
 
-// Intentional compile error to ensure not built with pre-Go 1.9.
-//
-// gittool.go depends on the sane os/exec environment variable
-// behavior introduced in Go 1.9.
+import (
+	"os"
+	"syscall"
+)
 
-const _ = REQUIRES_GO_1_9
+func exitStatus(state *os.ProcessState) int {
+	ws, ok := state.Sys().(syscall.WaitStatus)
+	if !ok {
+		if !state.Success() {
+			return -1
+		}
+		return 0
+	}
+	return ws.ExitStatus()
+}
+
+func wasSignaled(state *os.ProcessState) bool {
+	ws, ok := state.Sys().(syscall.WaitStatus)
+	return ok && ws.Signaled()
+}

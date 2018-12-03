@@ -18,8 +18,7 @@ import (
 	"context"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 const catSynopsis = "output the current or given revision of files"
@@ -29,7 +28,7 @@ func cat(ctx context.Context, cc *cmdContext, args []string) error {
 
 	Print the specified files as they were at the given revision. If no
 	revision is given, HEAD is used.`)
-	r := f.String("r", gitobj.Head.String(), "print the `rev`ision")
+	r := f.String("r", git.Head.String(), "print the `rev`ision")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -39,7 +38,7 @@ func cat(ctx context.Context, cc *cmdContext, args []string) error {
 	if f.NArg() == 0 {
 		return usagef("must pass one or more files to cat")
 	}
-	rev, err := gittool.ParseRev(ctx, cc.git, *r)
+	rev, err := git.ParseRev(ctx, cc.git, *r)
 	if err != nil {
 		return err
 	}
@@ -51,11 +50,11 @@ func cat(ctx context.Context, cc *cmdContext, args []string) error {
 	return nil
 }
 
-func catFile(ctx context.Context, cc *cmdContext, rev *gittool.Rev, path string) error {
+func catFile(ctx context.Context, cc *cmdContext, rev *git.Rev, path string) error {
 	// Find path relative to top of repository. ls-files outputs files in
 	// a different order than its arguments, so we have to do this one at
 	// a time.
-	topPath, err := cc.git.RunOneLiner(ctx, 0, "ls-tree", "-z", "--name-only", "--full-name", rev.Commit().String(), "--", gittool.LiteralPath(path).String())
+	topPath, err := cc.git.RunOneLiner(ctx, 0, "ls-tree", "-z", "--name-only", "--full-name", rev.Commit().String(), "--", git.LiteralPath(path).String())
 	if err != nil {
 		return err
 	}

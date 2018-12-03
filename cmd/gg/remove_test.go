@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestRemove(t *testing.T) {
@@ -57,7 +57,7 @@ func TestRemove(t *testing.T) {
 		t.Error("foo.txt exists after gg rm")
 	}
 	// Verify that foo.txt is no longer in the index.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestRemove_AddedFails(t *testing.T) {
 		t.Error("foo.txt does not exist")
 	}
 	// Verify that foo.txt is still in the index as added.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +181,7 @@ func TestRemove_AddedForce(t *testing.T) {
 		t.Error("foo.txt exists after gg rm")
 	}
 	// Verify that the index is clean.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +239,7 @@ func TestRemove_ModifiedFails(t *testing.T) {
 		t.Error("foo.txt does not exist")
 	}
 	// Verify that foo.txt is still in the index as modified.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,7 +307,7 @@ func TestRemove_ModifiedForce(t *testing.T) {
 		t.Error("foo.txt exists after gg rm")
 	}
 	// Verify that foo.txt is no longer in the index.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +370,7 @@ func TestRemove_MissingFails(t *testing.T) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
 	// Verify that foo.txt is still in the index.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,7 +432,7 @@ func TestRemove_MissingAfter(t *testing.T) {
 	}
 
 	// Verify that foo.txt is no longer in the index.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -496,7 +496,7 @@ func TestRemove_Recursive(t *testing.T) {
 		t.Error("foo/bar.txt exists after gg rm")
 	}
 	// Verify that foo/bar.txt is not in the index.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -560,7 +560,7 @@ func TestRemove_RecursiveMissingFails(t *testing.T) {
 	}
 
 	// Verify that foo.txt is still in the index.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -622,7 +622,7 @@ func TestRemove_RecursiveMissingAfter(t *testing.T) {
 	}
 
 	// Verify that foo/bar.txt is not in the index.
-	st, err := gittool.Status(ctx, env.git, gittool.StatusOptions{})
+	st, err := git.Status(ctx, env.git, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -20,8 +20,7 @@ import (
 	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 const upstreamSynopsis = "query or set upstream branch"
@@ -46,7 +45,7 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("cannot set multiple upstreams")
 	}
 	if *branch == "" {
-		rev, err := gittool.ParseRev(ctx, cc.git, gitobj.Head.String())
+		rev, err := git.ParseRev(ctx, cc.git, git.Head.String())
 		if err != nil {
 			return err
 		}
@@ -56,7 +55,7 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	if f.Arg(0) == "" {
-		rev, err := gittool.ParseRev(ctx, cc.git, *branch+"@{upstream}")
+		rev, err := git.ParseRev(ctx, cc.git, *branch+"@{upstream}")
 		if err != nil {
 			return err
 		}

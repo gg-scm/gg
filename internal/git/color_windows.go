@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gittool
+package git
 
 // cmd.exe doesn't support ANSI escape sequences until Windows 10.
 // Let's pick the safer option of not colorizing.

@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 const backoutSynopsis = "reverse effect of an earlier commit"
@@ -40,17 +40,17 @@ func backout(ctx context.Context, cc *cmdContext, args []string) error {
 	} else if err != nil {
 		return usagef("%v", err)
 	}
-	var r *gittool.Rev
+	var r *git.Rev
 	switch {
 	case f.NArg() == 0 && *rev != "":
 		var err error
-		r, err = gittool.ParseRev(ctx, cc.git, *rev)
+		r, err = git.ParseRev(ctx, cc.git, *rev)
 		if err != nil {
 			return err
 		}
 	case f.NArg() == 1 && *rev == "":
 		var err error
-		r, err = gittool.ParseRev(ctx, cc.git, f.Arg(0))
+		r, err = git.ParseRev(ctx, cc.git, f.Arg(0))
 		if err != nil {
 			return err
 		}

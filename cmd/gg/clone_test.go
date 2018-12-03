@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 const cloneFileMsg = "Hello, World!\n"
@@ -55,7 +55,7 @@ func TestClone(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(env.root.FromSlash("repoB"))
-	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != head {
@@ -65,17 +65,17 @@ func TestClone(t *testing.T) {
 			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
 		}
 	}
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/foo"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/heads/foo"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != head {
 		t.Errorf("refs/heads/foo = %s; want %s", r.Commit(), head)
 	}
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/remotes/origin/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/remotes/origin/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != head {
 		t.Errorf("refs/remotes/origin/master = %s; want %s", r.Commit(), head)
 	}
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/remotes/origin/foo"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/remotes/origin/foo"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != head {
 		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.Commit(), head)
@@ -118,7 +118,7 @@ func TestClone_Branch(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(env.root.FromSlash("repoB"))
-	if r, err := gittool.ParseRev(ctx, gitB, "HEAD"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "HEAD"); err != nil {
 		t.Error(err)
 	} else {
 		if r.Commit() != head {
@@ -128,17 +128,17 @@ func TestClone_Branch(t *testing.T) {
 			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref())
 		}
 	}
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/heads/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != head {
 		t.Errorf("refs/heads/master = %s; want %s", r.Commit(), head)
 	}
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/remotes/origin/master"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/remotes/origin/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != head {
 		t.Errorf("refs/remotes/origin/master = %s; want %s", r.Commit(), head)
 	}
-	if r, err := gittool.ParseRev(ctx, gitB, "refs/remotes/origin/foo"); err != nil {
+	if r, err := git.ParseRev(ctx, gitB, "refs/remotes/origin/foo"); err != nil {
 		t.Error(err)
 	} else if r.Commit() != head {
 		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.Commit(), head)

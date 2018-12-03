@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gitobj provides Git data types.
-package gitobj // import "gg-scm.io/pkg/internal/gitobj"
+package git
 
 import (
 	"encoding/hex"

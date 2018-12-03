@@ -32,7 +32,7 @@ import (
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/sigterm"
 )
 
@@ -115,7 +115,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 			return fmt.Errorf("gg: %v", err)
 		}
 	}
-	opts := gittool.Options{
+	opts := git.Options{
 		Env:    pctx.env,
 		Stdin:  pctx.stdin,
 		Stdout: pctx.stdout,
@@ -139,7 +139,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 			pctx.stderr.Write(buf.Bytes())
 		}
 	}
-	git, err := gittool.New(*gitPath, pctx.dir, &opts)
+	git, err := git.New(*gitPath, pctx.dir, &opts)
 	if err != nil {
 		return fmt.Errorf("gg: %v", err)
 	}
@@ -185,7 +185,7 @@ type cmdContext struct {
 	dir     string
 	xdgDirs *xdgDirs
 
-	git        *gittool.Tool
+	git        *git.Git
 	editor     *editor
 	httpClient *http.Client
 

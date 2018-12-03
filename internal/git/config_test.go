@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gittool
+package git
 
 import (
 	"context"
@@ -125,12 +125,12 @@ func TestConfigValue(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		cfg, err := ReadConfig(ctx, env.git)
+		cfg, err := ReadConfig(ctx, env.g)
 		if err != nil {
 			t.Errorf("For %q: %v", test.config, err)
 			continue
 		}
-		want, err := env.git.RunOneLiner(ctx, 0, "config", "-z", test.name)
+		want, err := env.g.RunOneLiner(ctx, 0, "config", "-z", test.name)
 		if err != nil {
 			want = nil
 		}
@@ -185,13 +185,13 @@ func TestConfigBool(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		cfg, err := ReadConfig(ctx, env.git)
+		cfg, err := ReadConfig(ctx, env.g)
 		if err != nil {
 			t.Errorf("For %q: %v", test.config, err)
 			continue
 		}
 		got, gotErr := cfg.Bool(test.name)
-		out, wantErr := env.git.RunOneLiner(ctx, 0, "config", "-z", "--bool", test.name)
+		out, wantErr := env.g.RunOneLiner(ctx, 0, "config", "-z", "--bool", test.name)
 		if wantErr != nil {
 			if gotErr == nil {
 				t.Errorf("For %q, cfg.Bool(%q) = _, <nil>; want error", test.config, test.name)
@@ -252,7 +252,7 @@ func BenchmarkReadConfig(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		ReadConfig(ctx, env.git)
+		ReadConfig(ctx, env.g)
 	}
 }
 
@@ -290,6 +290,6 @@ func BenchmarkOneConfigLine(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		env.git.RunOneLiner(ctx, '\n', "config", "user.email")
+		env.g.RunOneLiner(ctx, '\n', "config", "user.email")
 	}
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gittool
+package git
 
 import (
 	"bytes"
@@ -29,8 +29,8 @@ type Config struct {
 }
 
 // ReadConfig reads all the configuration settings from git.
-func ReadConfig(ctx context.Context, git *Tool) (*Config, error) {
-	p, err := git.Start(ctx, "config", "-z", "--list")
+func ReadConfig(ctx context.Context, g *Git) (*Config, error) {
+	p, err := g.Start(ctx, "config", "-z", "--list")
 	if err != nil {
 		return nil, fmt.Errorf("read git config: %v", err)
 	}

@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/singleclose"
 	"gg-scm.io/pkg/internal/terminal"
 )
@@ -45,7 +45,7 @@ aliases: st, check`)
 		untrackedColor []byte
 		unmergedColor  []byte
 	)
-	cfg, err := gittool.ReadConfig(ctx, cc.git)
+	cfg, err := git.ReadConfig(ctx, cc.git)
 	if err != nil {
 		return err
 	}
@@ -78,11 +78,11 @@ aliases: st, check`)
 			fmt.Fprintln(cc.stderr, "gg:", err)
 		}
 	}
-	pathspecs := make([]gittool.Pathspec, f.NArg())
+	pathspecs := make([]git.Pathspec, f.NArg())
 	for i, arg := range f.Args() {
-		pathspecs[i] = gittool.Pathspec(arg)
+		pathspecs[i] = git.Pathspec(arg)
 	}
-	st, err := gittool.Status(ctx, cc.git, gittool.StatusOptions{
+	st, err := git.Status(ctx, cc.git, git.StatusOptions{
 		Pathspecs: pathspecs,
 	})
 	if err != nil {

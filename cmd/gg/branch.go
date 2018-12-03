@@ -20,8 +20,7 @@ import (
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/gitobj"
-	"gg-scm.io/pkg/internal/gittool"
+	"gg-scm.io/pkg/internal/git"
 )
 
 const branchSynopsis = "list or manage branches"
@@ -83,17 +82,17 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 				return fmt.Errorf("invalid branch name %q", b)
 			}
 		}
-		target := gitobj.Head.String()
+		target := git.Head.String()
 		if *rev != "" {
 			target = *rev
 		}
-		r, err := gittool.ParseRev(ctx, cc.git, target)
+		r, err := git.ParseRev(ctx, cc.git, target)
 		if err != nil {
 			return err
 		}
 		var upstream string
 		if b := r.Ref().Branch(); b != "" {
-			cfg, err := gittool.ReadConfig(ctx, cc.git)
+			cfg, err := git.ReadConfig(ctx, cc.git)
 			if err != nil {
 				return err
 			}
@@ -118,7 +117,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 				// since branch would fail otherwise. We need to check for
 				// existence because we don't want to clobber upstream.
 				// TODO(someday): write test that exercises this.
-				_, err := gittool.ParseRev(ctx, cc.git, gitobj.BranchRef(b).String())
+				_, err := git.ParseRev(ctx, cc.git, git.BranchRef(b).String())
 				exists = err == nil
 			}
 			branchArgs[len(branchArgs)-2] = b
@@ -133,13 +132,13 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 			}
 		}
 		if *rev == "" {
-			return cc.git.Run(ctx, "symbolic-ref", "-m", "gg branch", gitobj.Head.String(), gitobj.BranchRef(f.Arg(0)).String())
+			return cc.git.Run(ctx, "symbolic-ref", "-m", "gg branch", git.Head.String(), git.BranchRef(f.Arg(0)).String())
 		}
 	}
 	return nil
 }
 
-func branchUpstream(cfg *gittool.Config, name string) string {
+func branchUpstream(cfg *git.Config, name string) string {
 	// TODO(soon): Remove this function; the branch command should copy
 	// the configuration directly.
 
@@ -147,7 +146,7 @@ func branchUpstream(cfg *gittool.Config, name string) string {
 	if remote == "" {
 		return ""
 	}
-	merge := gitobj.Ref(cfg.Value("branch." + name + ".merge"))
+	merge := git.Ref(cfg.Value("branch." + name + ".merge"))
 	if merge == "" {
 		return ""
 	}
