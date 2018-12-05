@@ -22,7 +22,6 @@ import (
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
-	"gg-scm.io/pkg/internal/singleclose"
 )
 
 const revertSynopsis = "restore files to their checkout state"
@@ -68,7 +67,7 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 	for _, f := range f.Args() {
 		pathspecs = append(pathspecs, git.LiteralPath(f))
 	}
-	dr, err := git.DiffStatus(ctx, cc.git, git.DiffStatusOptions{
+	st, err := cc.git.DiffStatus(ctx, git.DiffStatusOptions{
 		Commit1:        revObj.Commit().String(),
 		Pathspecs:      pathspecs,
 		DisableRenames: true,
@@ -76,26 +75,18 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 	if err != nil {
 		return err
 	}
-	drCloser := singleclose.For(dr)
-	defer drCloser.Close()
 	var adds, deletes, mods, chmods []git.Pathspec
-	for dr.Scan() {
-		switch dr.Entry().Code() {
+	for _, ent := range st {
+		switch ent.Code {
 		case git.DiffStatusAdded:
-			adds = append(adds, dr.Entry().Name().Pathspec())
+			adds = append(adds, ent.Name.Pathspec())
 		case git.DiffStatusDeleted:
-			deletes = append(deletes, dr.Entry().Name().Pathspec())
+			deletes = append(deletes, ent.Name.Pathspec())
 		case git.DiffStatusModified:
-			mods = append(mods, dr.Entry().Name().Pathspec())
+			mods = append(mods, ent.Name.Pathspec())
 		case git.DiffStatusChangedMode:
-			chmods = append(chmods, dr.Entry().Name().Pathspec())
+			chmods = append(chmods, ent.Name.Pathspec())
 		}
-	}
-	if err := dr.Err(); err != nil {
-		return err
-	}
-	if err := drCloser.Close(); err != nil {
-		return err
 	}
 
 	// Find the list of files that need to be backed up: these are
