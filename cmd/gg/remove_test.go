@@ -20,6 +20,7 @@ import (
 
 	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/git"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestRemove(t *testing.T) {
@@ -57,32 +58,15 @@ func TestRemove(t *testing.T) {
 		t.Error("foo.txt exists after gg rm")
 	}
 	// Verify that foo.txt is no longer in the index.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
-			t.Errorf("foo.txt status = '%v'; want 'D '", code)
-		}
+	want := []git.StatusEntry{
+		{Code: git.StatusCode{'D', ' '}, Name: "foo.txt"},
 	}
-	if !found {
-		t.Error("File foo.txt unmodified")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if diff := cmp.Diff(want, st); diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
 	}
 }
 
@@ -120,32 +104,15 @@ func TestRemove_AddedFails(t *testing.T) {
 		t.Error("foo.txt does not exist")
 	}
 	// Verify that foo.txt is still in the index as added.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != 'A' || code[1] != ' ' {
-			t.Errorf("foo.txt status = '%v'; want 'A '", code)
-		}
+	want := []git.StatusEntry{
+		{Code: git.StatusCode{'A', ' '}, Name: "foo.txt"},
 	}
-	if !found {
-		t.Error("File foo.txt removed")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if diff := cmp.Diff(want, st); diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
 	}
 }
 
@@ -181,20 +148,12 @@ func TestRemove_AddedForce(t *testing.T) {
 		t.Error("foo.txt exists after gg rm")
 	}
 	// Verify that the index is clean.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	for st.Scan() {
-		t.Errorf("Found status: %v; want clean working copy", st.Entry())
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if len(st) > 0 {
+		t.Errorf("Found status: %v; want clean working copy", st)
 	}
 }
 
@@ -239,32 +198,15 @@ func TestRemove_ModifiedFails(t *testing.T) {
 		t.Error("foo.txt does not exist")
 	}
 	// Verify that foo.txt is still in the index as modified.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != ' ' || code[1] != 'M' {
-			t.Errorf("foo.txt status = '%v'; want ' M'", code)
-		}
+	want := []git.StatusEntry{
+		{Code: git.StatusCode{' ', 'M'}, Name: "foo.txt"},
 	}
-	if !found {
-		t.Error("File foo.txt reverted")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if diff := cmp.Diff(want, st); diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
 	}
 }
 
@@ -307,32 +249,15 @@ func TestRemove_ModifiedForce(t *testing.T) {
 		t.Error("foo.txt exists after gg rm")
 	}
 	// Verify that foo.txt is no longer in the index.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
-			t.Errorf("foo.txt status = '%v'; want 'D '", code)
-		}
+	want := []git.StatusEntry{
+		{Code: git.StatusCode{'D', ' '}, Name: "foo.txt"},
 	}
-	if !found {
-		t.Error("File foo.txt unmodified")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if diff := cmp.Diff(want, st); diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
 	}
 }
 
@@ -370,32 +295,15 @@ func TestRemove_MissingFails(t *testing.T) {
 		t.Errorf("`gg rm` error: %v; want failure, not usage", err)
 	}
 	// Verify that foo.txt is still in the index.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != ' ' || code[1] != 'D' {
-			t.Errorf("foo.txt status = '%v'; want ' D'", code)
-		}
+	want := []git.StatusEntry{
+		{Code: git.StatusCode{' ', 'D'}, Name: "foo.txt"},
 	}
-	if !found {
-		t.Error("File foo.txt reverted")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if diff := cmp.Diff(want, st); diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
 	}
 }
 
@@ -432,32 +340,15 @@ func TestRemove_MissingAfter(t *testing.T) {
 	}
 
 	// Verify that foo.txt is no longer in the index.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
-			t.Errorf("foo.txt status = '%v'; want 'D '", code)
-		}
+	want := []git.StatusEntry{
+		{Code: git.StatusCode{'D', ' '}, Name: "foo.txt"},
 	}
-	if !found {
-		t.Error("File foo.txt reverted")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if diff := cmp.Diff(want, st); diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
 	}
 }
 
@@ -496,32 +387,15 @@ func TestRemove_Recursive(t *testing.T) {
 		t.Error("foo/bar.txt exists after gg rm")
 	}
 	// Verify that foo/bar.txt is not in the index.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo/bar.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
-			t.Errorf("foo/bar.txt status = '%v'; want 'D '", code)
-		}
+	want := []git.StatusEntry{
+		{Code: git.StatusCode{'D', ' '}, Name: "foo/bar.txt"},
 	}
-	if !found {
-		t.Error("File foo/bar.txt unmodified")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if diff := cmp.Diff(want, st); diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
 	}
 }
 
@@ -560,32 +434,15 @@ func TestRemove_RecursiveMissingFails(t *testing.T) {
 	}
 
 	// Verify that foo.txt is still in the index.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo/bar.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != ' ' || code[1] != 'D' {
-			t.Errorf("foo/bar.txt status = '%v'; want ' D'", code)
-		}
+	want := []git.StatusEntry{
+		{Code: git.StatusCode{' ', 'D'}, Name: "foo/bar.txt"},
 	}
-	if !found {
-		t.Error("File foo/bar.txt unmodified")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if diff := cmp.Diff(want, st); diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
 	}
 }
 
@@ -622,31 +479,14 @@ func TestRemove_RecursiveMissingAfter(t *testing.T) {
 	}
 
 	// Verify that foo/bar.txt is not in the index.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo/bar.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != 'D' || code[1] != ' ' {
-			t.Errorf("foo/bar.txt status = '%v'; want 'D '", code)
-		}
+	want := []git.StatusEntry{
+		{Code: git.StatusCode{'D', ' '}, Name: "foo/bar.txt"},
 	}
-	if !found {
-		t.Error("File foo/bar.txt unmodified")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if diff := cmp.Diff(want, st); diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
 	}
 }

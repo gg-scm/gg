@@ -21,7 +21,6 @@ import (
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
-	"gg-scm.io/pkg/internal/singleclose"
 )
 
 const commitSynopsis = "commit the specified files or all outstanding changes"
@@ -100,63 +99,46 @@ func argsToFiles(ctx context.Context, g *git.Git, args []string) ([]git.TopPath,
 	for i := range args {
 		statusArgs[i] = git.LiteralPath(args[i])
 	}
-	st, err := git.Status(ctx, g, git.StatusOptions{
+	st, err := g.Status(ctx, git.StatusOptions{
 		Pathspecs: statusArgs,
 	})
 	if err != nil {
 		return nil, err
 	}
-	stClose := singleclose.For(st)
-	defer stClose.Close()
 	var files []git.TopPath
-	for st.Scan() {
-		files = append(files, st.Entry().Name())
-	}
-	if err := st.Err(); err != nil {
-		return nil, err
-	}
-	if err := stClose.Close(); err != nil {
-		return nil, err
+	for _, ent := range st {
+		files = append(files, ent.Name)
 	}
 	return files, nil
 }
 
 func inferCommitFiles(ctx context.Context, g *git.Git) ([]git.TopPath, error) {
 	missing, missingStaged, unmerged := 0, 0, 0
-	st, err := git.Status(ctx, g, git.StatusOptions{})
+	st, err := g.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		return nil, err
 	}
-	stClose := singleclose.For(st)
-	defer stClose.Close()
 	var files []git.TopPath
-	for st.Scan() {
-		ent := st.Entry()
+	for _, ent := range st {
 		switch {
-		case ent.Code().IsMissing():
+		case ent.Code.IsMissing():
 			missing++
-			if ent.Code()[0] != ' ' {
+			if ent.Code[0] != ' ' {
 				missingStaged++
 			}
-		case ent.Code().IsAdded() || ent.Code().IsModified() || ent.Code().IsRemoved() || ent.Code().IsCopied():
+		case ent.Code.IsAdded() || ent.Code.IsModified() || ent.Code.IsRemoved() || ent.Code.IsCopied():
 			// Prepend pathspec options to interpret relative to top of
 			// repository and ignore globs. See gitglossary(7) for more details.
-			files = append(files, ent.Name())
-		case ent.Code().IsRenamed():
-			files = append(files, ent.Name(), ent.From())
-		case ent.Code().IsUntracked():
+			files = append(files, ent.Name)
+		case ent.Code.IsRenamed():
+			files = append(files, ent.Name, ent.From)
+		case ent.Code.IsUntracked():
 			// Skip
-		case ent.Code().IsUnmerged():
+		case ent.Code.IsUnmerged():
 			unmerged++
 		default:
 			return nil, fmt.Errorf("unhandled status: %v", ent)
 		}
-	}
-	if err := st.Err(); err != nil {
-		return nil, err
-	}
-	if err := stClose.Close(); err != nil {
-		return nil, err
 	}
 	if unmerged == 1 {
 		return nil, errors.New("1 unmerged file; see 'gg status'")

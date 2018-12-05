@@ -24,7 +24,6 @@ import (
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
-	"gg-scm.io/pkg/internal/singleclose"
 )
 
 const pushSynopsis = "push changes to the specified destination"
@@ -359,22 +358,14 @@ func inferPushRepo(ctx context.Context, git *git.Git, cfg *git.Config, branch st
 // isClean returns true iff all tracked files are unmodified in the
 // working copy.  Untracked and ignored files are not considered.
 func isClean(ctx context.Context, g *git.Git) (bool, error) {
-	st, err := git.Status(ctx, g, git.StatusOptions{})
+	st, err := g.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		return false, err
 	}
-	stClose := singleclose.For(st)
-	defer stClose.Close()
-	for st.Scan() {
-		if !st.Entry().Code().IsUntracked() {
+	for _, ent := range st {
+		if !ent.Code.IsUntracked() {
 			return false, nil
 		}
-	}
-	if err := st.Err(); err != nil {
-		return false, err
-	}
-	if err := stClose.Close(); err != nil {
-		return false, err
 	}
 	return true, nil
 }

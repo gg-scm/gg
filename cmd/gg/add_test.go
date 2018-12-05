@@ -20,6 +20,7 @@ import (
 
 	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/git"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestAdd(t *testing.T) {
@@ -40,32 +41,12 @@ func TestAdd(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != 'A' && code[1] != 'A' {
-			t.Errorf("foo.txt status = '%v'; want to contain 'A'", code)
-		}
-	}
-	if !found {
-		t.Error("File foo.txt not in git status")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if len(st) != 1 || st[0].Name != "foo.txt" || (st[0].Code[0] != 'A' && st[0].Code[1] != 'A') {
+		t.Errorf("status = %v; want foo.txt with 'A'", st)
 	}
 }
 
@@ -96,32 +77,15 @@ func TestAdd_DoesNotStageModified(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != ' ' || code[1] != 'M' {
-			t.Errorf("foo.txt status = '%v'; want ' M'", code)
-		}
+	want := []git.StatusEntry{
+		{Code: git.StatusCode{' ', 'M'}, Name: "foo.txt"},
 	}
-	if !found {
-		t.Error("File foo.txt not in git status")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if diff := cmp.Diff(want, st); diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
 	}
 }
 
@@ -143,32 +107,12 @@ func TestAdd_WholeRepo(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "."); err != nil {
 		t.Error(err)
 	}
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != 'A' && code[1] != 'A' {
-			t.Errorf("foo.txt status = '%v'; want to contain 'A'", code)
-		}
-	}
-	if !found {
-		t.Error("File foo.txt not in git status")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if len(st) != 1 || st[0].Name != "foo.txt" || (st[0].Code[0] != 'A' && st[0].Code[1] != 'A') {
+		t.Errorf("status = %v; want foo.txt with 'A'", st)
 	}
 }
 
@@ -220,32 +164,15 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Name() != "foo.txt" {
-			t.Errorf("Unknown line in status: %v", ent)
-			continue
-		}
-		found = true
-		if code := ent.Code(); code[0] != 'M' || code[1] != ' ' {
-			t.Errorf("foo.txt status = '%v'; want 'M '", code)
-		}
+	want := []git.StatusEntry{
+		{Code: git.StatusCode{'M', ' '}, Name: "foo.txt"},
 	}
-	if !found {
-		t.Error("File foo.txt not in git status")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if diff := cmp.Diff(want, st); diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
 	}
 }
 
@@ -298,29 +225,22 @@ func TestAdd_Directory(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
 	foundBar, foundNewFile := false, false
-	for st.Scan() {
-		ent := st.Entry()
-		code := ent.Code()
-		switch ent.Name() {
+	for _, ent := range st {
+		switch ent.Name {
 		case "foo/bar.txt":
 			foundBar = true
-			if code[0] != 'M' || code[1] != ' ' {
-				t.Errorf("foo/bar.txt status = '%v'; want 'M '", code)
+			if ent.Code[0] != 'M' || ent.Code[1] != ' ' {
+				t.Errorf("foo/bar.txt status = '%v'; want 'M '", ent.Code)
 			}
 		case "foo/newfile.txt":
 			foundNewFile = true
-			if code[0] != 'A' && code[1] != 'A' {
-				t.Errorf("foo/newfile.txt status = '%v'; want to contain 'A'", code)
+			if ent.Code[0] != 'A' && ent.Code[1] != 'A' {
+				t.Errorf("foo/newfile.txt status = '%v'; want to contain 'A'", ent.Code)
 			}
 		default:
 			t.Errorf("Unknown line in status: %v", ent)
@@ -331,9 +251,6 @@ func TestAdd_Directory(t *testing.T) {
 	}
 	if !foundNewFile {
 		t.Error("File foo/newfile.txt not in git status")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
 	}
 }
 
@@ -359,27 +276,21 @@ func TestAdd_IgnoredFile(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo.txt"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
 	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		switch ent.Name() {
+	for _, ent := range st {
+		switch ent.Name {
 		case "foo.txt":
 			found = true
-			if code := ent.Code(); code[0] != 'A' && code[1] != 'A' {
-				t.Errorf("foo.txt status = '%v'; want to contain 'A'", code)
+			if ent.Code[0] != 'A' && ent.Code[1] != 'A' {
+				t.Errorf("foo.txt status = '%v'; want to contain 'A'", ent.Code)
 			}
 		case ".gitignore":
-			if code := ent.Code(); !code.IsUntracked() {
-				t.Errorf(".gitignore status = '%v'; want untracked", code)
+			if !ent.Code.IsUntracked() {
+				t.Errorf(".gitignore status = '%v'; want untracked", ent.Code)
 			}
 		default:
 			t.Errorf("Unknown line in status: %v", ent)
@@ -387,9 +298,6 @@ func TestAdd_IgnoredFile(t *testing.T) {
 	}
 	if !found {
 		t.Error("File foo.txt not in git status")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
 	}
 }
 
@@ -416,31 +324,25 @@ func TestAdd_IgnoredFileInDirectory(t *testing.T) {
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo"); err != nil {
 		t.Error("gg:", err)
 	}
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
 	foundBaz := false
-	for st.Scan() {
-		ent := st.Entry()
-		switch ent.Name() {
+	for _, ent := range st {
+		switch ent.Name {
 		case "foo/bar.txt":
-			if code := ent.Code(); code[0] != '!' || code[1] != '!' {
-				t.Errorf("foo/bar.txt status = '%v'; want '!!'", code)
+			if ent.Code[0] != '!' || ent.Code[1] != '!' {
+				t.Errorf("foo/bar.txt status = '%v'; want '!!'", ent.Code)
 			}
 		case "foo/baz.txt":
 			foundBaz = true
-			if code := ent.Code(); code[0] != 'A' && code[1] != 'A' {
-				t.Errorf("foo/baz.txt status = '%v'; want to contain 'A'", code)
+			if ent.Code[0] != 'A' && ent.Code[1] != 'A' {
+				t.Errorf("foo/baz.txt status = '%v'; want to contain 'A'", ent.Code)
 			}
 		case ".gitignore":
-			if code := ent.Code(); !code.IsUntracked() {
-				t.Errorf(".gitignore status = '%v'; want untracked", code)
+			if !ent.Code.IsUntracked() {
+				t.Errorf(".gitignore status = '%v'; want untracked", ent.Code)
 			}
 		default:
 			t.Errorf("Unknown line in status: %v", ent)
@@ -448,8 +350,5 @@ func TestAdd_IgnoredFileInDirectory(t *testing.T) {
 	}
 	if !foundBaz {
 		t.Error("File foo/baz.txt not in git status")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
 	}
 }

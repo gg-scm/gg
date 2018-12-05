@@ -65,24 +65,16 @@ func verifyPresent(ctx context.Context, g *git.Git, args []string) error {
 	for i := range args {
 		statusArgs[i] = git.LiteralPath(args[i])
 	}
-	st, err := git.Status(ctx, g, git.StatusOptions{
+	st, err := g.Status(ctx, git.StatusOptions{
 		Pathspecs: statusArgs,
 	})
 	if err != nil {
 		return err
 	}
-	for st.Scan() {
-		ent := st.Entry()
-		if ent.Code().IsMissing() {
-			st.Close()
-			return fmt.Errorf("missing %s", ent.Name())
+	for _, ent := range st {
+		if ent.Code.IsMissing() {
+			return fmt.Errorf("missing %s", ent.Name)
 		}
-	}
-	if err := st.Close(); err != nil {
-		return err
-	}
-	if err := st.Err(); err != nil {
-		return err
 	}
 	return nil
 }

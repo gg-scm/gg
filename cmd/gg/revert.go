@@ -141,24 +141,16 @@ func backupForRevert(ctx context.Context, cc *cmdContext, modified []git.Pathspe
 	if len(modified) == 0 {
 		return nil
 	}
-	sr, err := git.Status(ctx, cc.git, git.StatusOptions{
+	st, err := cc.git.Status(ctx, git.StatusOptions{
 		DisableRenames: true,
 		Pathspecs:      modified,
 	})
 	if err != nil {
 		return fmt.Errorf("backing up files: %v", err)
 	}
-	srCloser := singleclose.For(sr)
-	defer srCloser.Close()
 	var names []git.TopPath
-	for sr.Scan() {
-		names = append(names, sr.Entry().Name())
-	}
-	if err := sr.Err(); err != nil {
-		return fmt.Errorf("backing up files: %v", err)
-	}
-	if err := srCloser.Close(); err != nil {
-		return fmt.Errorf("backing up files: %v", err)
+	for _, ent := range st {
+		names = append(names, ent.Name)
 	}
 	if len(names) == 0 {
 		// Nothing to back up.

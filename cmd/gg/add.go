@@ -21,7 +21,6 @@ import (
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
-	"gg-scm.io/pkg/internal/singleclose"
 )
 
 const addSynopsis = "add the specified files on the next commit"
@@ -122,29 +121,20 @@ func findAddFiles(ctx context.Context, g *git.Git, args []string, includeIgnored
 	for i := range args {
 		statusArgs[i] = git.LiteralPath(args[i])
 	}
-	st, err := git.Status(ctx, g, git.StatusOptions{
+	st, err := g.Status(ctx, git.StatusOptions{
 		Pathspecs:      statusArgs,
 		IncludeIgnored: includeIgnored,
 	})
 	if err != nil {
 		return nil, nil, err
 	}
-	stClose := singleclose.For(st)
-	defer stClose.Close()
-	for st.Scan() {
-		ent := st.Entry()
-		switch code := ent.Code(); {
-		case code.IsUntracked() || code.IsIgnored():
-			untracked = append(untracked, ent.Name())
-		case code.IsUnmerged():
-			unmerged = append(unmerged, ent.Name())
+	for _, ent := range st {
+		switch {
+		case ent.Code.IsUntracked() || ent.Code.IsIgnored():
+			untracked = append(untracked, ent.Name)
+		case ent.Code.IsUnmerged():
+			unmerged = append(unmerged, ent.Name)
 		}
-	}
-	if err := st.Err(); err != nil {
-		return nil, nil, err
-	}
-	if err := stClose.Close(); err != nil {
-		return nil, nil, err
 	}
 	return untracked, unmerged, nil
 }

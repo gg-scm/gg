@@ -21,7 +21,6 @@ import (
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
-	"gg-scm.io/pkg/internal/singleclose"
 	"gg-scm.io/pkg/internal/terminal"
 )
 
@@ -82,14 +81,9 @@ aliases: st, check`)
 	for i, arg := range f.Args() {
 		pathspecs[i] = git.Pathspec(arg)
 	}
-	st, err := git.Status(ctx, cc.git, git.StatusOptions{
+	st, statusErr := cc.git.Status(ctx, git.StatusOptions{
 		Pathspecs: pathspecs,
 	})
-	if err != nil {
-		return err
-	}
-	stClose := singleclose.For(st)
-	defer stClose.Close()
 	if colorize {
 		if err := terminal.ResetTextStyle(cc.stdout); err != nil {
 			return err
@@ -97,32 +91,31 @@ aliases: st, check`)
 	}
 	foundUnrecognized := false
 	hitRenameBug := false
-	for st.Scan() {
-		ent := st.Entry()
+	for _, ent := range st {
 		switch {
-		case ent.Code().IsModified():
-			_, err = fmt.Fprintf(cc.stdout, "%sM %s\n", modifiedColor, ent.Name())
-		case ent.Code().IsAdded():
-			name := ent.Name()
+		case ent.Code.IsModified():
+			_, err = fmt.Fprintf(cc.stdout, "%sM %s\n", modifiedColor, ent.Name)
+		case ent.Code.IsAdded():
+			name := ent.Name
 			if name == "" {
 				// See https://github.com/zombiezen/gg/issues/60 for explanation.
 				name = "???"
 				hitRenameBug = true
 			}
 			_, err = fmt.Fprintf(cc.stdout, "%sA %s\n", addedColor, name)
-			if ent.Code().IsOriginalMissing() {
+			if ent.Code.IsOriginalMissing() {
 				// See https://github.com/zombiezen/gg/issues/44 for explanation.
 				if colorize {
 					if err := terminal.ResetTextStyle(cc.stdout); err != nil {
 						return err
 					}
 				}
-				_, err = fmt.Fprintf(cc.stdout, "%s! %s\n", missingColor, ent.From())
+				_, err = fmt.Fprintf(cc.stdout, "%s! %s\n", missingColor, ent.From)
 			}
-		case ent.Code().IsRemoved():
-			_, err = fmt.Fprintf(cc.stdout, "%sR %s\n", removedColor, ent.Name())
-		case ent.Code().IsCopied():
-			if _, err := fmt.Fprintf(cc.stdout, "%sA %s\n", addedColor, ent.Name()); err != nil {
+		case ent.Code.IsRemoved():
+			_, err = fmt.Fprintf(cc.stdout, "%sR %s\n", removedColor, ent.Name)
+		case ent.Code.IsCopied():
+			if _, err := fmt.Fprintf(cc.stdout, "%sA %s\n", addedColor, ent.Name); err != nil {
 				return err
 			}
 			if colorize {
@@ -130,23 +123,23 @@ aliases: st, check`)
 					return err
 				}
 			}
-			_, err = fmt.Fprintf(cc.stdout, "  %s\n", ent.From())
-		case ent.Code().IsRenamed():
-			fmt.Fprintf(cc.stdout, "%sA %s\n", addedColor, ent.Name())
+			_, err = fmt.Fprintf(cc.stdout, "  %s\n", ent.From)
+		case ent.Code.IsRenamed():
+			fmt.Fprintf(cc.stdout, "%sA %s\n", addedColor, ent.Name)
 			if colorize {
 				if err := terminal.ResetTextStyle(cc.stdout); err != nil {
 					return err
 				}
 			}
-			_, err = fmt.Fprintf(cc.stdout, "  %s\n%sR %s\n", ent.From(), removedColor, ent.From())
-		case ent.Code().IsMissing():
-			_, err = fmt.Fprintf(cc.stdout, "%s! %s\n", missingColor, ent.Name())
-		case ent.Code().IsUntracked():
-			_, err = fmt.Fprintf(cc.stdout, "%s? %s\n", untrackedColor, ent.Name())
-		case ent.Code().IsUnmerged():
-			_, err = fmt.Fprintf(cc.stdout, "%sU %s\n", unmergedColor, ent.Name())
+			_, err = fmt.Fprintf(cc.stdout, "  %s\n%sR %s\n", ent.From, removedColor, ent.From)
+		case ent.Code.IsMissing():
+			_, err = fmt.Fprintf(cc.stdout, "%s! %s\n", missingColor, ent.Name)
+		case ent.Code.IsUntracked():
+			_, err = fmt.Fprintf(cc.stdout, "%s? %s\n", untrackedColor, ent.Name)
+		case ent.Code.IsUnmerged():
+			_, err = fmt.Fprintf(cc.stdout, "%sU %s\n", unmergedColor, ent.Name)
 		default:
-			fmt.Fprintf(cc.stderr, "gg: unrecognized status for %s: '%v'\n", ent.Name(), ent.Code())
+			fmt.Fprintf(cc.stderr, "gg: unrecognized status for %s: '%v'\n", ent.Name, ent.Code)
 			foundUnrecognized = true
 		}
 		if err != nil {
@@ -158,17 +151,14 @@ aliases: st, check`)
 			}
 		}
 	}
-	if err := st.Err(); err != nil {
-		return err
-	}
-	if err := stClose.Close(); err != nil {
-		return err
-	}
 	if foundUnrecognized {
 		return errors.New("unrecognized output from git status. Please file a bug at https://github.com/zombiezen/gg/issues/new and include the output from this command.")
 	}
 	if hitRenameBug {
 		return errors.New("version of Git has buggy rename detection; please upgrade. See https://github.com/zombiezen/gg/issues/60 for details.")
+	}
+	if statusErr != nil {
+		return statusErr
 	}
 	return nil
 }

@@ -16,24 +16,15 @@ package git
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
+
+	"gg-scm.io/pkg/internal/sigterm"
 )
-
-// StatusReader is a handle to a running `git status` command.
-type StatusReader struct {
-	p         *Process
-	r         *bufio.Reader
-	cancel    context.CancelFunc
-	renameBug bool
-
-	scanned bool
-	ent     StatusEntry
-	err     error
-}
 
 // StatusOptions specifies the command-line arguments for `git status`.
 type StatusOptions struct {
@@ -45,13 +36,12 @@ type StatusOptions struct {
 	Pathspecs []Pathspec
 }
 
-// Status starts a `git status` subprocess.
-func Status(ctx context.Context, g *Git, opts StatusOptions) (*StatusReader, error) {
+// Status returns any differences the working copy has from the files at HEAD.
+func (g *Git) Status(ctx context.Context, opts StatusOptions) ([]StatusEntry, error) {
 	renameBug := false
 	if version, err := g.getVersion(ctx); err == nil && affectedByStatusRenameBug(version) {
 		renameBug = true
 	}
-	ctx, cancel := context.WithCancel(ctx)
 	args := make([]string, 0, 8+len(opts.Pathspecs))
 	if opts.DisableRenames {
 		args = append(args, "-c", "status.renames=false")
@@ -66,16 +56,28 @@ func Status(ctx context.Context, g *Git, opts StatusOptions) (*StatusReader, err
 			args = append(args, string(spec))
 		}
 	}
-	p, err := g.Start(ctx, args...)
-	if err != nil {
-		return nil, err
+	c := g.Command(ctx, args...)
+	stdout := new(strings.Builder)
+	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
+	stderr := new(bytes.Buffer)
+	c.Stderr = &limitWriter{w: stderr, n: 4096}
+	if err := sigterm.Run(ctx, c); err != nil {
+		if stderr.Len() == 0 {
+			return nil, fmt.Errorf("git status: %v", err)
+		}
+		return nil, fmt.Errorf("git status: %v\n%s", err, stderr)
 	}
-	return &StatusReader{
-		p:         p,
-		r:         bufio.NewReader(p),
-		cancel:    cancel,
-		renameBug: renameBug,
-	}, nil
+	var entries []StatusEntry
+	for stdout := stdout.String(); len(stdout) > 0; {
+		var ent StatusEntry
+		var err error
+		ent, stdout, err = readStatusEntry(stdout, renameBug)
+		if err != nil {
+			return entries, err
+		}
+		entries = append(entries, ent)
+	}
+	return entries, nil
 }
 
 // affectedByStatusRenameBug reports whether `git status --porcelain`
@@ -100,115 +102,59 @@ func affectedByStatusRenameBug(version string) bool {
 	return false
 }
 
-// Scan reads the next entry in the status output.
-func (sr *StatusReader) Scan() bool {
-	sr.err = readStatusEntry(&sr.ent, sr.r, sr.renameBug)
-	if sr.err != nil {
-		return false
-	}
-	sr.scanned = true
-	return true
-}
-
-// Err returns the first non-EOF error encountered during Scan.
-func (sr *StatusReader) Err() error {
-	if sr.err == io.EOF {
-		return nil
-	}
-	return sr.err
-}
-
-// Entry returns the most recent entry parsed by a call to Scan.
-// The pointer may point to data that will be overwritten by a
-// subsequent call to Scan.
-func (sr *StatusReader) Entry() *StatusEntry {
-	if !sr.scanned || sr.err != nil {
-		return nil
-	}
-	return &sr.ent
-}
-
-// Close finishes reading from the Git subprocess and waits for it to
-// terminate. The behavior of calling methods on a StatusReader after
-// Close is undefined.
-//
-// If the subprocess exited due to a signal, Close will not return an
-// error, as it usually means that Close terminated the process. In the
-// case that another signal terminated the subprocess, this usually
-// results in a scan error.
-func (sr *StatusReader) Close() error {
-	sr.cancel()
-	err := sr.p.Wait()
-	*sr = StatusReader{}
-	switch err := err.(type) {
-	case nil:
-		return nil
-	case *exitError:
-		if err.signaled {
-			return nil
-		}
-		return err
-	default:
-		return err
-	}
-}
-
 // A StatusEntry describes the state of a single file in the working copy.
 type StatusEntry struct {
-	code StatusCode
-	name TopPath
-	from TopPath
+	// Code is the two-letter code from the Git status short format.
+	// More details in the Output section of git-status(1).
+	Code StatusCode
+	// Name is the path of the file.
+	Name TopPath
+	// From is the path of the file that this file was renamed or
+	// copied from, otherwise an empty string.
+	From TopPath
 }
 
-func readStatusEntry(out *StatusEntry, r io.ByteReader, renameBug bool) error {
-	var err error
-	// Read status code.
-	out.code[0], err = r.ReadByte()
-	if err == io.EOF {
-		return err
+func readStatusEntry(data string, renameBug bool) (StatusEntry, string, error) {
+	// Read status code and space.
+	if len(data) == 0 {
+		return StatusEntry{}, "", io.EOF
 	}
-	if err != nil {
-		return fmt.Errorf("read status entry: %v", err)
+	if len(data) < 4 { // 2 bytes + 1 space + 1 NUL
+		return StatusEntry{}, data, errors.New("read status entry: unexpected EOF")
 	}
-	out.code[1], err = r.ReadByte()
-	if err != nil {
-		return fmt.Errorf("read status entry: %v", dontExpectEOF(err))
-	}
-
-	// Read space.
-	sp, err := r.ReadByte()
-	if err != nil {
-		return fmt.Errorf("read status entry: %v", dontExpectEOF(err))
-	}
-	if sp != ' ' {
-		return fmt.Errorf("read status entry: expected ' ', got %q", sp)
+	var ent StatusEntry
+	copy(ent.Code[:], data)
+	if data[2] != ' ' {
+		return StatusEntry{}, data, fmt.Errorf("read status entry: expected ' ', got %q", data[2])
 	}
 
 	// Read name and from.
-	name, err := readString(r, 2048)
-	if err != nil {
-		return fmt.Errorf("read status entry: %v", err)
+	i := strings.IndexByte(data[3:], 0)
+	if i == -1 {
+		return StatusEntry{}, "", errors.New("read status entry: unexpected EOF reading name")
 	}
-	out.name = TopPath(name)
-	if renameBug && out.code[0] == ' ' && out.code[1] == 'R' {
+	ent.Name = TopPath(data[3 : 3+i])
+	data = data[4+i:]
+	if renameBug && ent.Code[0] == ' ' && ent.Code[1] == 'R' {
 		// See doc for affectedByStatusRenameBug for explanation.
-		out.from = out.name
-		out.name = ""
-		return nil
+		ent.From = ent.Name
+		ent.Name = ""
+		return ent, data, nil
 	}
-	if out.code[0] == 'R' || out.code[0] == 'C' || out.code[1] == 'R' || out.code[1] == 'C' {
-		from, err := readString(r, 2048)
-		if err != nil {
-			return fmt.Errorf("read status entry: %v", err)
+	if ent.Code[0] == 'R' || ent.Code[0] == 'C' || ent.Code[1] == 'R' || ent.Code[1] == 'C' {
+		i := strings.IndexByte(data, 0)
+		if i == -1 {
+			return StatusEntry{}, "", errors.New("read status entry: unexpected EOF reading from")
 		}
-		out.from = TopPath(from)
+		ent.From = TopPath(data[:i])
+		data = data[i+1:]
 	}
 
 	// Check code validity at very end in order to consume as much as possible.
-	if !out.code.isValid() {
-		return fmt.Errorf("read status entry: invalid code %q %q", out.code[0], out.code[1])
+	if !ent.Code.isValid() {
+		return StatusEntry{}, data, fmt.Errorf("read status entry: invalid code %q %q", ent.Code[0], ent.Code[1])
 	}
-	return nil
+	return ent, data, nil
 }
 
 // readString reads a NUL-terminated string from r.
@@ -235,29 +181,11 @@ func readString(r io.ByteReader, limit int) (string, error) {
 }
 
 // String returns the entry in short format.
-func (ent *StatusEntry) String() string {
-	if ent.from != "" {
-		return ent.code.String() + " " + ent.from.String() + " -> " + ent.name.String()
+func (ent StatusEntry) String() string {
+	if ent.From != "" {
+		return ent.Code.String() + " " + ent.From.String() + " -> " + ent.Name.String()
 	}
-	return ent.code.String() + " " + ent.name.String()
-}
-
-// Code returns the two-letter code from the Git status short format.
-//
-// More details in the Output section of git-status(1).
-func (ent *StatusEntry) Code() StatusCode {
-	return ent.code
-}
-
-// Name returns the path of the file.
-func (ent *StatusEntry) Name() TopPath {
-	return ent.name
-}
-
-// From returns the path of the file that this file was renamed or
-// copied from, otherwise an empty string.
-func (ent *StatusEntry) From() TopPath {
-	return ent.from
+	return ent.Code.String() + " " + ent.Name.String()
 }
 
 // A StatusCode is a two-letter code from the `git status` short format.

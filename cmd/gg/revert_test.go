@@ -123,23 +123,15 @@ func TestRevert(t *testing.T) {
 			}
 
 			// Verify that working copy is clean (sans backup files).
-			st, err := git.Status(ctx, env.git, git.StatusOptions{})
+			st, err := env.git.Status(ctx, git.StatusOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer func() {
-				if err := st.Close(); err != nil {
-					t.Error("st.Close():", err)
-				}
-			}()
-			for st.Scan() {
-				if name := st.Entry().Name(); name == "staged.txt.orig" || name == "unstaged.txt.orig" {
+			for _, ent := range st {
+				if ent.Name == "staged.txt.orig" || ent.Name == "unstaged.txt.orig" {
 					continue
 				}
-				t.Errorf("Found status: %v; want clean working copy", st.Entry())
-			}
-			if err := st.Err(); err != nil {
-				t.Error(err)
+				t.Errorf("Found status: %v; want clean working copy", ent)
 			}
 		})
 	}
@@ -196,30 +188,21 @@ func TestRevert_AddedFile(t *testing.T) {
 				t.Error("foo.txt.orig was created")
 			}
 			// Verify that foo.txt is untracked.
-			st, err := git.Status(ctx, env.git, git.StatusOptions{})
+			st, err := env.git.Status(ctx, git.StatusOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer func() {
-				if err := st.Close(); err != nil {
-					t.Error("st.Close():", err)
-				}
-			}()
-			for st.Scan() {
-				ent := st.Entry()
-				switch ent.Name() {
+			for _, ent := range st {
+				switch ent.Name {
 				case "foo.txt":
-					if got := ent.Code(); !got.IsUntracked() {
-						t.Errorf("foo.txt status code = '%v'; want '??'", got)
+					if !ent.Code.IsUntracked() {
+						t.Errorf("foo.txt status code = '%v'; want '??'", ent.Code)
 					}
 				case "foo.txt.orig":
 					// Ignore, error already reported.
 				default:
-					t.Errorf("Found status: %v; want untracked foo.txt", st.Entry())
+					t.Errorf("Found status: %v; want untracked foo.txt", ent)
 				}
-			}
-			if err := st.Err(); err != nil {
-				t.Error(err)
 			}
 		})
 	}
@@ -263,30 +246,21 @@ func TestRevert_AddedFileBeforeFirstCommit(t *testing.T) {
 		t.Error("foo.txt.orig was created")
 	}
 	// Verify that foo.txt is untracked.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	for st.Scan() {
-		ent := st.Entry()
-		switch ent.Name() {
+	for _, ent := range st {
+		switch ent.Name {
 		case "foo.txt":
-			if got := ent.Code(); !got.IsUntracked() {
-				t.Errorf("foo.txt status code = '%v'; want '??'", got)
+			if !ent.Code.IsUntracked() {
+				t.Errorf("foo.txt status code = '%v'; want '??'", ent.Code)
 			}
 		case "foo.txt.orig":
 			// Ignore, error already reported.
 		default:
-			t.Errorf("Found status: %v; want untracked foo.txt", st.Entry())
+			t.Errorf("Found status: %v; want untracked foo.txt", ent)
 		}
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
 	}
 }
 
@@ -345,23 +319,15 @@ func TestRevert_All(t *testing.T) {
 		t.Errorf("unstaged modified file content = %q after revert; want %q", got, want)
 	}
 	// Verify that working copy is clean (sans backup files).
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	for st.Scan() {
-		if name := st.Entry().Name(); name == "staged.txt.orig" || name == "unstaged.txt.orig" {
+	for _, ent := range st {
+		if ent.Name == "staged.txt.orig" || ent.Name == "unstaged.txt.orig" {
 			continue
 		}
-		t.Errorf("Found status: %v; want clean working copy", st.Entry())
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+		t.Errorf("Found status: %v; want clean working copy", ent)
 	}
 }
 
@@ -412,23 +378,17 @@ func TestRevert_Rev(t *testing.T) {
 		t.Error("foo.txt.orig was created")
 	}
 	// Verify that Git considers foo.txt locally modified.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
 	found := false
-	for st.Scan() {
-		ent := st.Entry()
-		switch ent.Name() {
+	for _, ent := range st {
+		switch ent.Name {
 		case "foo.txt":
 			found = true
-			if code := ent.Code(); !(code[0] == ' ' && code[1] == 'M') && !(code[0] == 'M' || code[1] == ' ') {
-				t.Errorf("foo.txt status = '%v'; want ' M' or 'M '", code)
+			if !(ent.Code[0] == ' ' && ent.Code[1] == 'M') && !(ent.Code[0] == 'M' || ent.Code[1] == ' ') {
+				t.Errorf("foo.txt status = '%v'; want ' M' or 'M '", ent.Code)
 			}
 		case "foo.txt.orig":
 			// Error already reported.
@@ -439,9 +399,6 @@ func TestRevert_Rev(t *testing.T) {
 	}
 	if !found {
 		t.Error("File foo.txt unmodified")
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
 	}
 }
 
@@ -484,20 +441,12 @@ func TestRevert_Missing(t *testing.T) {
 		t.Errorf("file content = %q after revert; want %q", got, want)
 	}
 	// Verify that the working copy is clean.
-	st, err := git.Status(ctx, env.git, git.StatusOptions{})
+	st, err := env.git.Status(ctx, git.StatusOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := st.Close(); err != nil {
-			t.Error("st.Close():", err)
-		}
-	}()
-	for st.Scan() {
-		t.Errorf("Found status: %v; want clean working copy", st.Entry())
-	}
-	if err := st.Err(); err != nil {
-		t.Error(err)
+	if len(st) > 0 {
+		t.Errorf("Found status: %v; want clean working copy", st)
 	}
 }
 
@@ -627,32 +576,23 @@ func TestRevert_LocalRename(t *testing.T) {
 				t.Error("renamed.txt.orig was created")
 			}
 			// Verify status renamed.txt matches expectations.
-			st, err := git.Status(ctx, env.git, git.StatusOptions{})
+			st, err := env.git.Status(ctx, git.StatusOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer func() {
-				if err := st.Close(); err != nil {
-					t.Error("st.Close():", err)
-				}
-			}()
-			for st.Scan() {
-				ent := st.Entry()
-				switch ent.Name() {
+			for _, ent := range st {
+				switch ent.Name {
 				case "renamed.txt":
-					if got := ent.Code(); test.revertRenamed && !got.IsUntracked() {
-						t.Errorf("renamed.txt status code = '%v'; want '??'", got)
-					} else if !test.revertRenamed && !got.IsAdded() {
-						t.Errorf("renamed.txt status code = '%v'; want to contain 'A'", got)
+					if test.revertRenamed && !ent.Code.IsUntracked() {
+						t.Errorf("renamed.txt status code = '%v'; want '??'", ent.Code)
+					} else if !test.revertRenamed && !ent.Code.IsAdded() {
+						t.Errorf("renamed.txt status code = '%v'; want to contain 'A'", ent.Code)
 					}
 				case "foo.txt", "foo.txt.orig", "renamed.txt.orig":
 					// Ignore, error already reported if needed.
 				default:
-					t.Errorf("Found status: %v; want untracked renamed.txt", st.Entry())
+					t.Errorf("Found status: %v; want untracked renamed.txt", ent)
 				}
-			}
-			if err := st.Err(); err != nil {
-				t.Error(err)
 			}
 		})
 	}
