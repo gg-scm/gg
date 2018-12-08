@@ -180,21 +180,21 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 
 // continueRebase adds any modified files to the index and then runs
 // `git rebase --continue`.
-func continueRebase(ctx context.Context, git *git.Git) error {
-	addFiles, err := inferCommitFiles(ctx, git)
+func continueRebase(ctx context.Context, g *git.Git) error {
+	addFiles, err := inferCommitFiles(ctx, g)
 	if err != nil {
 		return err
 	}
 	if len(addFiles) > 0 {
-		addArgs := []string{"add", "--"}
+		addPathspec := make([]git.Pathspec, 0, len(addFiles))
 		for _, f := range addFiles {
-			addArgs = append(addArgs, f.Pathspec().String())
+			addPathspec = append(addPathspec, f.Pathspec())
 		}
-		if err := git.RunInteractive(ctx, addArgs...); err != nil {
+		if err := g.Add(ctx, addPathspec, git.AddOptions{}); err != nil {
 			return err
 		}
 	}
-	return git.RunInteractive(ctx, "rebase", "--continue")
+	return g.RunInteractive(ctx, "rebase", "--continue")
 }
 
 // findDescendants returns the set of distinct heads under refs/heads/

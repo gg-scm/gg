@@ -68,13 +68,17 @@ func add(ctx context.Context, cc *cmdContext, args []string) error {
 		return err
 	}
 	// Untracked files coming from file arguments should be marked with
-	// intent to add. -f adds ignored files.
+	// intent to add.
 	if len(untrackedFiles) > 0 {
-		gitArgs := []string{"add", "-f", "-N", "--"}
-		for _, tp := range untrackedFiles {
-			gitArgs = append(gitArgs, tp.Pathspec().String())
+		pathspecs := make([]git.Pathspec, 0, len(untrackedFiles))
+		for _, f := range untrackedFiles {
+			pathspecs = append(pathspecs, f.Pathspec())
 		}
-		if err := cc.git.Run(ctx, gitArgs...); err != nil {
+		err := cc.git.Add(ctx, pathspecs, git.AddOptions{
+			IntentToAdd:    true,
+			IncludeIgnored: true,
+		})
+		if err != nil {
 			return err
 		}
 	}
@@ -82,24 +86,27 @@ func add(ctx context.Context, cc *cmdContext, args []string) error {
 	// add, but no -f. A totally untracked directory will come in as a
 	// single entry, which would mean -f would apply to the whole tree.
 	if len(untrackedDirs) > 0 {
-		gitArgs := []string{"add", "-N", "--"}
-		for _, tp := range untrackedDirs {
-			gitArgs = append(gitArgs, tp.Pathspec().String())
+		pathspecs := make([]git.Pathspec, 0, len(untrackedFiles))
+		for _, d := range untrackedDirs {
+			pathspecs = append(pathspecs, d.Pathspec())
 		}
-		if err := cc.git.Run(ctx, gitArgs...); err != nil {
+		err := cc.git.Add(ctx, pathspecs, git.AddOptions{
+			IntentToAdd: true,
+		})
+		if err != nil {
 			return err
 		}
 	}
 	// Unmerged files should be added in their entirety.
 	if len(unmerged1)+len(unmerged2) > 0 {
-		gitArgs := []string{"add", "--"}
-		for _, tp := range unmerged1 {
-			gitArgs = append(gitArgs, tp.Pathspec().String())
+		unmerged := make([]git.Pathspec, 0, len(unmerged1)+len(unmerged2))
+		for _, u := range unmerged1 {
+			unmerged = append(unmerged, u.Pathspec())
 		}
-		for _, tp := range unmerged2 {
-			gitArgs = append(gitArgs, tp.Pathspec().String())
+		for _, u := range unmerged2 {
+			unmerged = append(unmerged, u.Pathspec())
 		}
-		if err := cc.git.Run(ctx, gitArgs...); err != nil {
+		if err := cc.git.Add(ctx, unmerged, git.AddOptions{}); err != nil {
 			return err
 		}
 	}

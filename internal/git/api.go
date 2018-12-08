@@ -110,3 +110,43 @@ func (g *Git) InitBare(ctx context.Context, dir string) error {
 	}
 	return nil
 }
+
+// AddOptions specifies the command-line options for `git add`.
+type AddOptions struct {
+	// IncludeIgnored specifies whether to add ignored files.
+	// If this is false and an ignored file is explicitly named, then Add
+	// will return an error while other matched files are still added.
+	IncludeIgnored bool
+	// If IntentToAdd is true, then contents of files in the index will
+	// not be changed, but any untracked files will have entries added
+	// into the index with empty content.
+	IntentToAdd bool
+}
+
+// Add adds file contents to the index.
+func (g *Git) Add(ctx context.Context, pathspecs []Pathspec, opts AddOptions) error {
+	var args []string
+	args = append(args, "add")
+	if opts.IncludeIgnored {
+		args = append(args, "-f")
+	}
+	if opts.IntentToAdd {
+		args = append(args, "-N")
+	}
+	args = append(args, "--")
+	for _, p := range pathspecs {
+		args = append(args, p.String())
+	}
+	c := g.Command(ctx, args...)
+	buf := new(bytes.Buffer)
+	c.Stdout = &limitWriter{w: buf, n: 4096}
+	c.Stderr = c.Stdout
+	err := sigterm.Run(ctx, c)
+	if err != nil {
+		if buf.Len() == 0 {
+			return fmt.Errorf("git add: %v", err)
+		}
+		return fmt.Errorf("git add: %v\n%s", err, buf)
+	}
+	return nil
+}

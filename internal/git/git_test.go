@@ -240,3 +240,7 @@ func findGit() (string, error) {
 	gitPathCache.val = path
 	return path, nil
 }
+
+// dummyContent is a non-empty string that is used in tests where the
+// exact data is not relevant to the test.
+const dummyContent = "Hello, World!\n"

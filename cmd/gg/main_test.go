@@ -281,7 +281,7 @@ func (env *testEnv) initRepoWithHistory(ctx context.Context, dir string) error {
 		return err
 	}
 	repoGit := env.git.WithDir(repoDir)
-	if err := repoGit.Run(ctx, "add", ".dummy"); err != nil {
+	if err := repoGit.Add(ctx, []git.Pathspec{".dummy"}, git.AddOptions{}); err != nil {
 		return err
 	}
 	if err := repoGit.Run(ctx, "commit", "-m", "initial import"); err != nil {
@@ -310,12 +310,11 @@ func (env *testEnv) addFiles(ctx context.Context, files ...string) error {
 	}
 
 	// Run git add.
-	args := make([]string, 0, 2+len(files))
-	args = append(args, "add", "--")
-	for i := range files {
-		args = append(args, env.root.FromSlash(files[i]))
+	var pathspecs []git.Pathspec
+	for _, f := range files {
+		pathspecs = append(pathspecs, git.LiteralPath(env.root.FromSlash(f)))
 	}
-	return env.git.WithDir(anchor).Run(ctx, args...)
+	return env.git.WithDir(anchor).Add(ctx, pathspecs, git.AddOptions{})
 }
 
 // trackFiles runs `git add -N` with the slash-separated paths relative to
@@ -332,12 +331,13 @@ func (env *testEnv) trackFiles(ctx context.Context, files ...string) error {
 	}
 
 	// Run git add.
-	args := make([]string, 0, 3+len(files))
-	args = append(args, "add", "-N", "--")
-	for i := range files {
-		args = append(args, env.root.FromSlash(files[i]))
+	var pathspecs []git.Pathspec
+	for _, f := range files {
+		pathspecs = append(pathspecs, git.LiteralPath(env.root.FromSlash(f)))
 	}
-	return env.git.WithDir(anchor).Run(ctx, args...)
+	return env.git.WithDir(anchor).Add(ctx, pathspecs, git.AddOptions{
+		IntentToAdd: true,
+	})
 }
 
 // newCommit runs `git commit -a` with some dummy commit message at the
@@ -383,7 +383,7 @@ func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file s
 	if err != nil {
 		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 	}
-	if err := g.Run(ctx, "add", file); err != nil {
+	if err := g.Add(ctx, []git.Pathspec{git.LiteralPath(file)}, git.AddOptions{}); err != nil {
 		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 	}
 	if err := g.Run(ctx, "commit", "-m", msg); err != nil {
