@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"gg-scm.io/pkg/internal/sigterm"
 )
@@ -147,6 +148,52 @@ func (g *Git) Add(ctx context.Context, pathspecs []Pathspec, opts AddOptions) er
 			return fmt.Errorf("git add: %v", err)
 		}
 		return fmt.Errorf("git add: %v\n%s", err, buf)
+	}
+	return nil
+}
+
+// CommitOptions specifies the command-line options for `git commit`.
+type CommitOptions struct {
+	// If Pathspecs is not empty, then the current content of the files
+	// matched by the pathspecs will be committed, regardless of what has
+	// already been staged.
+	Pathspecs []Pathspec
+
+	// If AllowEmpty is true and Pathspecs is empty, then an empty commit
+	// will be created.
+	AllowEmpty bool
+
+	// If All is true, then files that have been modified and deleted will
+	// be automatically staged.
+	All bool
+}
+
+// Commit creates a new commit on HEAD. The message will be used verbatim.
+func (g *Git) Commit(ctx context.Context, msg string, opts CommitOptions) error {
+	var args []string
+	args = append(args, "commit", "--quiet")
+	switch {
+	case opts.All:
+		args = append(args, "--all")
+	case opts.AllowEmpty && len(opts.Pathspecs) == 0:
+		args = append(args, "--only", "--allow-empty")
+	}
+	args = append(args, "--file=-", "--cleanup=verbatim", "--")
+	for _, spec := range opts.Pathspecs {
+		args = append(args, spec.String())
+	}
+
+	c := g.Command(ctx, args...)
+	c.Stdin = strings.NewReader(msg)
+	out := new(bytes.Buffer)
+	c.Stdout = &limitWriter{w: out, n: 4096}
+	c.Stderr = c.Stdout
+	err := sigterm.Run(ctx, c)
+	if err != nil {
+		if out.Len() == 0 {
+			return fmt.Errorf("git commit: %v", err)
+		}
+		return fmt.Errorf("git commit: %v\n%s", err, out)
 	}
 	return nil
 }
