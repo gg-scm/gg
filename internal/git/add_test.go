@@ -23,7 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-func TestAddUntracked(t *testing.T) {
+func TestAdd(t *testing.T) {
 	ctx := context.Background()
 	gitPath, err := findGit()
 	if err != nil {
@@ -32,13 +32,17 @@ func TestAddUntracked(t *testing.T) {
 
 	tests := []struct {
 		name      string
+		fsOps     []filesystem.Operation
 		pathspecs []Pathspec
 		opts      AddOptions
 		want      []StatusEntry
 		wantErr   bool
 	}{
 		{
-			name:      "NoPathspecs",
+			name: "NoPathspecs",
+			fsOps: []filesystem.Operation{
+				filesystem.Write("foo.txt", dummyContent),
+			},
 			pathspecs: []Pathspec{},
 			want: []StatusEntry{
 				{
@@ -48,7 +52,24 @@ func TestAddUntracked(t *testing.T) {
 			},
 		},
 		{
-			name:      "DefaultOptions",
+			name: "WrongFile",
+			fsOps: []filesystem.Operation{
+				filesystem.Write("foo.txt", dummyContent),
+			},
+			pathspecs: []Pathspec{"bar.txt"},
+			wantErr:   true,
+			want: []StatusEntry{
+				{
+					Code: StatusCode{'?', '?'},
+					Name: "foo.txt",
+				},
+			},
+		},
+		{
+			name: "Untracked/DefaultOptions",
+			fsOps: []filesystem.Operation{
+				filesystem.Write("foo.txt", dummyContent),
+			},
 			pathspecs: []Pathspec{"foo.txt"},
 			want: []StatusEntry{
 				{
@@ -58,7 +79,10 @@ func TestAddUntracked(t *testing.T) {
 			},
 		},
 		{
-			name:      "IncludeIgnoredOnUntracked",
+			name: "Untracked/IncludeIgnoredOnUntracked",
+			fsOps: []filesystem.Operation{
+				filesystem.Write("foo.txt", dummyContent),
+			},
 			pathspecs: []Pathspec{"foo.txt"},
 			opts: AddOptions{
 				IncludeIgnored: true,
@@ -71,7 +95,10 @@ func TestAddUntracked(t *testing.T) {
 			},
 		},
 		{
-			name:      "IntentToAdd",
+			name: "Untracked/IntentToAdd",
+			fsOps: []filesystem.Operation{
+				filesystem.Write("foo.txt", dummyContent),
+			},
 			pathspecs: []Pathspec{"foo.txt"},
 			opts: AddOptions{
 				IntentToAdd: true,
@@ -84,18 +111,10 @@ func TestAddUntracked(t *testing.T) {
 			},
 		},
 		{
-			name:      "WrongFile",
-			pathspecs: []Pathspec{"bar.txt"},
-			wantErr:   true,
-			want: []StatusEntry{
-				{
-					Code: StatusCode{'?', '?'},
-					Name: "foo.txt",
-				},
+			name: "Untracked/Dot",
+			fsOps: []filesystem.Operation{
+				filesystem.Write("foo.txt", dummyContent),
 			},
-		},
-		{
-			name:      "Dot",
 			pathspecs: []Pathspec{"."},
 			want: []StatusEntry{
 				{
@@ -104,64 +123,12 @@ func TestAddUntracked(t *testing.T) {
 				},
 			},
 		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			env, err := newTestEnv(ctx, gitPath)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer env.cleanup()
-
-			// Create an empty repository with a foo.txt file.
-			if err := env.g.Init(ctx, "."); err != nil {
-				t.Fatal(err)
-			}
-			if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
-				t.Fatal(err)
-			}
-
-			// Call Add with the test arguments.
-			if err := env.g.Add(ctx, test.pathspecs, test.opts); err != nil && !test.wantErr {
-				t.Error("unexpected Add error:", err)
-			} else if err == nil && test.wantErr {
-				t.Error("Add did not return error; want error")
-			}
-
-			// Compare status.
-			got, err := env.g.Status(ctx, StatusOptions{})
-			if err != nil {
-				t.Fatal(err)
-			}
-			diff := cmp.Diff(test.want, got,
-				cmp.Transformer("String", StatusCode.String),
-				cmpopts.SortSlices(func(a, b StatusEntry) bool {
-					return a.Name < b.Name
-				}))
-			if diff != "" {
-				t.Errorf("status (-want +got):\n%s", diff)
-			}
-		})
-	}
-}
-
-func TestAddIgnored(t *testing.T) {
-	ctx := context.Background()
-	gitPath, err := findGit()
-	if err != nil {
-		t.Skip("git not found:", err)
-	}
-
-	tests := []struct {
-		name      string
-		pathspecs []Pathspec
-		opts      AddOptions
-		want      []StatusEntry
-		wantErr   bool
-	}{
 		{
-			name:      "DefaultOptions",
+			name: "Ignored/DefaultOptions",
+			fsOps: []filesystem.Operation{
+				filesystem.Write(".gitignore", "foo.txt\n"),
+				filesystem.Write("foo.txt", dummyContent),
+			},
 			pathspecs: []Pathspec{"foo.txt"},
 			want: []StatusEntry{
 				{
@@ -176,7 +143,11 @@ func TestAddIgnored(t *testing.T) {
 			wantErr: true, // Git exits with an error saying that the paths are ignored.
 		},
 		{
-			name:      "DefaultOptionsWithUntrackedFile",
+			name: "Ignored/DefaultOptionsWithUntrackedFile",
+			fsOps: []filesystem.Operation{
+				filesystem.Write(".gitignore", "foo.txt\n"),
+				filesystem.Write("foo.txt", dummyContent),
+			},
 			pathspecs: []Pathspec{"foo.txt", ".gitignore"},
 			want: []StatusEntry{
 				{
@@ -191,7 +162,11 @@ func TestAddIgnored(t *testing.T) {
 			wantErr: true, // Git exits with an error saying that the paths are ignored.
 		},
 		{
-			name:      "IncludeIgnored",
+			name: "Ignored/IncludeIgnored",
+			fsOps: []filesystem.Operation{
+				filesystem.Write(".gitignore", "foo.txt\n"),
+				filesystem.Write("foo.txt", dummyContent),
+			},
 			pathspecs: []Pathspec{"foo.txt"},
 			opts: AddOptions{
 				IncludeIgnored: true,
@@ -208,7 +183,11 @@ func TestAddIgnored(t *testing.T) {
 			},
 		},
 		{
-			name:      "DotWithDefaults",
+			name: "Ignored/DotWithDefaults",
+			fsOps: []filesystem.Operation{
+				filesystem.Write(".gitignore", "foo.txt\n"),
+				filesystem.Write("foo.txt", dummyContent),
+			},
 			pathspecs: []Pathspec{"."},
 			want: []StatusEntry{
 				{
@@ -222,7 +201,11 @@ func TestAddIgnored(t *testing.T) {
 			},
 		},
 		{
-			name:      "DotIncludeIgnored",
+			name: "Ignored/DotIncludeIgnored",
+			fsOps: []filesystem.Operation{
+				filesystem.Write(".gitignore", "foo.txt\n"),
+				filesystem.Write("foo.txt", dummyContent),
+			},
 			pathspecs: []Pathspec{"."},
 			opts: AddOptions{
 				IncludeIgnored: true,
@@ -248,15 +231,11 @@ func TestAddIgnored(t *testing.T) {
 			}
 			defer env.cleanup()
 
-			// Create an empty repository with an ignored foo.txt file.
+			// Create an empty repository and then apply test's filesystem operations.
 			if err := env.g.Init(ctx, "."); err != nil {
 				t.Fatal(err)
 			}
-			err = env.root.Apply(
-				filesystem.Write(".gitignore", "foo.txt\n"),
-				filesystem.Write("foo.txt", dummyContent),
-			)
-			if err != nil {
+			if err := env.root.Apply(test.fsOps...); err != nil {
 				t.Fatal(err)
 			}
 
