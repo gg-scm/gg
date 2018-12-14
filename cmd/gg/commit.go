@@ -73,7 +73,7 @@ aliases: ci
 		for _, f := range files {
 			commitArgs = append(commitArgs, f.Pathspec().String())
 		}
-	} else if exists, err := cc.git.Query(ctx, "cat-file", "-e", "MERGE_HEAD"); err == nil && exists {
+	} else if merging, err := cc.git.IsMerging(ctx); err == nil && merging {
 		// Merging: must not provide selective files.
 		commitArgs = append(commitArgs, "-a")
 	} else {
