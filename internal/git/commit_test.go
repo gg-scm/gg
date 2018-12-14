@@ -128,6 +128,25 @@ func TestCommit(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer env.cleanup()
+		if version, err := env.g.getVersion(ctx); err == nil {
+			// Versions of Git < 2.11.1 fail at creating empty commits.
+			// Skip the test.
+			skipPrefixes := []string{
+				"git version 2.7",
+				"git version 2.8",
+				"git version 2.9",
+				"git version 2.10",
+				"git version 2.11",
+			}
+			for _, p := range skipPrefixes {
+				if strings.HasPrefix(version, p) && (len(version) == len(p) || version[len(p)] == '.') {
+					t.Skipf("Version = %q (<2.11.1); skipping", version)
+				}
+			}
+			if strings.HasPrefix(version, "git version 2.11.0") {
+				t.Skipf("Version = %q (<2.11.1); skipping", version)
+			}
+		}
 		if err := env.g.Init(ctx, "."); err != nil {
 			t.Fatal(err)
 		}

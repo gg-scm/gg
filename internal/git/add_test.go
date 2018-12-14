@@ -36,6 +36,7 @@ func TestAdd(t *testing.T) {
 		pathspecs []Pathspec
 		opts      AddOptions
 		want      []StatusEntry
+		allowed   [][]StatusEntry
 		wantErr   bool
 	}{
 		{
@@ -109,6 +110,13 @@ func TestAdd(t *testing.T) {
 					Name: "foo.txt",
 				},
 			},
+			// Git 2.11 and before.
+			allowed: [][]StatusEntry{{
+				{
+					Code: StatusCode{'A', 'M'},
+					Name: "foo.txt",
+				},
+			}},
 		},
 		{
 			name: "Untracked/Dot",
@@ -253,13 +261,24 @@ func TestAdd(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			diff := cmp.Diff(test.want, got,
+			opts := []cmp.Option{
 				cmp.Transformer("String", StatusCode.String),
 				cmpopts.SortSlices(func(a, b StatusEntry) bool {
 					return a.Name < b.Name
-				}))
+				}),
+			}
+			diff := cmp.Diff(test.want, got, opts...)
 			if diff != "" {
-				t.Errorf("status (-want +got):\n%s", diff)
+				foundAlt := false
+				for _, alt := range test.allowed {
+					if cmp.Equal(alt, got, opts...) {
+						foundAlt = true
+						break
+					}
+				}
+				if !foundAlt {
+					t.Errorf("status (-want +got):\n%s", diff)
+				}
 			}
 		})
 	}
