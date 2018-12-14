@@ -110,13 +110,13 @@ func TestRebase(t *testing.T) {
 			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 		}
 		// Verify that HEAD contains all the files.
-		if err := objectExists(ctx, env.git, curr.Commit().String()+":foo.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String(), "foo.txt"); err != nil {
 			t.Error("foo.txt not in second rebased change:", err)
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String(), "bar.txt"); err != nil {
 			t.Error("bar.txt not in second rebased change:", err)
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String()+":mainline.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String(), "mainline.txt"); err != nil {
 			t.Error("mainline.txt not in second rebased change:", err)
 		}
 
@@ -129,13 +129,13 @@ func TestRebase(t *testing.T) {
 			t.Fatalf("rebase HEAD~1 = %s; want new commit", prettyCommit(parent.Commit(), names))
 		}
 		// Verify that HEAD~1 contains all the files except the one in the second change.
-		if err := objectExists(ctx, env.git, parent.Commit().String()+":foo.txt"); err != nil {
+		if err := objectExists(ctx, env.git, parent.Commit().String(), "foo.txt"); err != nil {
 			t.Error("foo.txt not in first rebased change:", err)
 		}
-		if err := objectExists(ctx, env.git, parent.Commit().String()+":mainline.txt"); err != nil {
+		if err := objectExists(ctx, env.git, parent.Commit().String(), "mainline.txt"); err != nil {
 			t.Error("mainline.txt not in first rebased change:", err)
 		}
-		if err := objectExists(ctx, env.git, parent.Commit().String()+":bar.txt"); err == nil {
+		if err := objectExists(ctx, env.git, parent.Commit().String(), "bar.txt"); err == nil {
 			t.Error("bar.txt in first rebased change")
 		}
 
@@ -229,13 +229,13 @@ func TestRebase_Src(t *testing.T) {
 		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 	}
 	// Verify that HEAD contains all the files except the first topic change.
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":foo.txt"); err == nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String(), "foo.txt"); err == nil {
 		t.Error("foo.txt is in rebased change")
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String(), "bar.txt"); err != nil {
 		t.Error("bar.txt not in rebased change:", err)
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":mainline.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String(), "mainline.txt"); err != nil {
 		t.Error("mainline.txt not in rebased change:", err)
 	}
 
@@ -316,10 +316,10 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 	}
 	// Verify that HEAD contains the file from the second change but not from the first change.
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":foo.txt"); err == nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String(), "foo.txt"); err == nil {
 		t.Error("foo.txt in rebased change")
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String(), "bar.txt"); err != nil {
 		t.Error("bar.txt not in rebased change:", err)
 	}
 
@@ -449,19 +449,19 @@ func TestRebase_Base(t *testing.T) {
 		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 	}
 	// Verify that HEAD contains the mainline file and the change 3 file, but no others.
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":foo.txt"); err == nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String(), "foo.txt"); err == nil {
 		t.Error("foo.txt in rebased change")
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err == nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String(), "bar.txt"); err == nil {
 		t.Error("bar.txt in rebased change")
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String(), "baz.txt"); err != nil {
 		t.Error("baz.txt not in rebased change:", err)
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":mainline.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String(), "mainline.txt"); err != nil {
 		t.Error("mainline.txt not in rebased change:", err)
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String()+":shazam.txt"); err == nil {
+	if err := objectExists(ctx, env.git, curr.Commit().String(), "shazam.txt"); err == nil {
 		t.Error("shazam.txt in rebased change")
 	}
 
@@ -558,10 +558,10 @@ func TestRebase_ResetUpstream(t *testing.T) {
 			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 		}
 		// Verify that HEAD contains both of the files.
-		if err := objectExists(ctx, env.git, curr.Commit().String()+":foo.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String(), "foo.txt"); err != nil {
 			t.Error("foo.txt not in rebased change:", err)
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String()+":bar.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String(), "bar.txt"); err != nil {
 			t.Error("bar.txt not in rebased change:", err)
 		}
 		// Verify that the parent commit is the diverged upstream commit.
@@ -660,10 +660,10 @@ func TestHistedit(t *testing.T) {
 			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
 		}
 		// Verify that HEAD contains foo.txt but not upstream.txt.
-		if err := objectExists(ctx, env.git, curr.Commit().String()+":foo.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String(), "foo.txt"); err != nil {
 			t.Error("foo.txt not in rebased change:", err)
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String()+":upstream.txt"); err == nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String(), "upstream.txt"); err == nil {
 			t.Error("upstream.txt in rebased change")
 		}
 		// Verify that the commit message matches what was given.
@@ -823,7 +823,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 			t.Errorf("foo.txt @ HEAD~ = %q; want %q", content, amendedData)
 		}
 		// Verify that bar.txt does not exist in the first edited commit.
-		if err := objectExists(ctx, env.git, "HEAD~:bar.txt"); err == nil {
+		if err := objectExists(ctx, env.git, "HEAD~", "bar.txt"); err == nil {
 			t.Error("bar.txt @ HEAD~ exists")
 		}
 
@@ -840,7 +840,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 			t.Errorf("foo.txt @ HEAD = %q; want %q", content, amendedData)
 		}
 		// Verify that bar.txt exists in the second edited commit.
-		if err := objectExists(ctx, env.git, "HEAD:bar.txt"); err != nil {
+		if err := objectExists(ctx, env.git, "HEAD", "bar.txt"); err != nil {
 			t.Error(err)
 		}
 	})
@@ -992,10 +992,10 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Errorf("Rebased change 2 commit message = %q; want %q", got, wantMessage2)
 		}
 		// Verify that the second edited commit contains both foo.txt and bar.txt.
-		if err := objectExists(ctx, env.git, "HEAD:foo.txt"); err != nil {
+		if err := objectExists(ctx, env.git, "HEAD", "foo.txt"); err != nil {
 			t.Error(err)
 		}
-		if err := objectExists(ctx, env.git, "HEAD:bar.txt"); err != nil {
+		if err := objectExists(ctx, env.git, "HEAD", "bar.txt"); err != nil {
 			t.Error(err)
 		}
 	})

@@ -75,6 +75,38 @@ func (g *Git) IsMerging(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
+// ListTree returns the list of files at a given revision.
+func (g *Git) ListTree(ctx context.Context, rev string) (map[TopPath]struct{}, error) {
+	errPrefix := fmt.Sprintf("git ls-tree %q", rev)
+	if rev == "" {
+		return nil, fmt.Errorf("%s: empty revision", errPrefix)
+	}
+	if strings.HasPrefix(rev, "-") {
+		return nil, fmt.Errorf("%s: revision cannot begin with dash", errPrefix)
+	}
+	c := g.Command(ctx, "ls-tree", "-z", "-r", "--name-only", "--full-tree", rev)
+	stdout := new(strings.Builder)
+	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
+	stderr := new(bytes.Buffer)
+	c.Stderr = &limitWriter{w: stderr, n: 4096}
+	if err := sigterm.Run(ctx, c); err != nil {
+		if stderr.Len() == 0 {
+			return nil, fmt.Errorf("%s: %v", errPrefix, err)
+		}
+		return nil, fmt.Errorf("%s: %v\n%s", errPrefix, err, stderr)
+	}
+	paths := make(map[TopPath]struct{})
+	for out := stdout.String(); len(out) > 0; {
+		i := strings.IndexByte(out, 0)
+		if i == -1 {
+			return paths, fmt.Errorf("%s: unexpected EOF", errPrefix)
+		}
+		paths[TopPath(out[:i])] = struct{}{}
+		out = out[i+1:]
+	}
+	return paths, nil
+}
+
 // Cat reads the content of a file at a particular revision.
 // It is the caller's responsibility to close the returned io.ReadCloser
 // if the returned error is nil.

@@ -89,7 +89,7 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 		if names[curr.Commit()] != "" {
 			t.Errorf("HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String(), "baz.txt"); err != nil {
 			t.Error("baz.txt not in rebased change:", err)
 		}
 		parent, err := env.git.ParseRev(ctx, "HEAD^")
@@ -165,7 +165,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if curr.Commit() != c2 {
 			t.Errorf("HEAD = %s; want %s", prettyCommit(curr.Commit(), names), prettyCommit(c2, names))
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String(), "baz.txt"); err != nil {
 			t.Error("baz.txt not in rebased change:", err)
 		}
 
@@ -176,7 +176,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if parent.Commit() != c1 {
 			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(c1, names))
 		}
-		if err := objectExists(ctx, env.git, parent.Commit().String()+":bar.txt"); err != nil {
+		if err := objectExists(ctx, env.git, parent.Commit().String(), "bar.txt"); err != nil {
 			t.Error("bar.txt not in rebased change:", err)
 		}
 
@@ -262,7 +262,7 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if names[curr.Commit()] != "" {
 			t.Errorf("HEAD = %s; want new commit", prettyCommit(base, names))
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String()+":baz.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit().String(), "baz.txt"); err != nil {
 			t.Error("baz.txt not in rebased change:", err)
 		}
 

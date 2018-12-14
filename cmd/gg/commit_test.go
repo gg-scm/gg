@@ -108,7 +108,7 @@ func TestCommit_NoArgs(t *testing.T) {
 	} else if string(data) != modifiedNew {
 		t.Errorf("modified.txt = %q; want %q", data, modifiedNew)
 	}
-	if err := objectExists(ctx, env.git, r2.Commit().String()+":deleted.txt"); err == nil {
+	if err := objectExists(ctx, env.git, r2.Commit().String(), "deleted.txt"); err == nil {
 		t.Error("deleted.txt exists")
 	}
 
@@ -196,10 +196,10 @@ func TestCommit_Selective(t *testing.T) {
 	} else if string(data) != modifiedNew {
 		t.Errorf("modified.txt = %q; want %q", data, modifiedNew)
 	}
-	if err := objectExists(ctx, env.git, r2.Commit().String()+":added.txt"); err == nil {
+	if err := objectExists(ctx, env.git, r2.Commit().String(), "added.txt"); err == nil {
 		t.Error("added.txt was added but not put in arguments")
 	}
-	if err := objectExists(ctx, env.git, r2.Commit().String()+":deleted.txt"); err != nil {
+	if err := objectExists(ctx, env.git, r2.Commit().String(), "deleted.txt"); err != nil {
 		t.Error("deleted.txt was removed but not put in arguments:", err)
 	}
 
@@ -348,7 +348,7 @@ func TestCommit_Amend(t *testing.T) {
 	} else if string(data) != modifiedNew {
 		t.Errorf("modified.txt = %q; want %q", data, modifiedNew)
 	}
-	if err := objectExists(ctx, env.git, r2.Commit().String()+":deleted.txt"); err == nil {
+	if err := objectExists(ctx, env.git, r2.Commit().String(), "deleted.txt"); err == nil {
 		t.Error("deleted.txt exists")
 	}
 
@@ -579,7 +579,7 @@ func TestCommit_InSubdir(t *testing.T) {
 			} else if string(data) != modifiedNew {
 				t.Errorf("modified.txt = %q; want %q", data, modifiedNew)
 			}
-			if err := objectExists(ctx, env.git, r2.Commit().String()+":deleted.txt"); err == nil {
+			if err := objectExists(ctx, env.git, r2.Commit().String(), "deleted.txt"); err == nil {
 				t.Error("deleted.txt exists")
 			}
 
@@ -738,13 +738,13 @@ func readCommitMessage(ctx context.Context, git *git.Git, rev string) ([]byte, e
 	return data, nil
 }
 
-func objectExists(ctx context.Context, git *git.Git, obj string) error {
-	exists, err := git.Query(ctx, "cat-file", "-e", obj)
+func objectExists(ctx context.Context, g *git.Git, rev string, path git.TopPath) error {
+	tree, err := g.ListTree(ctx, rev)
 	if err != nil {
-		return fmt.Errorf("object %s does not exist: %v", obj, err)
+		return err
 	}
-	if !exists {
-		return fmt.Errorf("object %s does not exist", obj)
+	if _, exists := tree[path]; !exists {
+		return fmt.Errorf("object %s:%s does not exist", rev, path)
 	}
 	return nil
 }

@@ -108,7 +108,16 @@ func TestCommit(t *testing.T) {
 		}
 
 		// Verify contents of commit.
-		// TODO(soon): Check for proper existence of added and deleted.
+		if tree, err := env.g.ListTree(ctx, "HEAD"); err != nil {
+			t.Error(err)
+		} else {
+			if _, exists := tree["added.txt"]; !exists {
+				t.Error("added.txt not present in commit")
+			}
+			if _, exists := tree["deleted.txt"]; exists {
+				t.Error("deleted.txt present in commit")
+			}
+		}
 		if got, err := catFile(ctx, env.g, "HEAD", "modified_staged.txt"); err != nil {
 			t.Error(err)
 		} else if got != modifiedNew {
