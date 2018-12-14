@@ -63,6 +63,7 @@ func (g *Git) IsMerging(ctx context.Context) (bool, error) {
 		if !ok {
 			return false, fmt.Errorf("check git merge: %v", err)
 		}
+		// TODO(soon): I don't think that cat-file distinguishes. Tests please!
 		if exitStatus(exitErr.ProcessState) == 1 {
 			return false, nil
 		}
@@ -71,6 +72,28 @@ func (g *Git) IsMerging(ctx context.Context) (bool, error) {
 			return false, fmt.Errorf("check git merge: %v", exitErr)
 		}
 		return false, fmt.Errorf("check git merge: %s (%v)", errOut, exitErr)
+	}
+	return true, nil
+}
+
+// IsAncestor reports whether rev1 is an ancestor of rev2.
+func (g *Git) IsAncestor(ctx context.Context, rev1, rev2 string) (bool, error) {
+	c := g.Command(ctx, "merge-base", "--is-ancestor", rev1, rev2)
+	stderr := new(bytes.Buffer)
+	c.Stderr = stderr
+	if err := sigterm.Run(ctx, c); err != nil {
+		exitErr, ok := err.(*exec.ExitError)
+		if !ok {
+			return false, fmt.Errorf("git: check %q ancestor of %q: %v", rev1, rev2, err)
+		}
+		if exitStatus(exitErr.ProcessState) == 1 {
+			return false, nil
+		}
+		errOut := bytes.TrimRight(stderr.Bytes(), "\n")
+		if len(errOut) == 0 {
+			return false, fmt.Errorf("git: check %q ancestor of %q: %v", rev1, rev2, exitErr)
+		}
+		return false, fmt.Errorf("git: check %q ancestor of %q: %s (%v)", rev1, rev2, errOut, exitErr)
 	}
 	return true, nil
 }

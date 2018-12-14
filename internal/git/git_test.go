@@ -16,12 +16,10 @@ package git
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 
@@ -128,57 +126,6 @@ func TestRun(t *testing.T) {
 	}
 	if !info.IsDir() {
 		t.Errorf("%s is not a git directory", gitDir)
-	}
-}
-
-func TestQuery(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
-	gitPath, err := findGit()
-	if err != nil {
-		t.Skip("git not found:", err)
-	}
-	ctx := context.Background()
-	env, err := newTestEnv(ctx, gitPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer env.cleanup()
-
-	if err := env.g.Run(ctx, "init", "repo"); err != nil {
-		t.Fatal(err)
-	}
-	g := env.g.WithDir(env.root.FromSlash("repo"))
-	if err := env.root.Apply(filesystem.Write("repo/foo.txt", "Hi!\n")); err != nil {
-		t.Fatal(err)
-	}
-	if err := g.Run(ctx, "add", "foo.txt"); err != nil {
-		t.Fatal(err)
-	}
-	if err := g.Run(ctx, "commit", "-m", "first commit"); err != nil {
-		t.Fatal(err)
-	}
-
-	tests := []struct {
-		obj    string
-		want   bool
-		err    bool
-		errMsg string
-	}{
-		{obj: "master", want: true},
-		{obj: "761b1f6130847a33f580c515aad3594f0127e564", want: false},
-		{obj: "xyzzy", err: true, errMsg: "Not a valid object name xyzzy"},
-	}
-	for _, test := range tests {
-		got, err := g.Query(ctx, "cat-file", "-e", test.obj)
-		if got != test.want || (err != nil) != test.err || !strings.Contains(fmt.Sprint(err), test.errMsg) {
-			errStr := "<nil>"
-			if test.err {
-				errStr = fmt.Sprintf("<error containing %q>", test.errMsg)
-			}
-			t.Errorf("g.Query(ctx, \"cat-file\", \"-e\", %q) = %t, %v; want %t, %s", test.obj, got, err, test.want, errStr)
-		}
 	}
 }
 

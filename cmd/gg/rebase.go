@@ -71,7 +71,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		if strings.HasPrefix(*src, "-") {
 			return fmt.Errorf("revision cannot start with '-'")
 		}
-		ancestor, err := cc.git.Query(ctx, "merge-base", "--is-ancestor", *src, git.Head.String())
+		ancestor, err := cc.git.IsAncestor(ctx, *src, git.Head.String())
 		if err != nil {
 			return err
 		}
