@@ -16,6 +16,8 @@ package git
 
 import (
 	"context"
+	"io"
+	"strings"
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
@@ -105,7 +107,18 @@ func TestCommit(t *testing.T) {
 			t.Errorf("HEAD~ = %v; want %v", parent.Commit(), r1.Commit())
 		}
 
-		// TODO(soon): Verify contents of commit.
+		// Verify contents of commit.
+		// TODO(soon): Check for proper existence of added and deleted.
+		if got, err := catFile(ctx, env.g, "HEAD", "modified_staged.txt"); err != nil {
+			t.Error(err)
+		} else if got != modifiedNew {
+			t.Errorf("modified_staged.txt @ HEAD = %q; want %q", got, modifiedNew)
+		}
+		if got, err := catFile(ctx, env.g, "HEAD", "modified_unstaged.txt"); err != nil {
+			t.Error(err)
+		} else if got != modifiedOld {
+			t.Errorf("modified_unstaged.txt @ HEAD = %q; want %q", got, modifiedOld)
+		}
 		// TODO(soon): Verify working copy state.
 		// TODO(soon): Verify commit message.
 	})
@@ -138,4 +151,20 @@ func TestCommit(t *testing.T) {
 	})
 	// TODO(soon): Add test for Pathspecs.
 	// TODO(soon): Add test for All.
+}
+
+func catFile(ctx context.Context, g *Git, rev string, path TopPath) (string, error) {
+	rc, err := g.Cat(ctx, rev, path)
+	if err != nil {
+		return "", err
+	}
+	sb := new(strings.Builder)
+	if _, err := io.Copy(sb, rc); err != nil {
+		rc.Close()
+		return sb.String(), err
+	}
+	if err := rc.Close(); err != nil {
+		return sb.String(), err
+	}
+	return sb.String(), nil
 }

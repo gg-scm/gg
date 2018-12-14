@@ -706,18 +706,18 @@ func TestCommit_Merge(t *testing.T) {
 	}
 }
 
-func catBlob(ctx context.Context, git *git.Git, rev string, path string) ([]byte, error) {
-	p, err := git.Start(ctx, "cat-file", "blob", rev+":"+path)
+func catBlob(ctx context.Context, g *git.Git, rev string, path git.TopPath) ([]byte, error) {
+	r, err := g.Cat(ctx, rev, path)
 	if err != nil {
-		return nil, fmt.Errorf("cat %s @ %s: %v", path, rev, err)
+		return nil, err
 	}
-	data, err := ioutil.ReadAll(p)
-	waitErr := p.Wait()
+	data, err := ioutil.ReadAll(r)
+	closeErr := r.Close()
 	if err != nil {
-		return nil, fmt.Errorf("cat %s @ %s: %v", path, rev, err)
+		return nil, err
 	}
-	if waitErr != nil {
-		return nil, fmt.Errorf("cat %s @ %s: %v", path, rev, waitErr)
+	if closeErr != nil {
+		return nil, closeErr
 	}
 	return data, nil
 }

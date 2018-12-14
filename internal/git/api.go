@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -72,6 +73,94 @@ func (g *Git) IsMerging(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("check git merge: %s (%v)", errOut, exitErr)
 	}
 	return true, nil
+}
+
+// Cat reads the content of a file at a particular revision.
+// It is the caller's responsibility to close the returned io.ReadCloser
+// if the returned error is nil.
+func (g *Git) Cat(ctx context.Context, rev string, path TopPath) (io.ReadCloser, error) {
+	errPrefix := fmt.Sprintf("git cat %q @ %q", path, rev)
+	if rev == "" {
+		return nil, fmt.Errorf("%s: empty revision", errPrefix)
+	}
+	if strings.Contains(rev, ":") {
+		return nil, fmt.Errorf("%s: revision contains ':'", errPrefix)
+	}
+	if path == "" {
+		return nil, fmt.Errorf("%s: empty path", errPrefix)
+	}
+	if strings.HasPrefix(string(path), "./") || strings.HasPrefix(string(path), "../") {
+		return nil, fmt.Errorf("%s: path is relative", errPrefix)
+	}
+	c := g.Command(ctx, "cat-file", "blob", rev+":"+path.String())
+	stdout, err := c.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	stderr := new(bytes.Buffer)
+	c.Stderr = &limitWriter{w: stderr, n: 4096}
+	wait, err := sigterm.Start(ctx, c)
+	if err != nil {
+		stdout.Close()
+		return nil, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+
+	// If Git reports an error, stdout will be empty and stderr will
+	// contain the error message.
+	first := make([]byte, 2048)
+	readLen, readErr := io.ReadAtLeast(stdout, first, 1)
+	if readErr != nil {
+		// Empty stdout, check for error.
+		if err := wait(); err != nil {
+			if stderr.Len() == 0 {
+				return nil, fmt.Errorf("%s: %v", errPrefix, err)
+			}
+			return nil, fmt.Errorf("%s: %v\n%s", errPrefix, err, stderr)
+		}
+		if readErr != io.EOF {
+			return nil, fmt.Errorf("%s: %v", errPrefix, readErr)
+		}
+		return nopReader{}, nil
+	}
+	return &catReader{
+		errPrefix: errPrefix,
+		first:     first[:readLen],
+		pipe:      stdout,
+		wait:      wait,
+		stderr:    stderr,
+	}, nil
+}
+
+type catReader struct {
+	errPrefix string
+	first     []byte
+	pipe      io.ReadCloser
+	wait      func() error
+	stderr    *bytes.Buffer // can't be read until wait returns
+}
+
+func (cr *catReader) Read(p []byte) (int, error) {
+	if len(cr.first) > 0 {
+		n := copy(p, cr.first)
+		cr.first = cr.first[n:]
+		return n, nil
+	}
+	return cr.pipe.Read(p)
+}
+
+func (cr *catReader) Close() error {
+	closeErr := cr.pipe.Close()
+	waitErr := cr.wait()
+	if waitErr != nil {
+		if cr.stderr.Len() == 0 {
+			return fmt.Errorf("close %s: %v", cr.errPrefix, waitErr)
+		}
+		return fmt.Errorf("close %s: %v\n%s", cr.errPrefix, waitErr, cr.stderr)
+	}
+	if closeErr != nil {
+		return fmt.Errorf("close %s: %v", cr.errPrefix, closeErr)
+	}
+	return nil
 }
 
 // Init creates a new empty repository at the given path. Any relative
@@ -195,5 +284,15 @@ func (g *Git) Commit(ctx context.Context, msg string, opts CommitOptions) error 
 		}
 		return fmt.Errorf("git commit: %v\n%s", err, out)
 	}
+	return nil
+}
+
+type nopReader struct{}
+
+func (nopReader) Read(_ []byte) (int, error) {
+	return 0, io.EOF
+}
+
+func (nopReader) Close() error {
 	return nil
 }

@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"io"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
@@ -60,5 +61,17 @@ func catFile(ctx context.Context, cc *cmdContext, rev *git.Rev, path string) err
 	}
 
 	// Send file to stdout.
-	return cc.git.RunInteractive(ctx, "cat-file", "blob", rev.Commit().String()+":"+string(topPath))
+	r, err := cc.git.Cat(ctx, rev.Commit().String(), git.TopPath(topPath))
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(cc.stdout, r)
+	closeErr := r.Close()
+	if err != nil {
+		return err
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	return nil
 }
