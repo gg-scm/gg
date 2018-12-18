@@ -59,19 +59,11 @@ func (g *Git) IsMerging(ctx context.Context) (bool, error) {
 	stderr := new(bytes.Buffer)
 	c.Stderr = stderr
 	if err := sigterm.Run(ctx, c); err != nil {
-		exitErr, ok := err.(*exec.ExitError)
-		if !ok {
-			return false, fmt.Errorf("check git merge: %v", err)
-		}
 		// TODO(soon): I don't think that cat-file distinguishes. Tests please!
-		if exitStatus(exitErr.ProcessState) == 1 {
+		if err, ok := err.(*exec.ExitError); ok && exitStatus(err.ProcessState) == 1 {
 			return false, nil
 		}
-		errOut := bytes.TrimRight(stderr.Bytes(), "\n")
-		if len(errOut) == 0 {
-			return false, fmt.Errorf("check git merge: %v", exitErr)
-		}
-		return false, fmt.Errorf("check git merge: %s (%v)", errOut, exitErr)
+		return false, commandError("check git merge", err, stderr.Bytes())
 	}
 	return true, nil
 }
@@ -82,18 +74,10 @@ func (g *Git) IsAncestor(ctx context.Context, rev1, rev2 string) (bool, error) {
 	stderr := new(bytes.Buffer)
 	c.Stderr = stderr
 	if err := sigterm.Run(ctx, c); err != nil {
-		exitErr, ok := err.(*exec.ExitError)
-		if !ok {
-			return false, fmt.Errorf("git: check %q ancestor of %q: %v", rev1, rev2, err)
-		}
-		if exitStatus(exitErr.ProcessState) == 1 {
+		if err, ok := err.(*exec.ExitError); ok && exitStatus(err.ProcessState) == 1 {
 			return false, nil
 		}
-		errOut := bytes.TrimRight(stderr.Bytes(), "\n")
-		if len(errOut) == 0 {
-			return false, fmt.Errorf("git: check %q ancestor of %q: %v", rev1, rev2, exitErr)
-		}
-		return false, fmt.Errorf("git: check %q ancestor of %q: %s (%v)", rev1, rev2, errOut, exitErr)
+		return false, commandError(fmt.Sprintf("git: check %q ancestor of %q", rev1, rev2), err, stderr.Bytes())
 	}
 	return true, nil
 }
@@ -113,10 +97,7 @@ func (g *Git) ListTree(ctx context.Context, rev string) (map[TopPath]struct{}, e
 	stderr := new(bytes.Buffer)
 	c.Stderr = &limitWriter{w: stderr, n: 4096}
 	if err := sigterm.Run(ctx, c); err != nil {
-		if stderr.Len() == 0 {
-			return nil, fmt.Errorf("%s: %v", errPrefix, err)
-		}
-		return nil, fmt.Errorf("%s: %v\n%s", errPrefix, err, stderr)
+		return nil, commandError(errPrefix, err, stderr.Bytes())
 	}
 	paths := make(map[TopPath]struct{})
 	for out := stdout.String(); len(out) > 0; {
@@ -167,13 +148,10 @@ func (g *Git) Cat(ctx context.Context, rev string, path TopPath) (io.ReadCloser,
 	if readErr != nil {
 		// Empty stdout, check for error.
 		if err := wait(); err != nil {
-			if stderr.Len() == 0 {
-				return nil, fmt.Errorf("%s: %v", errPrefix, err)
-			}
-			return nil, fmt.Errorf("%s: %v\n%s", errPrefix, err, stderr)
+			return nil, commandError(errPrefix, err, stderr.Bytes())
 		}
 		if readErr != io.EOF {
-			return nil, fmt.Errorf("%s: %v", errPrefix, readErr)
+			return nil, commandError(errPrefix, readErr, stderr.Bytes())
 		}
 		return nopReader{}, nil
 	}
@@ -207,10 +185,7 @@ func (cr *catReader) Close() error {
 	closeErr := cr.pipe.Close()
 	waitErr := cr.wait()
 	if waitErr != nil {
-		if cr.stderr.Len() == 0 {
-			return fmt.Errorf("close %s: %v", cr.errPrefix, waitErr)
-		}
-		return fmt.Errorf("close %s: %v\n%s", cr.errPrefix, waitErr, cr.stderr)
+		return commandError("close "+cr.errPrefix, waitErr, cr.stderr.Bytes())
 	}
 	if closeErr != nil {
 		return fmt.Errorf("close %s: %v", cr.errPrefix, closeErr)
@@ -227,12 +202,8 @@ func (g *Git) Init(ctx context.Context, dir string) error {
 	buf := new(bytes.Buffer)
 	c.Stdout = &limitWriter{w: buf, n: 4096}
 	c.Stderr = c.Stdout
-	err := sigterm.Run(ctx, c)
-	if err != nil {
-		if buf.Len() == 0 {
-			return fmt.Errorf("git init %q: %v", dir, err)
-		}
-		return fmt.Errorf("git init %q: %v\n%s", dir, err, buf)
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError(fmt.Sprintf("git init %q", dir), err, buf.Bytes())
 	}
 	return nil
 }
@@ -246,12 +217,8 @@ func (g *Git) InitBare(ctx context.Context, dir string) error {
 	buf := new(bytes.Buffer)
 	c.Stdout = &limitWriter{w: buf, n: 4096}
 	c.Stderr = c.Stdout
-	err := sigterm.Run(ctx, c)
-	if err != nil {
-		if buf.Len() == 0 {
-			return fmt.Errorf("git init %q: %v", dir, err)
-		}
-		return fmt.Errorf("git init %q: %v\n%s", dir, err, buf)
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError(fmt.Sprintf("git init %q", dir), err, buf.Bytes())
 	}
 	return nil
 }
@@ -286,12 +253,8 @@ func (g *Git) Add(ctx context.Context, pathspecs []Pathspec, opts AddOptions) er
 	buf := new(bytes.Buffer)
 	c.Stdout = &limitWriter{w: buf, n: 4096}
 	c.Stderr = c.Stdout
-	err := sigterm.Run(ctx, c)
-	if err != nil {
-		if buf.Len() == 0 {
-			return fmt.Errorf("git add: %v", err)
-		}
-		return fmt.Errorf("git add: %v\n%s", err, buf)
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError("git add", err, buf.Bytes())
 	}
 	return nil
 }
@@ -332,14 +295,27 @@ func (g *Git) Commit(ctx context.Context, msg string, opts CommitOptions) error 
 	out := new(bytes.Buffer)
 	c.Stdout = &limitWriter{w: out, n: 4096}
 	c.Stderr = c.Stdout
-	err := sigterm.Run(ctx, c)
-	if err != nil {
-		if out.Len() == 0 {
-			return fmt.Errorf("git commit: %v", err)
-		}
-		return fmt.Errorf("git commit: %v\n%s", err, out)
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError("git commit", err, out.Bytes())
 	}
 	return nil
+}
+
+// commandError returns a new error with the information from an
+// unsuccessful run of a subprocess.
+func commandError(prefix string, runError error, stderr []byte) error {
+	stderr = bytes.TrimSuffix(stderr, []byte{'\n'})
+	if len(stderr) == 0 {
+		return fmt.Errorf("%s: %v", prefix, runError)
+	}
+	if _, isExit := runError.(*exec.ExitError); isExit {
+		if bytes.IndexByte(stderr, '\n') == -1 {
+			// Collapse into single line.
+			return fmt.Errorf("%s: %s", prefix, stderr)
+		}
+		return fmt.Errorf("%s:\n%s", prefix, stderr)
+	}
+	return fmt.Errorf("%s: %v\n%s", prefix, runError, stderr)
 }
 
 type nopReader struct{}
