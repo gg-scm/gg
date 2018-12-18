@@ -667,9 +667,9 @@ func TestHistedit(t *testing.T) {
 			t.Error("upstream.txt in rebased change")
 		}
 		// Verify that the commit message matches what was given.
-		if msg, err := readCommitMessage(ctx, env.git, curr.Commit().String()); err != nil {
+		if info, err := env.git.CommitInfo(ctx, curr.Commit().String()); err != nil {
 			t.Error(err)
-		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
+		} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage {
 			t.Errorf("commit message = %q; want %q", got, wantMessage)
 		}
 
@@ -811,9 +811,9 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		}
 
 		// Verify that the commit message of the first edited commit is the message from the editor.
-		if msg, err := readCommitMessage(ctx, env.git, "HEAD~"); err != nil {
+		if info, err := env.git.CommitInfo(ctx, "HEAD~"); err != nil {
 			t.Errorf("Rebased change 1: %v", err)
-		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage1 {
+		} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage1 {
 			t.Errorf("Rebased change 1 commit message = %q; want %q", got, wantMessage1)
 		}
 		// Verify that the content of foo.txt in the first edited commit is the rewritten content.
@@ -828,9 +828,9 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		}
 
 		// Verify that the commit message of the second edited commit is the same as before.
-		if msg, err := readCommitMessage(ctx, env.git, "HEAD"); err != nil {
+		if info, err := env.git.CommitInfo(ctx, "HEAD"); err != nil {
 			t.Errorf("Rebased change 2: %v", err)
-		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage2 {
+		} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage2 {
 			t.Errorf("Rebased change 2 commit message = %q; want %q", got, wantMessage2)
 		}
 		// Verify that the content of foo.txt in the second edited commit is the rewritten content.
@@ -971,9 +971,9 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 				prettyCommit(baseRev.Commit(), names))
 		}
 		// Verify that the commit message of the first edited commit is the same as before.
-		if msg, err := readCommitMessage(ctx, env.git, "HEAD~"); err != nil {
+		if info, err := env.git.CommitInfo(ctx, "HEAD~"); err != nil {
 			t.Errorf("Rebased change 1: %v", err)
-		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage1 {
+		} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage1 {
 			t.Errorf("Rebased change 1 commit message = %q; want %q", got, wantMessage1)
 		}
 		// Verify that the first edited commit hash is the same as what was
@@ -986,9 +986,9 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 				prettyCommit(rebased1.Commit(), names))
 		}
 		// Verify that the commit message of the second edited commit is the same as before.
-		if msg, err := readCommitMessage(ctx, env.git, "HEAD"); err != nil {
+		if info, err := env.git.CommitInfo(ctx, "HEAD"); err != nil {
 			t.Errorf("Rebased change 2: %v", err)
-		} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage2 {
+		} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage2 {
 			t.Errorf("Rebased change 2 commit message = %q; want %q", got, wantMessage2)
 		}
 		// Verify that the second edited commit contains both foo.txt and bar.txt.

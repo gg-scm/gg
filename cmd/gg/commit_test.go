@@ -113,9 +113,9 @@ func TestCommit_NoArgs(t *testing.T) {
 	}
 
 	// Verify that the commit message matches the given message.
-	if msg, err := readCommitMessage(ctx, env.git, r2.Commit().String()); err != nil {
+	if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
 		t.Error(err)
-	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
+	} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage {
 		t.Errorf("commit message = %q; want %q", got, wantMessage)
 	}
 }
@@ -204,9 +204,9 @@ func TestCommit_Selective(t *testing.T) {
 	}
 
 	// Verify that the commit message matches the given message.
-	if msg, err := readCommitMessage(ctx, env.git, r2.Commit().String()); err != nil {
+	if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
 		t.Error(err)
-	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
+	} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage {
 		t.Errorf("commit message = %q; want %q", got, wantMessage)
 	}
 }
@@ -353,9 +353,9 @@ func TestCommit_Amend(t *testing.T) {
 	}
 
 	// Verify that the commit message matches the given message.
-	if msg, err := readCommitMessage(ctx, env.git, r2.Commit().String()); err != nil {
+	if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
 		t.Error(err)
-	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
+	} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage {
 		t.Errorf("commit message = %q; want %q", got, wantMessage)
 	}
 }
@@ -461,9 +461,9 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 	}
 
 	// Verify that the commit message matches the one given.
-	if msg, err := readCommitMessage(ctx, env.git, r2.Commit().String()); err != nil {
+	if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
 		t.Error(err)
-	} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
+	} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage {
 		t.Errorf("commit message = %q; want %q", got, wantMessage)
 	}
 
@@ -584,9 +584,9 @@ func TestCommit_InSubdir(t *testing.T) {
 			}
 
 			// Verify that the commit message matches the one given.
-			if msg, err := readCommitMessage(ctx, env.git, r2.Commit().String()); err != nil {
+			if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
 				t.Error(err)
-			} else if got := strings.TrimRight(string(msg), "\n"); got != wantMessage {
+			} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage {
 				t.Errorf("commit message = %q; want %q", got, wantMessage)
 			}
 		})
@@ -718,22 +718,6 @@ func catBlob(ctx context.Context, g *git.Git, rev string, path git.TopPath) ([]b
 	}
 	if closeErr != nil {
 		return nil, closeErr
-	}
-	return data, nil
-}
-
-func readCommitMessage(ctx context.Context, git *git.Git, rev string) ([]byte, error) {
-	p, err := git.Start(ctx, "show", "-s", "--format=%B", rev)
-	if err != nil {
-		return nil, fmt.Errorf("log %s: %v", rev, err)
-	}
-	data, err := ioutil.ReadAll(p)
-	waitErr := p.Wait()
-	if err != nil {
-		return nil, fmt.Errorf("log %s: %v", rev, err)
-	}
-	if waitErr != nil {
-		return nil, fmt.Errorf("log %s: %v", rev, waitErr)
 	}
 	return data, nil
 }

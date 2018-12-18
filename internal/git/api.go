@@ -275,7 +275,8 @@ type CommitOptions struct {
 	All bool
 }
 
-// Commit creates a new commit on HEAD. The message will be used verbatim.
+// Commit creates a new commit on HEAD. Commit will append a trailing
+// newline to message if it is not present (Git requires this).
 func (g *Git) Commit(ctx context.Context, msg string, opts CommitOptions) error {
 	var args []string
 	args = append(args, "commit", "--quiet")
