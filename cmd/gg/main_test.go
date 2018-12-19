@@ -284,13 +284,13 @@ func (env *testEnv) initRepoWithHistory(ctx context.Context, dir string) error {
 	if err := repoGit.Add(ctx, []git.Pathspec{".dummy"}, git.AddOptions{}); err != nil {
 		return err
 	}
-	if err := repoGit.Run(ctx, "commit", "-m", "initial import"); err != nil {
+	if err := repoGit.Commit(ctx, "initial import"); err != nil {
 		return err
 	}
 	if err := repoGit.Run(ctx, "rm", ".dummy"); err != nil {
 		return err
 	}
-	if err := repoGit.Run(ctx, "commit", "-m", "removed dummy file"); err != nil {
+	if err := repoGit.Commit(ctx, "removed dummy file"); err != nil {
 		return err
 	}
 	return nil
@@ -344,7 +344,7 @@ func (env *testEnv) trackFiles(ctx context.Context, files ...string) error {
 // slash-separated path relative to env.root.
 func (env *testEnv) newCommit(ctx context.Context, dir string) (git.Hash, error) {
 	g := env.git.WithDir(env.root.FromSlash(dir))
-	if err := g.Run(ctx, "commit", "-am", "did stuff"); err != nil {
+	if err := g.CommitAll(ctx, "did stuff"); err != nil {
 		return git.Hash{}, err
 	}
 	r, err := g.Head(ctx)
@@ -386,7 +386,7 @@ func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file s
 	if err := g.Add(ctx, []git.Pathspec{git.LiteralPath(file)}, git.AddOptions{}); err != nil {
 		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 	}
-	if err := g.Run(ctx, "commit", "-m", msg); err != nil {
+	if err := g.Commit(ctx, msg); err != nil {
 		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 	}
 	curr, err = g.Head(ctx)

@@ -725,7 +725,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err := env.addFiles(ctx, "foo.txt"); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.git.Run(ctx, "commit", "--quiet", "-m", "Divergence 1"); err != nil {
+		if err := env.git.Commit(ctx, "Divergence 1"); err != nil {
 			t.Fatal(err)
 		}
 		rev1, err := env.git.Head(ctx)
@@ -739,7 +739,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		const wantMessage2 = "Divergence 2\n"
-		if err := env.git.Run(ctx, "commit", "--quiet", "-m", "Divergence 2"); err != nil {
+		if err := env.git.Commit(ctx, "Divergence 2"); err != nil {
 			t.Fatal(err)
 		}
 		rev2, err := env.git.Head(ctx)
@@ -888,7 +888,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		const wantMessage1 = "Divergence 1\n"
-		if err := env.git.Run(ctx, "commit", "--quiet", "-m", "Divergence 1"); err != nil {
+		if err := env.git.Commit(ctx, "Divergence 1"); err != nil {
 			t.Fatal(err)
 		}
 		rev1, err := env.git.Head(ctx)
@@ -902,7 +902,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		const wantMessage2 = "Divergence 2\n"
-		if err := env.git.Run(ctx, "commit", "--quiet", "-m", "Divergence 2"); err != nil {
+		if err := env.git.Commit(ctx, "Divergence 2"); err != nil {
 			t.Fatal(err)
 		}
 		rev2, err := env.git.Head(ctx)
