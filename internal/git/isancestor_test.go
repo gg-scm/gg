@@ -47,7 +47,7 @@ func TestIsAncestor(t *testing.T) {
 	if err := env.g.Add(ctx, []Pathspec{"foo.txt"}, AddOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.Commit(ctx, "commit 1", CommitOptions{}); err != nil {
+	if err := env.g.Commit(ctx, "commit 1"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.g.Run(ctx, "checkout", "--quiet", "-b", "a"); err != nil {
@@ -56,7 +56,7 @@ func TestIsAncestor(t *testing.T) {
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent+"a\n")); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.Commit(ctx, "commit 2", CommitOptions{All: true}); err != nil {
+	if err := env.g.CommitAll(ctx, "commit 2"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.g.Run(ctx, "checkout", "--quiet", "-b", "b", "master"); err != nil {
@@ -65,7 +65,7 @@ func TestIsAncestor(t *testing.T) {
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent+"b\n")); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.Commit(ctx, "commit 3", CommitOptions{All: true}); err != nil {
+	if err := env.g.CommitAll(ctx, "commit 3"); err != nil {
 		t.Fatal(err)
 	}
 

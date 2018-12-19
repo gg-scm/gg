@@ -259,38 +259,42 @@ func (g *Git) Add(ctx context.Context, pathspecs []Pathspec, opts AddOptions) er
 	return nil
 }
 
-// CommitOptions specifies the command-line options for `git commit`.
-type CommitOptions struct {
-	// If Pathspecs is not empty, then the current content of the files
-	// matched by the pathspecs will be committed, regardless of what has
-	// already been staged.
-	Pathspecs []Pathspec
-
-	// If AllowEmpty is true and Pathspecs is empty, then an empty commit
-	// will be created.
-	AllowEmpty bool
-
-	// If All is true, then files that have been modified and deleted will
-	// be automatically staged.
-	All bool
+// Commit creates a new commit on HEAD with the staged content.
+// The message will be used exactly as given.
+func (g *Git) Commit(ctx context.Context, message string) error {
+	c := g.Command(ctx, "commit", "--quiet", "--file=-", "--cleanup=verbatim")
+	c.Stdin = strings.NewReader(message)
+	out := new(bytes.Buffer)
+	c.Stdout = &limitWriter{w: out, n: 4096}
+	c.Stderr = c.Stdout
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError("git commit", err, out.Bytes())
+	}
+	return nil
 }
 
-// Commit creates a new commit on HEAD. The message will be used exactly
-// as given.
-func (g *Git) Commit(ctx context.Context, message string, opts CommitOptions) error {
-	var args []string
-	args = append(args, "commit", "--quiet")
-	switch {
-	case opts.All:
-		args = append(args, "--all")
-	case opts.AllowEmpty && len(opts.Pathspecs) == 0:
-		args = append(args, "--only", "--allow-empty")
+// CommitAll creates a new commit on HEAD with all of the tracked files.
+// The message will be used exactly as given.
+func (g *Git) CommitAll(ctx context.Context, message string) error {
+	c := g.Command(ctx, "commit", "--quiet", "--file=-", "--cleanup=verbatim", "--all")
+	c.Stdin = strings.NewReader(message)
+	out := new(bytes.Buffer)
+	c.Stdout = &limitWriter{w: out, n: 4096}
+	c.Stderr = c.Stdout
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError("git commit", err, out.Bytes())
 	}
-	args = append(args, "--file=-", "--cleanup=verbatim", "--")
-	for _, spec := range opts.Pathspecs {
+	return nil
+}
+
+// CommitFiles creates a new commit on HEAD that updates the given files
+// to the content in the working copy. The message will be used exactly
+// as given.
+func (g *Git) CommitFiles(ctx context.Context, message string, pathspecs []Pathspec) error {
+	args := []string{"commit", "--quiet", "--file=-", "--cleanup=verbatim", "--only", "--allow-empty", "--"}
+	for _, spec := range pathspecs {
 		args = append(args, spec.String())
 	}
-
 	c := g.Command(ctx, args...)
 	c.Stdin = strings.NewReader(message)
 	out := new(bytes.Buffer)

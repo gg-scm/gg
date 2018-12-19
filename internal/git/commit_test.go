@@ -61,7 +61,7 @@ func TestCommit(t *testing.T) {
 				if err := env.g.Add(ctx, []Pathspec{"foo.txt"}, AddOptions{}); err != nil {
 					t.Fatal(err)
 				}
-				err = env.g.Commit(ctx, test.msg, CommitOptions{})
+				err = env.g.Commit(ctx, test.msg)
 				if err != nil {
 					if !test.wantErr {
 						t.Error("Commit error:", err)
@@ -81,7 +81,7 @@ func TestCommit(t *testing.T) {
 			})
 		}
 	})
-	t.Run("DefaultOptions", func(t *testing.T) {
+	t.Run("LocalChanges", func(t *testing.T) {
 		env, err := newTestEnv(ctx, gitPath)
 		if err != nil {
 			t.Fatal(err)
@@ -135,9 +135,9 @@ func TestCommit(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Call g.Commit. Contains a trailing newline, so will be used verbatim.
-		const wantMessage = "\n\ninternal/git made this commit\n\n"
-		if err := env.g.Commit(ctx, wantMessage, CommitOptions{}); err != nil {
+		// Call g.Commit.
+		const wantMessage = "\n\ninternal/git made this commit"
+		if err := env.g.Commit(ctx, wantMessage); err != nil {
 			t.Error("Commit error:", err)
 		}
 
@@ -188,6 +188,14 @@ func TestCommit(t *testing.T) {
 			t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
 		}
 	})
+}
+
+func TestCommitFiles(t *testing.T) {
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	ctx := context.Background()
 	t.Run("Empty", func(t *testing.T) {
 		env, err := newTestEnv(ctx, gitPath)
 		if err != nil {
@@ -217,9 +225,9 @@ func TestCommit(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Call g.Commit.
+		// Call g.CommitFiles.
 		const wantMessage = "\n\ninternal/git made this commit\n\n"
-		if err := env.g.Commit(ctx, wantMessage, CommitOptions{AllowEmpty: true}); err != nil {
+		if err := env.g.CommitFiles(ctx, wantMessage, nil); err != nil {
 			t.Error("Commit error:", err)
 		}
 
@@ -232,10 +240,201 @@ func TestCommit(t *testing.T) {
 			t.Errorf("HEAD ref = %s; want refs/heads/master", r.Ref())
 		}
 
-		// TODO(soon): Verify commit message.
+		// Verify commit message.
+		info, err := env.g.CommitInfo(ctx, "HEAD")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Message != wantMessage {
+			t.Errorf("message = %q; want %q", info.Message, wantMessage)
+		}
 	})
-	// TODO(soon): Add test for Pathspecs.
-	// TODO(soon): Add test for All.
+	t.Run("Unstaged", func(t *testing.T) {
+		env, err := newTestEnv(ctx, gitPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := env.g.Init(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+
+		// Create the parent commit.
+		const (
+			oldContent = "The Larch\n"
+			newContent = "The Chestnut\n"
+		)
+		err = env.root.Apply(
+			filesystem.Write("unstaged.txt", oldContent),
+			filesystem.Write("staged.txt", oldContent),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := env.g.Add(ctx, []Pathspec{"unstaged.txt", "staged.txt"}, AddOptions{}); err != nil {
+			t.Fatal(err)
+		}
+		// (Use command-line directly, so as not to depend on system-under-test.)
+		err = env.g.Run(ctx, "commit", "-m", "initial import")
+		if err != nil {
+			t.Fatal(err)
+		}
+		r1, err := env.g.Head(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Arrange working copy changes.
+		err = env.root.Apply(
+			filesystem.Write("unstaged.txt", newContent),
+			filesystem.Write("staged.txt", newContent),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := env.g.Add(ctx, []Pathspec{"staged.txt"}, AddOptions{}); err != nil {
+			t.Fatal(err)
+		}
+
+		// Call g.CommitFiles.
+		const wantMessage = "\n\ninternal/git made this commit"
+		if err := env.g.CommitFiles(ctx, wantMessage, []Pathspec{"unstaged.txt"}); err != nil {
+			t.Error("Commit error:", err)
+		}
+
+		// Verify that HEAD was moved to a new commit.
+		r2, err := env.g.Head(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r2.Commit() == r1.Commit() {
+			t.Error("new HEAD = initial import")
+		}
+		if r2.Ref() != r1.Ref() {
+			t.Errorf("HEAD ref = %s; want %s", r2.Ref(), r1.Ref())
+		}
+		// Verify that the commit's parent is the initial commit.
+		if parent, err := env.g.ParseRev(ctx, "HEAD~"); err != nil {
+			t.Error(err)
+		} else if parent.Commit() != r1.Commit() {
+			t.Errorf("HEAD~ = %v; want %v", parent.Commit(), r1.Commit())
+		}
+
+		// Verify contents of commit.
+		if got, err := catFile(ctx, env.g, "HEAD", "staged.txt"); err != nil {
+			t.Error(err)
+		} else if got != oldContent {
+			t.Errorf("staged.txt @ HEAD = %q; want %q", got, oldContent)
+		}
+		if got, err := catFile(ctx, env.g, "HEAD", "unstaged.txt"); err != nil {
+			t.Error(err)
+		} else if got != newContent {
+			t.Errorf("unstaged.txt @ HEAD = %q; want %q", got, newContent)
+		}
+
+		// Verify commit message.
+		if info, err := env.g.CommitInfo(ctx, "HEAD"); err != nil {
+			t.Error(err)
+		} else if info.Message != wantMessage {
+			t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
+		}
+	})
+}
+
+func TestCommitAll(t *testing.T) {
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, gitPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.g.Init(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the parent commit.
+	const (
+		oldContent = "The Larch\n"
+		newContent = "The Chestnut\n"
+	)
+	err = env.root.Apply(
+		filesystem.Write("unstaged.txt", oldContent),
+		filesystem.Write("staged.txt", oldContent),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Add(ctx, []Pathspec{"unstaged.txt", "staged.txt"}, AddOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	// (Use command-line directly, so as not to depend on system-under-test.)
+	err = env.g.Run(ctx, "commit", "-m", "initial import")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r1, err := env.g.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Arrange working copy changes.
+	err = env.root.Apply(
+		filesystem.Write("unstaged.txt", newContent),
+		filesystem.Write("staged.txt", newContent),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Add(ctx, []Pathspec{"staged.txt"}, AddOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call g.CommitAll.
+	const wantMessage = "\n\ninternal/git made this commit"
+	if err := env.g.CommitAll(ctx, wantMessage); err != nil {
+		t.Error("Commit error:", err)
+	}
+
+	// Verify that HEAD was moved to a new commit.
+	r2, err := env.g.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r2.Commit() == r1.Commit() {
+		t.Error("new HEAD = initial import")
+	}
+	if r2.Ref() != r1.Ref() {
+		t.Errorf("HEAD ref = %s; want %s", r2.Ref(), r1.Ref())
+	}
+	// Verify that the commit's parent is the initial commit.
+	if parent, err := env.g.ParseRev(ctx, "HEAD~"); err != nil {
+		t.Error(err)
+	} else if parent.Commit() != r1.Commit() {
+		t.Errorf("HEAD~ = %v; want %v", parent.Commit(), r1.Commit())
+	}
+
+	// Verify contents of commit.
+	if got, err := catFile(ctx, env.g, "HEAD", "staged.txt"); err != nil {
+		t.Error(err)
+	} else if got != newContent {
+		t.Errorf("staged.txt @ HEAD = %q; want %q", got, newContent)
+	}
+	if got, err := catFile(ctx, env.g, "HEAD", "unstaged.txt"); err != nil {
+		t.Error(err)
+	} else if got != newContent {
+		t.Errorf("unstaged.txt @ HEAD = %q; want %q", got, newContent)
+	}
+
+	// Verify commit message.
+	if info, err := env.g.CommitInfo(ctx, "HEAD"); err != nil {
+		t.Error(err)
+	} else if info.Message != wantMessage {
+		t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
+	}
 }
 
 func catFile(ctx context.Context, g *Git, rev string, path TopPath) (string, error) {
