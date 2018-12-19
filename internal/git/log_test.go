@@ -110,7 +110,7 @@ func TestCommitInfo(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "rm", "foo.txt"); err != nil {
+		if err := env.g.Remove(ctx, []Pathspec{"foo.txt"}, RemoveOptions{}); err != nil {
 			t.Fatal(err)
 		}
 		// Message does not have trailing newline to verify verbatim processing.

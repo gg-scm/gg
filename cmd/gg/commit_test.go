@@ -69,7 +69,7 @@ func TestCommit_NoArgs(t *testing.T) {
 	if err := env.trackFiles(ctx, "added.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "rm", "deleted.txt"); err != nil {
+	if err := env.git.Remove(ctx, []git.Pathspec{"deleted.txt"}, git.RemoveOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -162,7 +162,7 @@ func TestCommit_Selective(t *testing.T) {
 	if err := env.trackFiles(ctx, "added.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "rm", "deleted.txt"); err != nil {
+	if err := env.git.Remove(ctx, []git.Pathspec{"deleted.txt"}, git.RemoveOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -303,7 +303,7 @@ func TestCommit_Amend(t *testing.T) {
 	if err := env.trackFiles(ctx, "added.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "rm", "deleted.txt"); err != nil {
+	if err := env.git.Remove(ctx, []git.Pathspec{"deleted.txt"}, git.RemoveOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -539,7 +539,7 @@ func TestCommit_InSubdir(t *testing.T) {
 			if err := env.trackFiles(ctx, "added.txt"); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.git.Run(ctx, "rm", "deleted.txt"); err != nil {
+			if err := env.git.Remove(ctx, []git.Pathspec{"deleted.txt"}, git.RemoveOptions{}); err != nil {
 				t.Fatal(err)
 			}
 

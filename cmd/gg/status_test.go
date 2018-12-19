@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
+	"gg-scm.io/pkg/internal/git"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -69,7 +70,7 @@ func TestStatus(t *testing.T) {
 	if err := env.trackFiles(ctx, "added.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "rm", "deleted.txt"); err != nil {
+	if err := env.git.Remove(ctx, []git.Pathspec{"deleted.txt"}, git.RemoveOptions{}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -42,22 +42,19 @@ func remove(ctx context.Context, cc *cmdContext, args []string) error {
 	if f.NArg() == 0 {
 		return usagef("must pass one or more files to remove")
 	}
-	var rmArgs []string
-	rmArgs = append(rmArgs, "rm")
-	if *force {
-		rmArgs = append(rmArgs, "--force")
-	}
 	if !*after {
 		if err := verifyPresent(ctx, cc.git, f.Args()); err != nil {
 			return err
 		}
 	}
-	if *recursive {
-		rmArgs = append(rmArgs, "-r")
+	pathspecs := make([]git.Pathspec, 0, f.NArg())
+	for _, arg := range f.Args() {
+		pathspecs = append(pathspecs, git.LiteralPath(arg))
 	}
-	rmArgs = append(rmArgs, "--")
-	rmArgs = append(rmArgs, f.Args()...)
-	return cc.git.Run(ctx, rmArgs...)
+	return cc.git.Remove(ctx, pathspecs, git.RemoveOptions{
+		Recursive: *recursive,
+		Modified:  *force,
+	})
 }
 
 func verifyPresent(ctx context.Context, g *git.Git, args []string) error {

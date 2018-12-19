@@ -287,7 +287,7 @@ func (env *testEnv) initRepoWithHistory(ctx context.Context, dir string) error {
 	if err := repoGit.Commit(ctx, "initial import"); err != nil {
 		return err
 	}
-	if err := repoGit.Run(ctx, "rm", ".dummy"); err != nil {
+	if err := repoGit.Remove(ctx, []git.Pathspec{".dummy"}, git.RemoveOptions{}); err != nil {
 		return err
 	}
 	if err := repoGit.Commit(ctx, "removed dummy file"); err != nil {

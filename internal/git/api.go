@@ -259,6 +259,48 @@ func (g *Git) Add(ctx context.Context, pathspecs []Pathspec, opts AddOptions) er
 	return nil
 }
 
+// RemoveOptions specifies the command-line options for `git add`.
+type RemoveOptions struct {
+	// Recursive specifies whether to remove directories.
+	Recursive bool
+	// If Modified is true, then files will be deleted even if they've
+	// been modified from their checked in state.
+	Modified bool
+	// If KeepWorkingCopy is true, then the file will only be removed in
+	// the index, not the working copy.
+	KeepWorkingCopy bool
+}
+
+// Remove removes file contents from the index.
+func (g *Git) Remove(ctx context.Context, pathspecs []Pathspec, opts RemoveOptions) error {
+	if len(pathspecs) == 0 {
+		return nil
+	}
+	var args []string
+	args = append(args, "rm", "--quiet")
+	if opts.Recursive {
+		args = append(args, "-r")
+	}
+	if opts.Modified {
+		args = append(args, "--force")
+	}
+	if opts.KeepWorkingCopy {
+		args = append(args, "--cached")
+	}
+	args = append(args, "--")
+	for _, p := range pathspecs {
+		args = append(args, p.String())
+	}
+	c := g.Command(ctx, args...)
+	buf := new(bytes.Buffer)
+	c.Stdout = &limitWriter{w: buf, n: 4096}
+	c.Stderr = c.Stdout
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError("git rm", err, buf.Bytes())
+	}
+	return nil
+}
+
 // Commit creates a new commit on HEAD with the staged content.
 // The message will be used exactly as given.
 func (g *Git) Commit(ctx context.Context, message string) error {

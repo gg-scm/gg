@@ -130,8 +130,7 @@ func TestCommit(t *testing.T) {
 		if err := env.g.Add(ctx, []Pathspec{"added.txt", "modified_staged.txt"}, AddOptions{}); err != nil {
 			t.Fatal(err)
 		}
-		// TODO(soon): Replace this with a call to env.g.Remove.
-		if err := env.g.Run(ctx, "rm", "deleted.txt"); err != nil {
+		if err := env.g.Remove(ctx, []Pathspec{"deleted.txt"}, RemoveOptions{}); err != nil {
 			t.Fatal(err)
 		}
 
