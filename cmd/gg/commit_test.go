@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
@@ -75,8 +74,8 @@ func TestCommit_NoArgs(t *testing.T) {
 	}
 
 	// Call gg to make a commit.
-	const wantMessage = "gg made this commit"
-	if _, err := env.gg(ctx, env.root.String(), "commit", "-m", wantMessage); err != nil {
+	const wantMessage = "gg made this commit\n"
+	if _, err := env.gg(ctx, env.root.String(), "commit", "-m", "gg made this commit"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -115,8 +114,8 @@ func TestCommit_NoArgs(t *testing.T) {
 	// Verify that the commit message matches the given message.
 	if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
 		t.Error(err)
-	} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage {
-		t.Errorf("commit message = %q; want %q", got, wantMessage)
+	} else if info.Message != wantMessage {
+		t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
 	}
 }
 
@@ -168,8 +167,8 @@ func TestCommit_Selective(t *testing.T) {
 	}
 
 	// Call gg to make a commit.
-	const wantMessage = "gg made this commit"
-	if _, err := env.gg(ctx, env.root.String(), "commit", "-m", wantMessage, "modified.txt"); err != nil {
+	const wantMessage = "gg made this commit\n"
+	if _, err := env.gg(ctx, env.root.String(), "commit", "-m", "gg made this commit", "modified.txt"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -206,8 +205,8 @@ func TestCommit_Selective(t *testing.T) {
 	// Verify that the commit message matches the given message.
 	if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
 		t.Error(err)
-	} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage {
-		t.Errorf("commit message = %q; want %q", got, wantMessage)
+	} else if info.Message != wantMessage {
+		t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
 	}
 }
 
@@ -309,8 +308,8 @@ func TestCommit_Amend(t *testing.T) {
 	}
 
 	// Call gg to make a commit.
-	const wantMessage = "gg amended this commit"
-	if _, err := env.gg(ctx, env.root.String(), "commit", "--amend", "-m", wantMessage); err != nil {
+	const wantMessage = "gg amended this commit\n"
+	if _, err := env.gg(ctx, env.root.String(), "commit", "--amend", "-m", "gg amended this commit"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -355,8 +354,8 @@ func TestCommit_Amend(t *testing.T) {
 	// Verify that the commit message matches the given message.
 	if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
 		t.Error(err)
-	} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage {
-		t.Errorf("commit message = %q; want %q", got, wantMessage)
+	} else if info.Message != wantMessage {
+		t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
 	}
 }
 
@@ -431,8 +430,8 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 	}
 
 	// Call gg to amend the commit.
-	const wantMessage = "gg amended this commit"
-	if _, err := env.gg(ctx, env.root.String(), "commit", "--amend", "-m", wantMessage); err != nil {
+	const wantMessage = "gg amended this commit\n"
+	if _, err := env.gg(ctx, env.root.String(), "commit", "--amend", "-m", "gg amended this commit"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -463,8 +462,8 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 	// Verify that the commit message matches the one given.
 	if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
 		t.Error(err)
-	} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage {
-		t.Errorf("commit message = %q; want %q", got, wantMessage)
+	} else if info.Message != wantMessage {
+		t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
 	}
 
 	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "foo.txt"); err != nil {
@@ -545,8 +544,8 @@ func TestCommit_InSubdir(t *testing.T) {
 			}
 
 			// Call gg to create the commit, appending the test case's arguments.
-			const wantMessage = "gg made this commit"
-			args := append([]string{"commit", "-m", wantMessage}, test.args...)
+			const wantMessage = "gg made this commit\n"
+			args := append([]string{"commit", "-m", "gg made this commit"}, test.args...)
 			if _, err := env.gg(ctx, env.root.FromSlash("foo"), args...); err != nil {
 				t.Fatal(err)
 			}
@@ -586,8 +585,8 @@ func TestCommit_InSubdir(t *testing.T) {
 			// Verify that the commit message matches the one given.
 			if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
 				t.Error(err)
-			} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage {
-				t.Errorf("commit message = %q; want %q", got, wantMessage)
+			} else if info.Message != wantMessage {
+				t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
 			}
 		})
 	}

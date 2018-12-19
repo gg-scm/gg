@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 
 	"gg-scm.io/pkg/internal/escape"
@@ -632,8 +631,8 @@ func TestHistedit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		const wantMessage = "New commit message for foo.txt"
-		msgEditor, err := env.editorCmd([]byte(wantMessage + "\n"))
+		const wantMessage = "New commit message for foo.txt\n"
+		msgEditor, err := env.editorCmd([]byte(wantMessage))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -669,8 +668,8 @@ func TestHistedit(t *testing.T) {
 		// Verify that the commit message matches what was given.
 		if info, err := env.git.CommitInfo(ctx, curr.Commit().String()); err != nil {
 			t.Error(err)
-		} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage {
-			t.Errorf("commit message = %q; want %q", got, wantMessage)
+		} else if info.Message != wantMessage {
+			t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
 		}
 
 		// Verify that the parent commit is the base commit.
@@ -739,8 +738,8 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err := env.addFiles(ctx, "bar.txt"); err != nil {
 			t.Fatal(err)
 		}
-		const wantMessage2 = "Divergence 2"
-		if err := env.git.Run(ctx, "commit", "--quiet", "-m", wantMessage2); err != nil {
+		const wantMessage2 = "Divergence 2\n"
+		if err := env.git.Run(ctx, "commit", "--quiet", "-m", "Divergence 2"); err != nil {
 			t.Fatal(err)
 		}
 		rev2, err := env.git.Head(ctx)
@@ -761,8 +760,8 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		const wantMessage1 = "New commit message for foo.txt"
-		msgEditor, err := env.editorCmd([]byte(wantMessage1 + "\n"))
+		const wantMessage1 = "New commit message for foo.txt\n"
+		msgEditor, err := env.editorCmd([]byte(wantMessage1))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -813,8 +812,8 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		// Verify that the commit message of the first edited commit is the message from the editor.
 		if info, err := env.git.CommitInfo(ctx, "HEAD~"); err != nil {
 			t.Errorf("Rebased change 1: %v", err)
-		} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage1 {
-			t.Errorf("Rebased change 1 commit message = %q; want %q", got, wantMessage1)
+		} else if info.Message != wantMessage1 {
+			t.Errorf("Rebased change 1 commit message = %q; want %q", info.Message, wantMessage1)
 		}
 		// Verify that the content of foo.txt in the first edited commit is the rewritten content.
 		if content, err := catBlob(ctx, env.git, "HEAD~", "foo.txt"); err != nil {
@@ -830,8 +829,8 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		// Verify that the commit message of the second edited commit is the same as before.
 		if info, err := env.git.CommitInfo(ctx, "HEAD"); err != nil {
 			t.Errorf("Rebased change 2: %v", err)
-		} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage2 {
-			t.Errorf("Rebased change 2 commit message = %q; want %q", got, wantMessage2)
+		} else if info.Message != wantMessage2 {
+			t.Errorf("Rebased change 2 commit message = %q; want %q", info.Message, wantMessage2)
 		}
 		// Verify that the content of foo.txt in the second edited commit is the rewritten content.
 		if content, err := catBlob(ctx, env.git, "HEAD", "foo.txt"); err != nil {
@@ -888,8 +887,8 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err := env.addFiles(ctx, "foo.txt"); err != nil {
 			t.Fatal(err)
 		}
-		const wantMessage1 = "Divergence 1"
-		if err := env.git.Run(ctx, "commit", "--quiet", "-m", wantMessage1); err != nil {
+		const wantMessage1 = "Divergence 1\n"
+		if err := env.git.Run(ctx, "commit", "--quiet", "-m", "Divergence 1"); err != nil {
 			t.Fatal(err)
 		}
 		rev1, err := env.git.Head(ctx)
@@ -902,8 +901,8 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err := env.addFiles(ctx, "bar.txt"); err != nil {
 			t.Fatal(err)
 		}
-		const wantMessage2 = "Divergence 2"
-		if err := env.git.Run(ctx, "commit", "--quiet", "-m", wantMessage2); err != nil {
+		const wantMessage2 = "Divergence 2\n"
+		if err := env.git.Run(ctx, "commit", "--quiet", "-m", "Divergence 2"); err != nil {
 			t.Fatal(err)
 		}
 		rev2, err := env.git.Head(ctx)
@@ -973,8 +972,8 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		// Verify that the commit message of the first edited commit is the same as before.
 		if info, err := env.git.CommitInfo(ctx, "HEAD~"); err != nil {
 			t.Errorf("Rebased change 1: %v", err)
-		} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage1 {
-			t.Errorf("Rebased change 1 commit message = %q; want %q", got, wantMessage1)
+		} else if info.Message != wantMessage1 {
+			t.Errorf("Rebased change 1 commit message = %q; want %q", info.Message, wantMessage1)
 		}
 		// Verify that the first edited commit hash is the same as what was
 		// observed during the rebase operation.
@@ -988,8 +987,8 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		// Verify that the commit message of the second edited commit is the same as before.
 		if info, err := env.git.CommitInfo(ctx, "HEAD"); err != nil {
 			t.Errorf("Rebased change 2: %v", err)
-		} else if got := strings.TrimRight(string(info.Message), "\n"); got != wantMessage2 {
-			t.Errorf("Rebased change 2 commit message = %q; want %q", got, wantMessage2)
+		} else if info.Message != wantMessage2 {
+			t.Errorf("Rebased change 2 commit message = %q; want %q", info.Message, wantMessage2)
 		}
 		// Verify that the second edited commit contains both foo.txt and bar.txt.
 		if err := objectExists(ctx, env.git, "HEAD", "foo.txt"); err != nil {

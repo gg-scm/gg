@@ -16,6 +16,7 @@ package git
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
@@ -61,10 +62,14 @@ func TestCommitInfo(t *testing.T) {
 		if err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
 			t.Fatal(err)
 		}
-		// Message must have trailing newline, as all Git commit messages must have them.
-		const wantMsg = "\t foobarbaz  \r\n\n  initial import  \n"
-		if err := env.g.Run(ctx, "commit", "--cleanup=verbatim", "-m", wantMsg); err != nil {
-			t.Fatal(err)
+		// Message does not have trailing newline to verify verbatim processing.
+		const wantMsg = "\t foobarbaz  \r\n\n  initial import  "
+		{
+			c := env.g.Command(ctx, "commit", "--cleanup=verbatim", "--file=-")
+			c.Stdin = strings.NewReader(wantMsg)
+			if err := c.Run(); err != nil {
+				t.Fatal(err)
+			}
 		}
 		info, err := env.g.CommitInfo(ctx, "HEAD")
 		if err != nil {
@@ -108,10 +113,14 @@ func TestCommitInfo(t *testing.T) {
 		if err := env.g.Run(ctx, "rm", "foo.txt"); err != nil {
 			t.Fatal(err)
 		}
-		// Message must have trailing newline, as all Git commit messages must have them.
-		const wantMsg = "\t foobarbaz  \r\n\n  the second commit  \n"
-		if err := env.g.Run(ctx, "commit", "--cleanup=verbatim", "-m", wantMsg); err != nil {
-			t.Fatal(err)
+		// Message does not have trailing newline to verify verbatim processing.
+		const wantMsg = "\t foobarbaz  \r\n\n  the second commit  "
+		{
+			c := env.g.Command(ctx, "commit", "--quiet", "--cleanup=verbatim", "--file=-")
+			c.Stdin = strings.NewReader(wantMsg)
+			if err := c.Run(); err != nil {
+				t.Fatal(err)
+			}
 		}
 
 		info, err := env.g.CommitInfo(ctx, "HEAD")
