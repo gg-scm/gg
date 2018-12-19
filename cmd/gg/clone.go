@@ -59,29 +59,28 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	cc = cc.withDir(dst)
-	refs, err := listRefs(ctx, cc.git)
+	refs, err := cc.git.ListRefs(ctx)
 	if err != nil {
 		return err
 	}
 	branches := make(map[string]struct{}, len(refs))
-	for _, r := range refs {
-		b := r.name.Branch()
-		if b != "" {
+	for r := range refs {
+		if b := r.Branch(); b != "" {
 			branches[b] = struct{}{}
 		}
 	}
-	for _, r := range refs {
+	for r := range refs {
 		// Guaranteed to be the mapping used by clone.
 		const originPrefix = "refs/remotes/origin/"
-		if !strings.HasPrefix(r.name.String(), originPrefix) {
+		if !strings.HasPrefix(r.String(), originPrefix) {
 			continue
 		}
-		name := string(r.name[len(originPrefix):])
+		name := string(r[len(originPrefix):])
 		if name == git.Head.String() {
 			continue
 		}
 		if _, hasLocal := branches[string(name)]; !hasLocal {
-			if err := cc.git.Run(ctx, "branch", "--track", "--", name, r.name.String()); err != nil {
+			if err := cc.git.Run(ctx, "branch", "--track", "--", name, r.String()); err != nil {
 				return fmt.Errorf("mirroring local branch %q: %v", name, err)
 			}
 		}

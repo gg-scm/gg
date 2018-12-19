@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestParseRev(t *testing.T) {
@@ -152,5 +153,116 @@ func TestParseRev(t *testing.T) {
 		if got := rev.Ref; got != test.ref {
 			t.Errorf("ParseRev(ctx, g, %q).RefName() = %q; want %q", test.refspec, got, test.ref)
 		}
+	}
+}
+
+func TestListRefs(t *testing.T) {
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, gitPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	// Since ListRefs may be used to check state of other commands,
+	// everything here uses raw commands.
+
+	// Create the first master commit.
+	if err := env.g.Init(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Run(ctx, "commit", "-m", "first commit"); err != nil {
+		t.Fatal(err)
+	}
+	revMaster, err := env.g.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Create a new commit on branch abc.
+	if err := env.g.Run(ctx, "checkout", "--quiet", "-b", "abc"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Run(ctx, "add", "bar.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Run(ctx, "commit", "-m", "abc commit"); err != nil {
+		t.Fatal(err)
+	}
+	revABC, err := env.g.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Create a two new commits on branch def.
+	if err := env.g.Run(ctx, "checkout", "--quiet", "-b", "def", "master"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("baz.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Run(ctx, "add", "baz.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Run(ctx, "commit", "-m", "def commit 1"); err != nil {
+		t.Fatal(err)
+	}
+	revDEF1, err := env.g.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("baz.txt", dummyContent+"abc\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Run(ctx, "commit", "-a", "-m", "def commit 2"); err != nil {
+		t.Fatal(err)
+	}
+	revDEF2, err := env.g.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Tag the def branch as "ghi".
+	if err := env.g.Run(ctx, "tag", "-a", "-m", "tests gonna tag", "ghi", "HEAD~"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call env.g.ListRefs().
+	got, err := env.g.ListRefs(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify that refs match what we expect.
+	want := map[Ref]*Rev{
+		"refs/heads/master": &Rev{
+			Ref:    "refs/heads/master",
+			Commit: revMaster.Commit,
+		},
+		"refs/heads/abc": &Rev{
+			Ref:    "refs/heads/abc",
+			Commit: revABC.Commit,
+		},
+		"refs/heads/def": &Rev{
+			Ref:    "refs/heads/def",
+			Commit: revDEF2.Commit,
+		},
+		"refs/tags/ghi": &Rev{
+			Ref:    "refs/tags/ghi",
+			Commit: revDEF1.Commit,
+		},
+	}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("refs (-want +got):\n%s", diff)
 	}
 }
