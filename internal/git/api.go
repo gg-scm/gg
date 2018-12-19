@@ -275,9 +275,9 @@ type CommitOptions struct {
 	All bool
 }
 
-// Commit creates a new commit on HEAD. Commit will append a trailing
-// newline to message if it is not present (Git requires this).
-func (g *Git) Commit(ctx context.Context, msg string, opts CommitOptions) error {
+// Commit creates a new commit on HEAD. The message will be used exactly
+// as given.
+func (g *Git) Commit(ctx context.Context, message string, opts CommitOptions) error {
 	var args []string
 	args = append(args, "commit", "--quiet")
 	switch {
@@ -292,7 +292,7 @@ func (g *Git) Commit(ctx context.Context, msg string, opts CommitOptions) error 
 	}
 
 	c := g.Command(ctx, args...)
-	c.Stdin = strings.NewReader(msg)
+	c.Stdin = strings.NewReader(message)
 	out := new(bytes.Buffer)
 	c.Stdout = &limitWriter{w: out, n: 4096}
 	c.Stderr = c.Stdout

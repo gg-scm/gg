@@ -29,6 +29,58 @@ func TestCommit(t *testing.T) {
 		t.Skip("git not found:", err)
 	}
 	ctx := context.Background()
+	t.Run("Message", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			msg     string
+			wantErr bool
+		}{
+			{name: "Empty", msg: "", wantErr: true},
+			{name: "OneLineNoEOL", msg: "hello world"},
+			{name: "OneLine", msg: "hello world\n"},
+			{name: "OneLineUntrimmed", msg: " \t hello world\t \t\n"},
+			{name: "TwoLinesNoEOL", msg: "hello\nworld"},
+			{name: "TwoLines", msg: "hello\nworld\n"},
+			{name: "ThreeLinesNoEOL", msg: "hello\nworld\n!"},
+			{name: "ThreeLines", msg: "hello\nworld\n!\n"},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				env, err := newTestEnv(ctx, gitPath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer env.cleanup()
+				if err := env.g.Init(ctx, "."); err != nil {
+					t.Fatal(err)
+				}
+				if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+					t.Fatal(err)
+				}
+				if err := env.g.Add(ctx, []Pathspec{"foo.txt"}, AddOptions{}); err != nil {
+					t.Fatal(err)
+				}
+				err = env.g.Commit(ctx, test.msg, CommitOptions{})
+				if err != nil {
+					if !test.wantErr {
+						t.Error("Commit error:", err)
+					}
+					return
+				}
+				if test.wantErr {
+					t.Fatal("Commit did not return error; want error")
+				}
+				info, err := env.g.CommitInfo(ctx, "HEAD")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if info.Message != test.msg {
+					t.Errorf("message = %q; want %q", info.Message, test.msg)
+				}
+			})
+		}
+	})
 	t.Run("DefaultOptions", func(t *testing.T) {
 		env, err := newTestEnv(ctx, gitPath)
 		if err != nil {
@@ -83,7 +135,7 @@ func TestCommit(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Call g.Commit.
+		// Call g.Commit. Contains a trailing newline, so will be used verbatim.
 		const wantMessage = "\n\ninternal/git made this commit\n\n"
 		if err := env.g.Commit(ctx, wantMessage, CommitOptions{}); err != nil {
 			t.Error("Commit error:", err)
@@ -128,8 +180,13 @@ func TestCommit(t *testing.T) {
 		} else if got != modifiedOld {
 			t.Errorf("modified_unstaged.txt @ HEAD = %q; want %q", got, modifiedOld)
 		}
-		// TODO(soon): Verify working copy state.
-		// TODO(soon): Verify commit message.
+
+		// Verify commit message.
+		if info, err := env.g.CommitInfo(ctx, "HEAD"); err != nil {
+			t.Error(err)
+		} else if info.Message != wantMessage {
+			t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
+		}
 	})
 	t.Run("Empty", func(t *testing.T) {
 		env, err := newTestEnv(ctx, gitPath)
