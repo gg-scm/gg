@@ -68,7 +68,7 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 		pathspecs = append(pathspecs, git.LiteralPath(f))
 	}
 	st, err := cc.git.DiffStatus(ctx, git.DiffStatusOptions{
-		Commit1:        revObj.Commit().String(),
+		Commit1:        revObj.Commit.String(),
 		Pathspecs:      pathspecs,
 		DisableRenames: true,
 	})
@@ -105,7 +105,7 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	if len(mods)+len(chmods)+len(deletes) > 0 {
-		coArgs := []string{"checkout", revObj.Commit().String(), "--"}
+		coArgs := []string{"checkout", revObj.Commit.String(), "--"}
 		for _, f := range mods {
 			coArgs = append(coArgs, f.String())
 		}

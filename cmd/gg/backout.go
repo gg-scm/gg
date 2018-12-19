@@ -67,6 +67,6 @@ func backout(ctx context.Context, cc *cmdContext, args []string) error {
 	if *noCommit {
 		revertArgs = append(revertArgs, "--no-commit")
 	}
-	revertArgs = append(revertArgs, r.Commit().String())
+	revertArgs = append(revertArgs, r.Commit.String())
 	return cc.git.Run(ctx, revertArgs...)
 }

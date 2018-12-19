@@ -71,13 +71,13 @@ func TestUpdate_NoArgsFastForward(t *testing.T) {
 	// Verify that HEAD moved to the second commit.
 	if r, err := env.git.Head(ctx); err != nil {
 		t.Fatal(err)
-	} else if r.Commit() != h2 {
+	} else if r.Commit != h2 {
 		names := map[git.Hash]string{
 			h1: "first commit",
 			h2: "second commit",
 		}
 		t.Errorf("after update, HEAD = %s; want %s",
-			prettyCommit(r.Commit(), names),
+			prettyCommit(r.Commit, names),
 			prettyCommit(h2, names))
 	}
 
@@ -137,16 +137,16 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 	if r, err := env.git.Head(ctx); err != nil {
 		t.Fatal(err)
 	} else {
-		if r.Commit() != h2 {
+		if r.Commit != h2 {
 			names := map[git.Hash]string{
-				initRev.Commit(): "first commit",
+				initRev.Commit: "first commit",
 				h2:               "second commit",
 			}
 			t.Errorf("after update foo, HEAD = %s; want %s",
-				prettyCommit(r.Commit(), names),
+				prettyCommit(r.Commit, names),
 				prettyCommit(h2, names))
 		}
-		if got, want := r.Ref(), git.BranchRef("foo"); got != want {
+		if got, want := r.Ref, git.BranchRef("foo"); got != want {
 			t.Errorf("after update foo, HEAD ref = %s; want %s", got, want)
 		}
 	}
@@ -200,16 +200,16 @@ func TestUpdate_ToCommit(t *testing.T) {
 	if r, err := env.git.Head(ctx); err != nil {
 		t.Fatal(err)
 	} else {
-		if r.Commit() != h1 {
+		if r.Commit != h1 {
 			names := map[git.Hash]string{
 				h1: "first commit",
 				h2: "second commit",
 			}
 			t.Errorf("after update master, HEAD = %s; want %s",
-				prettyCommit(r.Commit(), names),
+				prettyCommit(r.Commit, names),
 				prettyCommit(h1, names))
 		}
-		if got := r.Ref(); got != git.Head {
+		if got := r.Ref; got != git.Head {
 			t.Errorf("after update master, HEAD ref = %s; want %s", got, git.Head)
 		}
 	}

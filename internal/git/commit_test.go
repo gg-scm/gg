@@ -145,17 +145,17 @@ func TestCommit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if r2.Commit() == r1.Commit() {
+		if r2.Commit == r1.Commit {
 			t.Error("new HEAD = initial import")
 		}
-		if r2.Ref() != r1.Ref() {
-			t.Errorf("HEAD ref = %s; want %s", r2.Ref(), r1.Ref())
+		if r2.Ref != r1.Ref {
+			t.Errorf("HEAD ref = %s; want %s", r2.Ref, r1.Ref)
 		}
 		// Verify that the commit's parent is the initial commit.
 		if parent, err := env.g.ParseRev(ctx, "HEAD~"); err != nil {
 			t.Error(err)
-		} else if parent.Commit() != r1.Commit() {
-			t.Errorf("HEAD~ = %v; want %v", parent.Commit(), r1.Commit())
+		} else if parent.Commit != r1.Commit {
+			t.Errorf("HEAD~ = %v; want %v", parent.Commit, r1.Commit)
 		}
 
 		// Verify contents of commit.
@@ -235,8 +235,8 @@ func TestCommitFiles(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if r.Ref() != "refs/heads/master" {
-			t.Errorf("HEAD ref = %s; want refs/heads/master", r.Ref())
+		if r.Ref != "refs/heads/master" {
+			t.Errorf("HEAD ref = %s; want refs/heads/master", r.Ref)
 		}
 
 		// Verify commit message.
@@ -306,17 +306,17 @@ func TestCommitFiles(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if r2.Commit() == r1.Commit() {
+		if r2.Commit == r1.Commit {
 			t.Error("new HEAD = initial import")
 		}
-		if r2.Ref() != r1.Ref() {
-			t.Errorf("HEAD ref = %s; want %s", r2.Ref(), r1.Ref())
+		if r2.Ref != r1.Ref {
+			t.Errorf("HEAD ref = %s; want %s", r2.Ref, r1.Ref)
 		}
 		// Verify that the commit's parent is the initial commit.
 		if parent, err := env.g.ParseRev(ctx, "HEAD~"); err != nil {
 			t.Error(err)
-		} else if parent.Commit() != r1.Commit() {
-			t.Errorf("HEAD~ = %v; want %v", parent.Commit(), r1.Commit())
+		} else if parent.Commit != r1.Commit {
+			t.Errorf("HEAD~ = %v; want %v", parent.Commit, r1.Commit)
 		}
 
 		// Verify contents of commit.
@@ -403,17 +403,17 @@ func TestCommitAll(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r2.Commit() == r1.Commit() {
+	if r2.Commit == r1.Commit {
 		t.Error("new HEAD = initial import")
 	}
-	if r2.Ref() != r1.Ref() {
-		t.Errorf("HEAD ref = %s; want %s", r2.Ref(), r1.Ref())
+	if r2.Ref != r1.Ref {
+		t.Errorf("HEAD ref = %s; want %s", r2.Ref, r1.Ref)
 	}
 	// Verify that the commit's parent is the initial commit.
 	if parent, err := env.g.ParseRev(ctx, "HEAD~"); err != nil {
 		t.Error(err)
-	} else if parent.Commit() != r1.Commit() {
-		t.Errorf("HEAD~ = %v; want %v", parent.Commit(), r1.Commit())
+	} else if parent.Commit != r1.Commit {
+		t.Errorf("HEAD~ = %v; want %v", parent.Commit, r1.Commit)
 	}
 
 	// Verify contents of commit.

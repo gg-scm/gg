@@ -57,27 +57,27 @@ func TestClone(t *testing.T) {
 	if r, err := gitB.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
-		if r.Commit() != head {
-			t.Errorf("HEAD = %s; want %s", r.Commit(), head)
+		if r.Commit != head {
+			t.Errorf("HEAD = %s; want %s", r.Commit, head)
 		}
-		if r.Ref() != "refs/heads/master" {
-			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
+		if r.Ref != "refs/heads/master" {
+			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref)
 		}
 	}
 	if r, err := gitB.ParseRev(ctx, "refs/heads/foo"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != head {
-		t.Errorf("refs/heads/foo = %s; want %s", r.Commit(), head)
+	} else if r.Commit != head {
+		t.Errorf("refs/heads/foo = %s; want %s", r.Commit, head)
 	}
 	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != head {
-		t.Errorf("refs/remotes/origin/master = %s; want %s", r.Commit(), head)
+	} else if r.Commit != head {
+		t.Errorf("refs/remotes/origin/master = %s; want %s", r.Commit, head)
 	}
 	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/foo"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != head {
-		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.Commit(), head)
+	} else if r.Commit != head {
+		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.Commit, head)
 	}
 	if got, err := env.root.ReadFile("repoB/foo.txt"); err != nil {
 		t.Error(err)
@@ -120,27 +120,27 @@ func TestClone_Branch(t *testing.T) {
 	if r, err := gitB.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
-		if r.Commit() != head {
-			t.Errorf("HEAD = %s; want %s", r.Commit(), head)
+		if r.Commit != head {
+			t.Errorf("HEAD = %s; want %s", r.Commit, head)
 		}
-		if r.Ref() != "refs/heads/foo" {
-			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref())
+		if r.Ref != "refs/heads/foo" {
+			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref)
 		}
 	}
 	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != head {
-		t.Errorf("refs/heads/master = %s; want %s", r.Commit(), head)
+	} else if r.Commit != head {
+		t.Errorf("refs/heads/master = %s; want %s", r.Commit, head)
 	}
 	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != head {
-		t.Errorf("refs/remotes/origin/master = %s; want %s", r.Commit(), head)
+	} else if r.Commit != head {
+		t.Errorf("refs/remotes/origin/master = %s; want %s", r.Commit, head)
 	}
 	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/foo"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != head {
-		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.Commit(), head)
+	} else if r.Commit != head {
+		t.Errorf("refs/remotes/origin/foo = %s; want %s", r.Commit, head)
 	}
 	if got, err := env.root.ReadFile("repoB/foo.txt"); err != nil {
 		t.Error(err)

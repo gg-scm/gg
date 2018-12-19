@@ -73,9 +73,9 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	if err != nil {
 		return err
 	}
-	srcRef := src.Ref()
+	srcRef := src.Ref
 	if srcRef == "" {
-		possible, err := branchesContaining(ctx, cc.git, src.Commit().String())
+		possible, err := branchesContaining(ctx, cc.git, src.Commit.String())
 		if err == nil && len(possible) == 1 {
 			srcRef = possible[0]
 		}
@@ -116,7 +116,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	if *dryRun {
 		pushArgs = append(pushArgs, "--dry-run")
 	}
-	pushArgs = append(pushArgs, "--", dstRepo, src.Commit().String()+":"+dstRef.String())
+	pushArgs = append(pushArgs, "--", dstRepo, src.Commit.String()+":"+dstRef.String())
 	return cc.git.RunInteractive(ctx, pushArgs...)
 }
 
@@ -160,9 +160,9 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	if err != nil {
 		return err
 	}
-	srcBranch := src.Ref().Branch()
+	srcBranch := src.Ref.Branch()
 	if srcBranch == "" {
-		possible, err := branchesContaining(ctx, cc.git, src.Commit().String())
+		possible, err := branchesContaining(ctx, cc.git, src.Commit.String())
 		if err == nil && len(possible) == 1 {
 			srcBranch = possible[0].Branch()
 		}
@@ -207,7 +207,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 		*dstBranch = strings.TrimPrefix(*dstBranch, "refs/for/")
 	}
 	ref := gerritPushRef(*dstBranch, gopts)
-	return cc.git.RunInteractive(ctx, "push", "--", dstRepo, src.Commit().String()+":"+ref.String())
+	return cc.git.RunInteractive(ctx, "push", "--", dstRepo, src.Commit.String()+":"+ref.String())
 }
 
 type gerritOptions struct {

@@ -91,7 +91,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 			return err
 		}
 		var upstream string
-		if b := r.Ref().Branch(); b != "" {
+		if b := r.Ref.Branch(); b != "" {
 			cfg, err := cc.git.ReadConfig(ctx)
 			if err != nil {
 				return err

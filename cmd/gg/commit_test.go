@@ -84,35 +84,35 @@ func TestCommit_NoArgs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r2.Commit() == r1 {
+	if r2.Commit == r1 {
 		t.Fatal("commit did not create a new commit in the working copy")
 	}
-	if ref := r2.Ref(); ref != "refs/heads/master" {
+	if ref := r2.Ref; ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if parent, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
 		t.Error(err)
-	} else if parent.Commit() != r1 {
-		t.Errorf("HEAD~ = %v; want %v", parent.Commit(), r1)
+	} else if parent.Commit != r1 {
+		t.Errorf("HEAD~ = %v; want %v", parent.Commit, r1)
 	}
 
 	// Verify that the commit incorporated all changes from the working copy.
-	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "added.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit.String(), "added.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != addContent {
 		t.Errorf("added.txt = %q; want %q", data, addContent)
 	}
-	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "modified.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit.String(), "modified.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != modifiedNew {
 		t.Errorf("modified.txt = %q; want %q", data, modifiedNew)
 	}
-	if err := objectExists(ctx, env.git, r2.Commit().String(), "deleted.txt"); err == nil {
+	if err := objectExists(ctx, env.git, r2.Commit.String(), "deleted.txt"); err == nil {
 		t.Error("deleted.txt exists")
 	}
 
 	// Verify that the commit message matches the given message.
-	if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
+	if info, err := env.git.CommitInfo(ctx, r2.Commit.String()); err != nil {
 		t.Error(err)
 	} else if info.Message != wantMessage {
 		t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
@@ -177,33 +177,33 @@ func TestCommit_Selective(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r2.Commit() == r1 {
+	if r2.Commit == r1 {
 		t.Fatal("commit did not create a new commit in the working copy")
 	}
-	if ref := r2.Ref(); ref != "refs/heads/master" {
+	if ref := r2.Ref; ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if parent, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
 		t.Error(err)
-	} else if parent.Commit() != r1 {
-		t.Errorf("HEAD~ = %v; want %v", parent.Commit(), r1)
+	} else if parent.Commit != r1 {
+		t.Errorf("HEAD~ = %v; want %v", parent.Commit, r1)
 	}
 
 	// Verify that the commit only changed modified.txt.
-	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "modified.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit.String(), "modified.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != modifiedNew {
 		t.Errorf("modified.txt = %q; want %q", data, modifiedNew)
 	}
-	if err := objectExists(ctx, env.git, r2.Commit().String(), "added.txt"); err == nil {
+	if err := objectExists(ctx, env.git, r2.Commit.String(), "added.txt"); err == nil {
 		t.Error("added.txt was added but not put in arguments")
 	}
-	if err := objectExists(ctx, env.git, r2.Commit().String(), "deleted.txt"); err != nil {
+	if err := objectExists(ctx, env.git, r2.Commit.String(), "deleted.txt"); err != nil {
 		t.Error("deleted.txt was removed but not put in arguments:", err)
 	}
 
 	// Verify that the commit message matches the given message.
-	if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
+	if info, err := env.git.CommitInfo(ctx, r2.Commit.String()); err != nil {
 		t.Error(err)
 	} else if info.Message != wantMessage {
 		t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
@@ -243,7 +243,7 @@ func TestCommit_SelectiveWrongFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if curr.Commit() != r.Commit() {
+	if curr.Commit != r.Commit {
 		t.Error("Created a new commit; wanted no-op")
 	}
 }
@@ -322,37 +322,37 @@ func TestCommit_Amend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r2.Commit() == r1 {
+	if r2.Commit == r1 {
 		t.Fatal("commit --amend did not create a new commit in the working copy")
 	}
-	if ref := r2.Ref(); ref != "refs/heads/master" {
+	if ref := r2.Ref; ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if newParent, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
 		t.Error(err)
-	} else if newParent.Commit() != parent {
+	} else if newParent.Commit != parent {
 		t.Errorf("HEAD~ after amend = %s; want %s",
-			prettyCommit(newParent.Commit(), changes),
+			prettyCommit(newParent.Commit, changes),
 			prettyCommit(parent, changes))
 	}
 
 	// Verify that the commit incorporated all the changes from the working copy.
-	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "added.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit.String(), "added.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != addContent {
 		t.Errorf("added.txt = %q; want %q", data, addContent)
 	}
-	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "modified.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit.String(), "modified.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != modifiedNew {
 		t.Errorf("modified.txt = %q; want %q", data, modifiedNew)
 	}
-	if err := objectExists(ctx, env.git, r2.Commit().String(), "deleted.txt"); err == nil {
+	if err := objectExists(ctx, env.git, r2.Commit.String(), "deleted.txt"); err == nil {
 		t.Error("deleted.txt exists")
 	}
 
 	// Verify that the commit message matches the given message.
-	if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
+	if info, err := env.git.CommitInfo(ctx, r2.Commit.String()); err != nil {
 		t.Error(err)
 	} else if info.Message != wantMessage {
 		t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
@@ -384,10 +384,10 @@ func TestCommit_NoChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r2.Commit() != r1.Commit() {
-		t.Errorf("commit created new commit %s; wanted to stay on %s", r2.Commit(), r1.Commit())
+	if r2.Commit != r1.Commit {
+		t.Errorf("commit created new commit %s; wanted to stay on %s", r2.Commit, r1.Commit)
 	}
-	if ref := r2.Ref(); ref != "refs/heads/master" {
+	if ref := r2.Ref; ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 }
@@ -445,28 +445,28 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r2.Commit() == r1 {
+	if r2.Commit == r1 {
 		t.Fatal("commit --amend did not create a new commit in the working copy")
 	}
-	if ref := r2.Ref(); ref != "refs/heads/master" {
+	if ref := r2.Ref; ref != "refs/heads/master" {
 		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 	}
 	if newParent, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
 		t.Error(err)
-	} else if newParent.Commit() != parent {
+	} else if newParent.Commit != parent {
 		t.Errorf("HEAD~ after amend = %s; want %s",
-			prettyCommit(newParent.Commit(), changes),
+			prettyCommit(newParent.Commit, changes),
 			prettyCommit(parent, changes))
 	}
 
 	// Verify that the commit message matches the one given.
-	if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
+	if info, err := env.git.CommitInfo(ctx, r2.Commit.String()); err != nil {
 		t.Error(err)
 	} else if info.Message != wantMessage {
 		t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
 	}
 
-	if data, err := catBlob(ctx, env.git, r2.Commit().String(), "foo.txt"); err != nil {
+	if data, err := catBlob(ctx, env.git, r2.Commit.String(), "foo.txt"); err != nil {
 		t.Error(err)
 	} else if string(data) != newContent {
 		t.Errorf("foo.txt = %q; want %q", data, newContent)
@@ -555,35 +555,35 @@ func TestCommit_InSubdir(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if r2.Commit() == r1 {
+			if r2.Commit == r1 {
 				t.Fatal("commit did not create a new commit in the working copy")
 			}
-			if ref := r2.Ref(); ref != "refs/heads/master" {
+			if ref := r2.Ref; ref != "refs/heads/master" {
 				t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
 			}
 			if parent, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
 				t.Error(err)
-			} else if parent.Commit() != r1 {
-				t.Errorf("HEAD~ = %v; want %v", parent.Commit(), r1)
+			} else if parent.Commit != r1 {
+				t.Errorf("HEAD~ = %v; want %v", parent.Commit, r1)
 			}
 
 			// Verify that the commit incorporates all the changes from the working copy.
-			if data, err := catBlob(ctx, env.git, r2.Commit().String(), "added.txt"); err != nil {
+			if data, err := catBlob(ctx, env.git, r2.Commit.String(), "added.txt"); err != nil {
 				t.Error(err)
 			} else if string(data) != addContent {
 				t.Errorf("added.txt = %q; want %q", data, addContent)
 			}
-			if data, err := catBlob(ctx, env.git, r2.Commit().String(), "modified.txt"); err != nil {
+			if data, err := catBlob(ctx, env.git, r2.Commit.String(), "modified.txt"); err != nil {
 				t.Error(err)
 			} else if string(data) != modifiedNew {
 				t.Errorf("modified.txt = %q; want %q", data, modifiedNew)
 			}
-			if err := objectExists(ctx, env.git, r2.Commit().String(), "deleted.txt"); err == nil {
+			if err := objectExists(ctx, env.git, r2.Commit.String(), "deleted.txt"); err == nil {
 				t.Error("deleted.txt exists")
 			}
 
 			// Verify that the commit message matches the one given.
-			if info, err := env.git.CommitInfo(ctx, r2.Commit().String()); err != nil {
+			if info, err := env.git.CommitInfo(ctx, r2.Commit.String()); err != nil {
 				t.Error(err)
 			} else if info.Message != wantMessage {
 				t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
@@ -681,26 +681,26 @@ func TestCommit_Merge(t *testing.T) {
 		r1:   "master commit",
 		r2:   "branch commit",
 	}
-	if curr.Commit() == base || curr.Commit() == r1 || curr.Commit() == r2 {
+	if curr.Commit == base || curr.Commit == r1 || curr.Commit == r2 {
 		t.Errorf("after merge commit, HEAD = %s; want new commit",
-			prettyCommit(curr.Commit(), names))
+			prettyCommit(curr.Commit, names))
 	}
 	parent1, err := env.git.ParseRev(ctx, "HEAD^1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parent1.Commit() != r1 {
+	if parent1.Commit != r1 {
 		t.Errorf("after merge commit, HEAD^1 = %s; want %s",
-			prettyCommit(parent1.Commit(), names),
+			prettyCommit(parent1.Commit, names),
 			prettyCommit(r1, names))
 	}
 	parent2, err := env.git.ParseRev(ctx, "HEAD^2")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parent2.Commit() != r2 {
+	if parent2.Commit != r2 {
 		t.Errorf("after merge commit, HEAD^2 = %s; want %s",
-			prettyCommit(parent2.Commit(), names),
+			prettyCommit(parent2.Commit, names),
 			prettyCommit(r2, names))
 	}
 }

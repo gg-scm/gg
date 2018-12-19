@@ -48,7 +48,7 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 		if err != nil {
 			return err
 		}
-		*branch = rev.Ref().Branch()
+		*branch = rev.Ref.Branch()
 		if *branch == "" {
 			return errors.New("no branch currently checked out; please specify branch with -b")
 		}
@@ -58,7 +58,7 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(cc.stdout, rev.Ref())
+		fmt.Fprintln(cc.stdout, rev.Ref)
 		return nil
 	}
 	return cc.git.RunInteractive(ctx, "branch", "--set-upstream-to="+f.Arg(0), "--", *branch)

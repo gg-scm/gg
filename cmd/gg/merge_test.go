@@ -83,13 +83,13 @@ func TestMerge(t *testing.T) {
 		t.Fatal(err)
 	}
 	names := map[git.Hash]string{
-		baseRev.Commit(): "initial commit",
+		baseRev.Commit: "initial commit",
 		upstream:         "master commit",
 		feature:          "branch commit",
 	}
-	if curr.Commit() != upstream {
+	if curr.Commit != upstream {
 		t.Errorf("after merge, HEAD = %s; want %s",
-			prettyCommit(curr.Commit(), names),
+			prettyCommit(curr.Commit, names),
 			prettyCommit(upstream, names))
 	}
 
@@ -98,9 +98,9 @@ func TestMerge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if mergeHead.Commit() != feature {
+	if mergeHead.Commit != feature {
 		t.Errorf("after merge, MERGE_HEAD = %s; want %s",
-			prettyCommit(curr.Commit(), names),
+			prettyCommit(curr.Commit, names),
 			prettyCommit(feature, names))
 	}
 
@@ -185,9 +185,9 @@ func TestMerge_Conflict(t *testing.T) {
 		upstream: "master commit",
 		feature:  "branch commit",
 	}
-	if curr.Commit() != upstream {
+	if curr.Commit != upstream {
 		t.Errorf("after merge, HEAD = %s; want %s",
-			prettyCommit(curr.Commit(), names),
+			prettyCommit(curr.Commit, names),
 			prettyCommit(upstream, names))
 	}
 
@@ -196,9 +196,9 @@ func TestMerge_Conflict(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if mergeHead.Commit() != feature {
+	if mergeHead.Commit != feature {
 		t.Errorf("after merge, MERGE_HEAD = %s; want %s",
-			prettyCommit(curr.Commit(), names),
+			prettyCommit(curr.Commit, names),
 			prettyCommit(feature, names))
 	}
 }

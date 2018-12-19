@@ -20,12 +20,6 @@ import (
 	"strings"
 )
 
-// Rev is a parsed reference to a single commit.
-type Rev struct {
-	commit  Hash
-	refname Ref
-}
-
 // Head returns the working copy's branch revision.
 func (g *Git) Head(ctx context.Context) (*Rev, error) {
 	return g.ParseRev(ctx, Head.String())
@@ -51,29 +45,25 @@ func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 		return nil, fmt.Errorf("parse revision %q: %v", refspec, err)
 	}
 	return &Rev{
-		commit:  h,
-		refname: Ref(refname),
+		Commit: h,
+		Ref:    Ref(refname),
 	}, nil
 }
 
-// Commit returns the commit hash.
-func (r *Rev) Commit() Hash {
-	return r.commit
-}
-
-// Ref returns the full refname or empty if r is not a symbolic revision.
-func (r *Rev) Ref() Ref {
-	return r.refname
+// Rev is a parsed reference to a single commit.
+type Rev struct {
+	Commit Hash
+	Ref    Ref
 }
 
 // String returns the shortest symbolic name if possible, falling back
 // to the commit hash.
 func (r *Rev) String() string {
-	if b := r.refname.Branch(); b != "" {
+	if b := r.Ref.Branch(); b != "" {
 		return b
 	}
-	if r.refname.IsValid() {
-		return r.refname.String()
+	if r.Ref.IsValid() {
+		return r.Ref.String()
 	}
-	return r.commit.String()
+	return r.Commit.String()
 }

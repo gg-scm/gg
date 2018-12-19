@@ -60,7 +60,7 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 			return err
 		}
 	}
-	mergeBaseBytes, err := cc.git.RunOneLiner(ctx, '\n', "merge-base", dstRev.Commit().String(), git.Head.String())
+	mergeBaseBytes, err := cc.git.RunOneLiner(ctx, '\n', "merge-base", dstRev.Commit.String(), git.Head.String())
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 	if err != nil {
 		return err
 	}
-	upstreamChanges, err := readChanges(ctx, cc.git, dstRev.Commit().String(), mergeBase)
+	upstreamChanges, err := readChanges(ctx, cc.git, dstRev.Commit.String(), mergeBase)
 	if err != nil {
 		return err
 	}

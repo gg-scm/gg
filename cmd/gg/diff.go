@@ -88,7 +88,7 @@ func diff(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("can't pass both -r and -c")
 	default:
 		if rev, err := cc.git.Head(ctx); err == nil {
-			diffArgs = append(diffArgs, rev.Commit().String())
+			diffArgs = append(diffArgs, rev.Commit.String())
 		} else {
 			// HEAD not found; repository has not been initialized.
 			// Compare to the null tree.

@@ -40,7 +40,7 @@ func TestPull(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	commit1 := rev1.Commit()
+	commit1 := rev1.Commit
 	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
@@ -75,31 +75,31 @@ func TestPull(t *testing.T) {
 	if r, err := gitB.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
-		if r.Commit() != commit1 {
+		if r.Commit != commit1 {
 			t.Errorf("HEAD = %s; want %s",
-				prettyCommit(r.Commit(), commitNames),
+				prettyCommit(r.Commit, commitNames),
 				prettyCommit(commit1, commitNames))
 		}
-		if r.Ref() != "refs/heads/master" {
-			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
+		if r.Ref != "refs/heads/master" {
+			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref)
 		}
 	}
 
 	// Verify that the remote tracking branch has moved to the new commit.
 	if r, err := gitB.ParseRev(ctx, "origin/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit2 {
+	} else if r.Commit != commit2 {
 		t.Errorf("origin/master = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
 	}
 
 	// Verify that the tag was mirrored in repository B.
 	if r, err := gitB.ParseRev(ctx, "first"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit1 {
+	} else if r.Commit != commit1 {
 		t.Errorf("origin/master = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
 	}
 }
@@ -123,7 +123,7 @@ func TestPullWithArgument(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	commit1 := rev1.Commit()
+	commit1 := rev1.Commit
 	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
@@ -171,31 +171,31 @@ func TestPullWithArgument(t *testing.T) {
 	if r, err := gitB.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
-		if r.Commit() != commit1 {
+		if r.Commit != commit1 {
 			t.Errorf("HEAD = %s; want %s",
-				prettyCommit(r.Commit(), commitNames),
+				prettyCommit(r.Commit, commitNames),
 				prettyCommit(commit1, commitNames))
 		}
-		if r.Ref() != "refs/heads/master" {
-			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
+		if r.Ref != "refs/heads/master" {
+			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref)
 		}
 	}
 
 	// Verify that FETCH_HEAD has set to the second commit.
 	if r, err := gitB.ParseRev(ctx, "FETCH_HEAD"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit2 {
+	} else if r.Commit != commit2 {
 		t.Errorf("FETCH_HEAD = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
 	}
 
 	// Verify that the tag was mirrored in repository B.
 	if r, err := gitB.ParseRev(ctx, "first"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit1 {
+	} else if r.Commit != commit1 {
 		t.Errorf("origin/master = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
 	}
 }
@@ -218,7 +218,7 @@ func TestPullUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	commit1 := rev1.Commit()
+	commit1 := rev1.Commit
 	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
@@ -250,22 +250,22 @@ func TestPullUpdate(t *testing.T) {
 	if r, err := gitB.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
-		if r.Commit() != commit2 {
+		if r.Commit != commit2 {
 			t.Errorf("HEAD = %s; want %s",
-				prettyCommit(r.Commit(), commitNames),
+				prettyCommit(r.Commit, commitNames),
 				prettyCommit(commit1, commitNames))
 		}
-		if r.Ref() != "refs/heads/master" {
-			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref())
+		if r.Ref != "refs/heads/master" {
+			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref)
 		}
 	}
 
 	// Verify that the remote tracking branch has moved to the new commit.
 	if r, err := gitB.ParseRev(ctx, "origin/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit2 {
+	} else if r.Commit != commit2 {
 		t.Errorf("origin/master = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
 	}
 }

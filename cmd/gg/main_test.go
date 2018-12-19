@@ -351,7 +351,7 @@ func (env *testEnv) newCommit(ctx context.Context, dir string) (git.Hash, error)
 	if err != nil {
 		return git.Hash{}, err
 	}
-	return r.Commit(), nil
+	return r.Commit, nil
 }
 
 // dummyRev creates a new revision in a repository that adds the given file.
@@ -365,13 +365,13 @@ func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file s
 		if branch != "master" {
 			return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 		}
-	} else if curr.Ref().Branch() != branch {
+	} else if curr.Ref.Branch() != branch {
 		if _, err := g.ParseRev(ctx, "refs/heads/"+branch); err != nil {
 			// Branch doesn't exist, create it.
 			if err := g.Run(ctx, "branch", "--", branch); err != nil {
 				return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 			}
-			if err := g.Run(ctx, "branch", "--set-upstream-to="+curr.Ref().String(), "--", branch); err != nil {
+			if err := g.Run(ctx, "branch", "--set-upstream-to="+curr.Ref.String(), "--", branch); err != nil {
 				return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 			}
 		}
@@ -393,7 +393,7 @@ func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file s
 	if err != nil {
 		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 	}
-	return curr.Commit(), nil
+	return curr.Commit, nil
 }
 
 // prettyCommit annotates the hex-encoded hash with a name if present

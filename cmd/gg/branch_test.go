@@ -42,21 +42,21 @@ func TestBranch(t *testing.T) {
 	if r, err := env.git.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
-		if r.Commit() != first.Commit() {
-			t.Errorf("HEAD = %s; want %s", r.Commit(), first.Commit())
+		if r.Commit != first.Commit {
+			t.Errorf("HEAD = %s; want %s", r.Commit, first.Commit)
 		}
-		if r.Ref() != "refs/heads/foo" {
-			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref())
+		if r.Ref != "refs/heads/foo" {
+			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref)
 		}
 	}
 	if r, err := env.git.ParseRev(ctx, "bar"); err != nil {
 		t.Error(err)
 	} else {
-		if r.Commit() != first.Commit() {
-			t.Errorf("bar = %s; want %s", r.Commit(), first.Commit())
+		if r.Commit != first.Commit {
+			t.Errorf("bar = %s; want %s", r.Commit, first.Commit)
 		}
-		if r.Ref() != "refs/heads/bar" {
-			t.Errorf("bar refname = %q; want refs/heads/bar", r.Ref())
+		if r.Ref != "refs/heads/bar" {
+			t.Errorf("bar refname = %q; want refs/heads/bar", r.Ref)
 		}
 	}
 }
@@ -90,11 +90,11 @@ func TestBranch_Upstream(t *testing.T) {
 	if r, err := git2.Head(ctx); err != nil {
 		t.Error(err)
 	} else {
-		if r.Commit() != first.Commit() {
-			t.Errorf("HEAD = %s; want %s", r.Commit(), first.Commit())
+		if r.Commit != first.Commit {
+			t.Errorf("HEAD = %s; want %s", r.Commit, first.Commit)
 		}
-		if r.Ref() != "refs/heads/foo" {
-			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref())
+		if r.Ref != "refs/heads/foo" {
+			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref)
 		}
 	}
 	cfg, err := git2.ReadConfig(ctx)

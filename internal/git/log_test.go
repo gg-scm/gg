@@ -127,11 +127,11 @@ func TestCommitInfo(t *testing.T) {
 		if err != nil {
 			t.Fatal("CommitInfo:", err)
 		}
-		if info.Hash == (Hash{}) || info.Hash == rev1.Commit() {
-			t.Errorf("info.Hash = %v; want non-zero and != %v", info.Hash, rev1.Commit())
+		if info.Hash == (Hash{}) || info.Hash == rev1.Commit {
+			t.Errorf("info.Hash = %v; want non-zero and != %v", info.Hash, rev1.Commit)
 		}
-		if len(info.Parents) != 1 || info.Parents[0] != rev1.Commit() {
-			t.Errorf("info.Parents = %v; want %v", info.Parents, []Hash{rev1.Commit()})
+		if len(info.Parents) != 1 || info.Parents[0] != rev1.Commit {
+			t.Errorf("info.Parents = %v; want %v", info.Parents, []Hash{rev1.Commit})
 		}
 		if info.Message != wantMsg {
 			t.Errorf("info.Message = %q; want %q", info.Message, wantMsg)
@@ -198,8 +198,8 @@ func TestCommitInfo(t *testing.T) {
 		if err != nil {
 			t.Fatal("CommitInfo:", err)
 		}
-		if len(info.Parents) != 2 || info.Parents[0] != rev1.Commit() || info.Parents[1] != rev2.Commit() {
-			t.Errorf("info.Parents = %v; want %v", info.Parents, []Hash{rev1.Commit(), rev2.Commit()})
+		if len(info.Parents) != 2 || info.Parents[0] != rev1.Commit || info.Parents[1] != rev2.Commit {
+			t.Errorf("info.Parents = %v; want %v", info.Parents, []Hash{rev1.Commit, rev2.Commit})
 		}
 	})
 }

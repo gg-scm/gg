@@ -80,7 +80,7 @@ func TestRebase(t *testing.T) {
 			t.Fatal(err)
 		}
 		names := map[git.Hash]string{
-			baseRev.Commit(): "initial import",
+			baseRev.Commit: "initial import",
 			c1:               "change 1",
 			c2:               "change 2",
 			head:             "mainline change",
@@ -101,21 +101,21 @@ func TestRebase(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Verify that HEAD points to a new commit.
-		if _, existedBefore := names[curr.Commit()]; existedBefore {
-			t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
+		if _, existedBefore := names[curr.Commit]; existedBefore {
+			t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit, names))
 		}
 		// Verify that HEAD is on the topic branch.
-		if want := git.Ref("refs/heads/topic"); curr.Ref() != want {
-			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
+		if want := git.Ref("refs/heads/topic"); curr.Ref != want {
+			t.Errorf("rebase changed ref to %s; want %s", curr.Ref, want)
 		}
 		// Verify that HEAD contains all the files.
-		if err := objectExists(ctx, env.git, curr.Commit().String(), "foo.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit.String(), "foo.txt"); err != nil {
 			t.Error("foo.txt not in second rebased change:", err)
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String(), "bar.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit.String(), "bar.txt"); err != nil {
 			t.Error("bar.txt not in second rebased change:", err)
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String(), "mainline.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit.String(), "mainline.txt"); err != nil {
 			t.Error("mainline.txt not in second rebased change:", err)
 		}
 
@@ -124,17 +124,17 @@ func TestRebase(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Verify that the parent is a new commit.
-		if _, existedBefore := names[parent.Commit()]; existedBefore {
-			t.Fatalf("rebase HEAD~1 = %s; want new commit", prettyCommit(parent.Commit(), names))
+		if _, existedBefore := names[parent.Commit]; existedBefore {
+			t.Fatalf("rebase HEAD~1 = %s; want new commit", prettyCommit(parent.Commit, names))
 		}
 		// Verify that HEAD~1 contains all the files except the one in the second change.
-		if err := objectExists(ctx, env.git, parent.Commit().String(), "foo.txt"); err != nil {
+		if err := objectExists(ctx, env.git, parent.Commit.String(), "foo.txt"); err != nil {
 			t.Error("foo.txt not in first rebased change:", err)
 		}
-		if err := objectExists(ctx, env.git, parent.Commit().String(), "mainline.txt"); err != nil {
+		if err := objectExists(ctx, env.git, parent.Commit.String(), "mainline.txt"); err != nil {
 			t.Error("mainline.txt not in first rebased change:", err)
 		}
-		if err := objectExists(ctx, env.git, parent.Commit().String(), "bar.txt"); err == nil {
+		if err := objectExists(ctx, env.git, parent.Commit.String(), "bar.txt"); err == nil {
 			t.Error("bar.txt in first rebased change")
 		}
 
@@ -143,8 +143,8 @@ func TestRebase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if grandparent.Commit() != head {
-			t.Errorf("HEAD~2 = %s; want %s", prettyCommit(grandparent.Commit(), names), prettyCommit(head, names))
+		if grandparent.Commit != head {
+			t.Errorf("HEAD~2 = %s; want %s", prettyCommit(grandparent.Commit, names), prettyCommit(head, names))
 		}
 	})
 }
@@ -204,7 +204,7 @@ func TestRebase_Src(t *testing.T) {
 		t.Fatal(err)
 	}
 	names := map[git.Hash]string{
-		baseRev.Commit(): "initial import",
+		baseRev.Commit: "initial import",
 		c1:               "change 1",
 		c2:               "change 2",
 		head:             "mainline change",
@@ -220,21 +220,21 @@ func TestRebase_Src(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Verify that HEAD points to a new commit.
-	if _, existedBefore := names[curr.Commit()]; existedBefore {
-		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
+	if _, existedBefore := names[curr.Commit]; existedBefore {
+		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit, names))
 	}
 	// Verify that HEAD is on the topic branch.
-	if want := git.Ref("refs/heads/topic"); curr.Ref() != want {
-		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
+	if want := git.Ref("refs/heads/topic"); curr.Ref != want {
+		t.Errorf("rebase changed ref to %s; want %s", curr.Ref, want)
 	}
 	// Verify that HEAD contains all the files except the first topic change.
-	if err := objectExists(ctx, env.git, curr.Commit().String(), "foo.txt"); err == nil {
+	if err := objectExists(ctx, env.git, curr.Commit.String(), "foo.txt"); err == nil {
 		t.Error("foo.txt is in rebased change")
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String(), "bar.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit.String(), "bar.txt"); err != nil {
 		t.Error("bar.txt not in rebased change:", err)
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String(), "mainline.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit.String(), "mainline.txt"); err != nil {
 		t.Error("mainline.txt not in rebased change:", err)
 	}
 
@@ -243,8 +243,8 @@ func TestRebase_Src(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parent.Commit() != head {
-		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(head, names))
+	if parent.Commit != head {
+		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit, names), prettyCommit(head, names))
 	}
 }
 
@@ -289,7 +289,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 		t.Fatal(err)
 	}
 	names := map[git.Hash]string{
-		baseRev.Commit(): "initial import",
+		baseRev.Commit: "initial import",
 		c1:               "change 1",
 		c2:               "change 2",
 	}
@@ -307,18 +307,18 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Verify that HEAD points to a new commit.
-	if _, existedBefore := names[curr.Commit()]; existedBefore {
-		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
+	if _, existedBefore := names[curr.Commit]; existedBefore {
+		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit, names))
 	}
 	// Verify that HEAD is on the master branch.
-	if want := git.Ref("refs/heads/master"); curr.Ref() != want {
-		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
+	if want := git.Ref("refs/heads/master"); curr.Ref != want {
+		t.Errorf("rebase changed ref to %s; want %s", curr.Ref, want)
 	}
 	// Verify that HEAD contains the file from the second change but not from the first change.
-	if err := objectExists(ctx, env.git, curr.Commit().String(), "foo.txt"); err == nil {
+	if err := objectExists(ctx, env.git, curr.Commit.String(), "foo.txt"); err == nil {
 		t.Error("foo.txt in rebased change")
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String(), "bar.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit.String(), "bar.txt"); err != nil {
 		t.Error("bar.txt not in rebased change:", err)
 	}
 
@@ -327,8 +327,8 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parent.Commit() != baseRev.Commit() {
-		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(baseRev.Commit(), names))
+	if parent.Commit != baseRev.Commit {
+		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit, names), prettyCommit(baseRev.Commit, names))
 	}
 }
 
@@ -418,7 +418,7 @@ func TestRebase_Base(t *testing.T) {
 		t.Fatal(err)
 	}
 	names := map[git.Hash]string{
-		baseRev.Commit(): "initial import",
+		baseRev.Commit: "initial import",
 		c1:               "change 1",
 		c2:               "change 2",
 		c3:               "change 3",
@@ -440,27 +440,27 @@ func TestRebase_Base(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Verify that HEAD points to a new commit.
-	if _, existedBefore := names[curr.Commit()]; existedBefore {
-		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
+	if _, existedBefore := names[curr.Commit]; existedBefore {
+		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit, names))
 	}
 	// Verify that HEAD is on the topic branch.
-	if want := git.Ref("refs/heads/topic"); curr.Ref() != want {
-		t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
+	if want := git.Ref("refs/heads/topic"); curr.Ref != want {
+		t.Errorf("rebase changed ref to %s; want %s", curr.Ref, want)
 	}
 	// Verify that HEAD contains the mainline file and the change 3 file, but no others.
-	if err := objectExists(ctx, env.git, curr.Commit().String(), "foo.txt"); err == nil {
+	if err := objectExists(ctx, env.git, curr.Commit.String(), "foo.txt"); err == nil {
 		t.Error("foo.txt in rebased change")
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String(), "bar.txt"); err == nil {
+	if err := objectExists(ctx, env.git, curr.Commit.String(), "bar.txt"); err == nil {
 		t.Error("bar.txt in rebased change")
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String(), "baz.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit.String(), "baz.txt"); err != nil {
 		t.Error("baz.txt not in rebased change:", err)
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String(), "mainline.txt"); err != nil {
+	if err := objectExists(ctx, env.git, curr.Commit.String(), "mainline.txt"); err != nil {
 		t.Error("mainline.txt not in rebased change:", err)
 	}
-	if err := objectExists(ctx, env.git, curr.Commit().String(), "shazam.txt"); err == nil {
+	if err := objectExists(ctx, env.git, curr.Commit.String(), "shazam.txt"); err == nil {
 		t.Error("shazam.txt in rebased change")
 	}
 
@@ -469,8 +469,8 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parent.Commit() != head {
-		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(head, names))
+	if parent.Commit != head {
+		t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit, names), prettyCommit(head, names))
 	}
 }
 
@@ -510,7 +510,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 		}
 		// Move master branch back to the base commit.
 		// Importantly, this will be recorded in the reflog.
-		if err := env.git.Run(ctx, "reset", "--hard", baseRev.Commit().String()); err != nil {
+		if err := env.git.Run(ctx, "reset", "--hard", baseRev.Commit.String()); err != nil {
 			t.Fatal(err)
 		}
 		// Create a new commit on master.
@@ -525,7 +525,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 			t.Fatal(err)
 		}
 		names := map[git.Hash]string{
-			baseRev.Commit(): "initial import",
+			baseRev.Commit: "initial import",
 			feature:          "feature change",
 			upstream:         "upstream change",
 		}
@@ -549,18 +549,18 @@ func TestRebase_ResetUpstream(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Verify that HEAD points to a new commit.
-		if _, existedBefore := names[curr.Commit()]; existedBefore {
-			t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
+		if _, existedBefore := names[curr.Commit]; existedBefore {
+			t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit, names))
 		}
 		// Verify that HEAD is on the topic branch.
-		if want := git.Ref("refs/heads/topic"); curr.Ref() != want {
-			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
+		if want := git.Ref("refs/heads/topic"); curr.Ref != want {
+			t.Errorf("rebase changed ref to %s; want %s", curr.Ref, want)
 		}
 		// Verify that HEAD contains both of the files.
-		if err := objectExists(ctx, env.git, curr.Commit().String(), "foo.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit.String(), "foo.txt"); err != nil {
 			t.Error("foo.txt not in rebased change:", err)
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String(), "bar.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit.String(), "bar.txt"); err != nil {
 			t.Error("bar.txt not in rebased change:", err)
 		}
 		// Verify that the parent commit is the diverged upstream commit.
@@ -568,8 +568,8 @@ func TestRebase_ResetUpstream(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.Commit() != upstream {
-			t.Errorf("HEAD~ = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(upstream, names))
+		if parent.Commit != upstream {
+			t.Errorf("HEAD~ = %s; want %s", prettyCommit(parent.Commit, names), prettyCommit(upstream, names))
 		}
 	})
 }
@@ -621,7 +621,7 @@ func TestHistedit(t *testing.T) {
 			t.Fatal(err)
 		}
 		names := map[git.Hash]string{
-			baseRev.Commit(): "initial import",
+			baseRev.Commit: "initial import",
 			c:                "branch change",
 			head:             "mainline change",
 		}
@@ -651,22 +651,22 @@ func TestHistedit(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Verify that HEAD points to a new commit.
-		if _, existedBefore := names[curr.Commit()]; existedBefore {
-			t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit(), names))
+		if _, existedBefore := names[curr.Commit]; existedBefore {
+			t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit, names))
 		}
 		// Verify that HEAD is on the foo branch.
-		if want := git.Ref("refs/heads/foo"); curr.Ref() != want {
-			t.Errorf("rebase changed ref to %s; want %s", curr.Ref(), want)
+		if want := git.Ref("refs/heads/foo"); curr.Ref != want {
+			t.Errorf("rebase changed ref to %s; want %s", curr.Ref, want)
 		}
 		// Verify that HEAD contains foo.txt but not upstream.txt.
-		if err := objectExists(ctx, env.git, curr.Commit().String(), "foo.txt"); err != nil {
+		if err := objectExists(ctx, env.git, curr.Commit.String(), "foo.txt"); err != nil {
 			t.Error("foo.txt not in rebased change:", err)
 		}
-		if err := objectExists(ctx, env.git, curr.Commit().String(), "upstream.txt"); err == nil {
+		if err := objectExists(ctx, env.git, curr.Commit.String(), "upstream.txt"); err == nil {
 			t.Error("upstream.txt in rebased change")
 		}
 		// Verify that the commit message matches what was given.
-		if info, err := env.git.CommitInfo(ctx, curr.Commit().String()); err != nil {
+		if info, err := env.git.CommitInfo(ctx, curr.Commit.String()); err != nil {
 			t.Error(err)
 		} else if info.Message != wantMessage {
 			t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
@@ -677,8 +677,8 @@ func TestHistedit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.Commit() != baseRev.Commit() {
-			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit(), names), prettyCommit(baseRev.Commit(), names))
+		if parent.Commit != baseRev.Commit {
+			t.Errorf("HEAD~1 = %s; want %s", prettyCommit(parent.Commit, names), prettyCommit(baseRev.Commit, names))
 		}
 	})
 }
@@ -747,16 +747,16 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		names := map[git.Hash]string{
-			baseRev.Commit(): "initial import",
-			rev1.Commit():    "branch change 1",
-			rev2.Commit():    "branch change 2",
+			baseRev.Commit: "initial import",
+			rev1.Commit:    "branch change 1",
+			rev2.Commit:    "branch change 2",
 			head:             "mainline change",
 		}
 
 		// Call gg histedit on foo branch.
 		rebaseEditor, err := env.editorCmd([]byte(
-			"edit " + rev1.Commit().String() + "\n" +
-				"pick " + rev2.Commit().String() + "\n"))
+			"edit " + rev1.Commit.String() + "\n" +
+				"pick " + rev2.Commit.String() + "\n"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -781,10 +781,10 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.Commit() != baseRev.Commit() {
+		if parent.Commit != baseRev.Commit {
 			t.Errorf("After first stop, HEAD~ = %s; want %s",
-				prettyCommit(parent.Commit(), names),
-				prettyCommit(baseRev.Commit(), names))
+				prettyCommit(parent.Commit, names),
+				prettyCommit(baseRev.Commit, names))
 		}
 		// Write new data to foo.txt.
 		const amendedData = "This is edited history\n"
@@ -803,10 +803,10 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if grandparent.Commit() != baseRev.Commit() {
+		if grandparent.Commit != baseRev.Commit {
 			t.Errorf("After continuing, HEAD~2 = %s; want %s",
-				prettyCommit(grandparent.Commit(), names),
-				prettyCommit(baseRev.Commit(), names))
+				prettyCommit(grandparent.Commit, names),
+				prettyCommit(baseRev.Commit, names))
 		}
 
 		// Verify that the commit message of the first edited commit is the message from the editor.
@@ -910,16 +910,16 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		names := map[git.Hash]string{
-			baseRev.Commit(): "initial import",
-			rev1.Commit():    "branch change 1",
-			rev2.Commit():    "branch change 2",
+			baseRev.Commit: "initial import",
+			rev1.Commit:    "branch change 1",
+			rev2.Commit:    "branch change 2",
 			head:             "mainline change",
 		}
 
 		// Call gg histedit on foo branch.
 		rebaseEditor, err := env.editorCmd([]byte(
-			"edit " + rev1.Commit().String() + "\n" +
-				"pick " + rev2.Commit().String() + "\n"))
+			"edit " + rev1.Commit.String() + "\n" +
+				"pick " + rev2.Commit.String() + "\n"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -943,16 +943,16 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if parent.Commit() != baseRev.Commit() {
+		if parent.Commit != baseRev.Commit {
 			t.Errorf("After first stop, HEAD~ = %s; want %s",
-				prettyCommit(parent.Commit(), names),
-				prettyCommit(baseRev.Commit(), names))
+				prettyCommit(parent.Commit, names),
+				prettyCommit(baseRev.Commit, names))
 		}
 		rebased1, err := env.git.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		names[rebased1.Commit()] = "rebased change 1"
+		names[rebased1.Commit] = "rebased change 1"
 
 		// Continue rebase, should be finished.
 		out, err = env.gg(ctx, env.root.String(), "histedit", "-continue")
@@ -964,10 +964,10 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if grandparent.Commit() != baseRev.Commit() {
+		if grandparent.Commit != baseRev.Commit {
 			t.Errorf("After continuing, HEAD~2 = %s; want %s",
-				prettyCommit(grandparent.Commit(), names),
-				prettyCommit(baseRev.Commit(), names))
+				prettyCommit(grandparent.Commit, names),
+				prettyCommit(baseRev.Commit, names))
 		}
 		// Verify that the commit message of the first edited commit is the same as before.
 		if info, err := env.git.CommitInfo(ctx, "HEAD~"); err != nil {
@@ -979,10 +979,10 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		// observed during the rebase operation.
 		if r, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
 			t.Errorf("Rebased change 1: %v", err)
-		} else if r.Commit() != rebased1.Commit() {
+		} else if r.Commit != rebased1.Commit {
 			t.Errorf("After continuing, HEAD~ = %s; want %s",
-				prettyCommit(r.Commit(), names),
-				prettyCommit(rebased1.Commit(), names))
+				prettyCommit(r.Commit, names),
+				prettyCommit(rebased1.Commit, names))
 		}
 		// Verify that the commit message of the second edited commit is the same as before.
 		if info, err := env.git.CommitInfo(ctx, "HEAD"); err != nil {

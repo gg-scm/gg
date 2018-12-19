@@ -52,7 +52,7 @@ func TestLog(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	hex := rev.Commit().Short()
+	hex := rev.Commit.Short()
 	if !bytes.Contains(out, []byte(hex)) || !bytes.Contains(out, []byte(wantMsg)) {
 		t.Errorf("log does not contain either %q or %q. Output:\n%s", hex, wantMsg, out)
 	}

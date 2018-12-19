@@ -146,10 +146,10 @@ func TestParseRev(t *testing.T) {
 			t.Errorf("ParseRev(ctx, g, %q) = %v; want error", test.refspec, rev)
 			continue
 		}
-		if got := rev.Commit(); got != test.commit {
+		if got := rev.Commit; got != test.commit {
 			t.Errorf("ParseRev(ctx, g, %q).Commit() = %v; want %v", test.refspec, got, test.commit)
 		}
-		if got := rev.Ref(); got != test.ref {
+		if got := rev.Ref; got != test.ref {
 			t.Errorf("ParseRev(ctx, g, %q).RefName() = %q; want %q", test.refspec, got, test.ref)
 		}
 	}

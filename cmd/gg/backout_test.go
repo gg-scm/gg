@@ -67,7 +67,7 @@ func TestBackout(t *testing.T) {
 		c1: "commit 1",
 		c2: "commit 2",
 	}
-	if got := curr.Commit(); got == c1 || got == c2 {
+	if got := curr.Commit; got == c1 || got == c2 {
 		t.Errorf("After backout, HEAD = %s; want new commit", prettyCommit(got, names))
 	}
 
@@ -75,7 +75,7 @@ func TestBackout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := parent.Commit(), c2; got != want {
+	if got, want := parent.Commit, c2; got != want {
 		t.Errorf("After backout, HEAD~ = %s; want %s", prettyCommit(got, names), prettyCommit(want, names))
 	}
 }
@@ -125,7 +125,7 @@ func TestBackout_NoCommit(t *testing.T) {
 		c1: "commit 1",
 		c2: "commit 2",
 	}
-	if got, want := curr.Commit(), c2; got != want {
+	if got, want := curr.Commit, c2; got != want {
 		t.Errorf("After backout, HEAD = %s; want %s", prettyCommit(got, names), prettyCommit(want, names))
 	}
 }

@@ -113,7 +113,7 @@ aliases: pr
 		if err != nil {
 			return err
 		}
-		branch = rev.Ref().Branch()
+		branch = rev.Ref.Branch()
 		if branch == "" {
 			return fmt.Errorf("%s is not a branch", branchArg)
 		}

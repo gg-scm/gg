@@ -77,13 +77,13 @@ func TestPush(t *testing.T) {
 	gitB := env.git.WithDir(repoBPath)
 	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit2 {
+	} else if r.Commit != commit2 {
 		names := map[git.Hash]string{
-			rev1.Commit(): "shared commit",
+			rev1.Commit: "shared commit",
 			commit2:       "local commit",
 		}
 		t.Errorf("refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), names),
+			prettyCommit(r.Commit, names),
 			prettyCommit(commit2, names))
 	}
 }
@@ -145,7 +145,7 @@ func TestPush_Arg(t *testing.T) {
 	}
 
 	// Ensure that repo C's master branch has moved to the new commit.
-	commit1 := rev1.Commit()
+	commit1 := rev1.Commit
 	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
@@ -153,9 +153,9 @@ func TestPush_Arg(t *testing.T) {
 	gitC := env.git.WithDir(repoCPath)
 	if r, err := gitC.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit2 {
+	} else if r.Commit != commit2 {
 		t.Errorf("named remote refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
 	}
 
@@ -163,9 +163,9 @@ func TestPush_Arg(t *testing.T) {
 	gitB := env.git.WithDir(repoBPath)
 	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit1 {
+	} else if r.Commit != commit1 {
 		t.Errorf("origin refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
 	}
 }
@@ -223,7 +223,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 	}
 
 	// Verify that repo B's master branch has not changed.
-	commit1 := rev1.Commit()
+	commit1 := rev1.Commit
 	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
@@ -231,18 +231,18 @@ func TestPush_FailUnknownRef(t *testing.T) {
 	gitB := env.git.WithDir(repoBPath)
 	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit1 {
+	} else if r.Commit != commit1 {
 		t.Errorf("refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
 	}
 
 	// Verify that repo B did not gain a foo branch.
 	if r, err := gitB.ParseRev(ctx, "foo"); err == nil {
-		if ref := r.Ref(); ref != "" {
+		if ref := r.Ref; ref != "" {
 			t.Logf("foo resolved to %s", ref)
 		}
-		t.Errorf("on remote, foo = %s; want to not exist", prettyCommit(r.Commit(), commitNames))
+		t.Errorf("on remote, foo = %s; want to not exist", prettyCommit(r.Commit, commitNames))
 	}
 }
 
@@ -296,7 +296,7 @@ func TestPush_CreateRef(t *testing.T) {
 	}
 
 	// Verify that repo B's foo branch has moved to the new commit.
-	commit1 := rev1.Commit()
+	commit1 := rev1.Commit
 	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
@@ -304,18 +304,18 @@ func TestPush_CreateRef(t *testing.T) {
 	gitB := env.git.WithDir(repoBPath)
 	if r, err := gitB.ParseRev(ctx, "refs/heads/foo"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit2 {
+	} else if r.Commit != commit2 {
 		t.Errorf("refs/heads/foo = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
 	}
 
 	// Verify that repo B's master branch has not changed.
 	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit1 {
+	} else if r.Commit != commit1 {
 		t.Errorf("refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
 	}
 }
@@ -371,7 +371,7 @@ func TestPush_RewindFails(t *testing.T) {
 
 	// Call gg to push initial commit from repo A to repo B's master branch (a rewind).
 	// This should return an error.
-	commit1 := rev1.Commit()
+	commit1 := rev1.Commit
 	if _, err := env.gg(ctx, repoAPath, "push", "-d", "master", "-r", commit1.String()); err == nil {
 		t.Error("push of parent rev did not return error")
 	} else if isUsage(err) {
@@ -386,9 +386,9 @@ func TestPush_RewindFails(t *testing.T) {
 	gitB := env.git.WithDir(repoBPath)
 	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit2 {
+	} else if r.Commit != commit2 {
 		t.Errorf("refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
 	}
 }
@@ -444,7 +444,7 @@ func TestPush_RewindForce(t *testing.T) {
 
 	// Call gg to push initial commit from repo A to repo B's master branch (a rewind) with
 	// the -f flag.
-	commit1 := rev1.Commit()
+	commit1 := rev1.Commit
 	if _, err := env.gg(ctx, repoAPath, "push", "-f", "-d", "master", "-r", commit1.String()); err != nil {
 		t.Error(err)
 	}
@@ -457,9 +457,9 @@ func TestPush_RewindForce(t *testing.T) {
 	gitB := env.git.WithDir(repoBPath)
 	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit1 {
+	} else if r.Commit != commit1 {
 		t.Errorf("refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
 	}
 }
@@ -524,14 +524,14 @@ func TestPush_AncestorInferDst(t *testing.T) {
 	gitB := env.git.WithDir(repoBPath)
 	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
 		t.Error(err)
-	} else if r.Commit() != commit2 {
+	} else if r.Commit != commit2 {
 		commitNames := map[git.Hash]string{
-			rev1.Commit(): "first commit",
+			rev1.Commit: "first commit",
 			commit2:       "second commit",
 			commit3:       "third commit",
 		}
 		t.Errorf("remote refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
 	}
 }
@@ -595,7 +595,7 @@ func TestPush_DistinctPushURL(t *testing.T) {
 	}
 
 	// Verify that repo C's master branch has moved to the new commit.
-	commit1 := rev1.Commit()
+	commit1 := rev1.Commit
 	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
@@ -603,9 +603,9 @@ func TestPush_DistinctPushURL(t *testing.T) {
 	gitC := env.git.WithDir(repoCPath)
 	if r, err := gitC.ParseRev(ctx, "master"); err != nil {
 		t.Error("In push repo:", err)
-	} else if r.Commit() != commit2 {
+	} else if r.Commit != commit2 {
 		t.Errorf("master in push repo = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
 	}
 
@@ -613,9 +613,9 @@ func TestPush_DistinctPushURL(t *testing.T) {
 	gitB := env.git.WithDir(repoBPath)
 	if r, err := gitB.ParseRev(ctx, "master"); err != nil {
 		t.Error("In fetch repo:", err)
-	} else if r.Commit() != commit1 {
+	} else if r.Commit != commit1 {
 		t.Errorf("master in fetch repo = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
 	}
 }
@@ -693,21 +693,21 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 
 	// Verify that repo C's branch "newbranch" was moved to the new commit.
 	commitNames := map[git.Hash]string{
-		rev1.Commit(): "shared commit",
+		rev1.Commit: "shared commit",
 		commit2:       "local commit",
 	}
 	if r, err := gitC.ParseRev(ctx, "newbranch"); err != nil {
 		t.Error("In push repo:", err)
-	} else if r.Commit() != commit2 {
+	} else if r.Commit != commit2 {
 		t.Errorf("newbranch in push repo = %s; want %s",
-			prettyCommit(r.Commit(), commitNames),
+			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
 	}
 
 	// Verify that repo B's branch "newbranch" was not created.
 	gitB := env.git.WithDir(repoBPath)
 	if r, err := gitB.ParseRev(ctx, "newbranch"); err == nil {
-		t.Errorf("newbranch in fetch repo = %s; want to not exist", prettyCommit(r.Commit(), commitNames))
+		t.Errorf("newbranch in fetch repo = %s; want to not exist", prettyCommit(r.Commit, commitNames))
 	}
 }
 
