@@ -28,7 +28,7 @@ weight = 3
 [[menu.main]]
 identifier = "download"
 name = "Download"
-url = "https://github.com/zombiezen/gg/releases/tag/v0.6.0"
+url = "https://github.com/zombiezen/gg/releases/latest"
 weight = 4
 
 [[menu.main]]
