@@ -173,7 +173,7 @@ func (g *Git) run(ctx context.Context, errPrefix string, args ...string) (string
 	stdout := new(strings.Builder)
 	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
 	stderr := new(bytes.Buffer)
-	c.Stderr = &limitWriter{w: stdout, n: 1 << 20 /* 1 MiB */}
+	c.Stderr = &limitWriter{w: stderr, n: 1 << 20 /* 1 MiB */}
 	if err := sigterm.Run(ctx, c); err != nil {
 		return stdout.String(), commandError(errPrefix, err, stderr.Bytes())
 	}
