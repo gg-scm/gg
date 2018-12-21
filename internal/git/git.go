@@ -17,13 +17,11 @@
 package git // import "gg-scm.io/pkg/internal/git"
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -39,12 +37,8 @@ import (
 type Git struct {
 	exe string
 	dir string
-
-	env    []string
-	log    func(context.Context, []string)
-	stdin  io.Reader
-	stdout io.Writer
-	stderr io.Writer
+	env []string
+	log func(context.Context, []string)
 
 	versionMu   sync.Mutex
 	versionCond chan struct{}
@@ -100,9 +94,6 @@ func New(path string, wd string, opts *Options) (*Git, error) {
 	if opts != nil {
 		g.log = opts.LogHook
 		g.env = append([]string(nil), opts.Env...)
-		g.stdin = opts.Stdin
-		g.stdout = opts.Stdout
-		g.stderr = opts.Stderr
 	} else {
 		g.env = []string{}
 	}
@@ -122,12 +113,6 @@ func (g *Git) Command(ctx context.Context, args ...string) *exec.Cmd {
 	return c
 }
 
-func (g *Git) cmd(ctx context.Context, args []string) *exec.Cmd {
-	c := g.Command(ctx, args...)
-	c.Stderr = g.stderr
-	return c
-}
-
 func (g *Git) getVersion(ctx context.Context) (string, error) {
 	g.versionMu.Lock()
 	for g.versionCond != nil {
@@ -137,7 +122,7 @@ func (g *Git) getVersion(ctx context.Context) (string, error) {
 		case <-c:
 			g.versionMu.Lock()
 		case <-ctx.Done():
-			return "", wrapError("git --version", ctx.Err())
+			return "", fmt.Errorf("git --version: %v", ctx.Err())
 		}
 	}
 	if g.version != "" {
@@ -150,23 +135,15 @@ func (g *Git) getVersion(ctx context.Context) (string, error) {
 	g.versionMu.Unlock()
 
 	// Run git --version.
-	args := []string{"--version"}
-	c := g.cmd(ctx, args)
-	sb := new(strings.Builder)
-	c.Stdout = &limitWriter{w: sb, n: 4096}
-	if err := sigterm.Run(ctx, c); err != nil {
-		g.versionMu.Lock()
-		close(g.versionCond)
-		g.versionCond = nil
-		g.versionMu.Unlock()
-		return "", wrapError("git --version", err)
-	}
-	v := sb.String()
-
+	v, err := g.run(ctx, "git --version", "--version")
 	g.versionMu.Lock()
-	g.version = v
 	close(g.versionCond)
 	g.versionCond = nil
+	if err != nil {
+		g.versionMu.Unlock()
+		return "", err
+	}
+	g.version = v
 	g.versionMu.Unlock()
 	return v, nil
 }
@@ -184,144 +161,39 @@ func (g *Git) WithDir(dir string) *Git {
 	return g2
 }
 
-// Run starts the specified Git subcommand and waits for it to finish.
-//
-// stderr will be sent to the writer specified in the tool's options.
-// stdin and stdout will be connected to the null device.
-func (g *Git) Run(ctx context.Context, args ...string) error {
-	if err := sigterm.Run(ctx, g.cmd(ctx, args)); err != nil {
-		return wrapError(errorSubject(args), err)
-	}
-	return nil
+// Run runs the specified Git subcommand, returning its stdout.
+func (g *Git) Run(ctx context.Context, args ...string) (string, error) {
+	return g.run(ctx, errorSubject(args), args...)
 }
 
-// RunInteractive starts the specified Git subcommand and waits for it
-// to finish.  All standard streams will be attached to the
-// corresponding streams specified in the tool's options.
-func (g *Git) RunInteractive(ctx context.Context, args ...string) error {
-	c := g.cmd(ctx, args)
-	c.Stdin = g.stdin
-	c.Stdout = g.stdout
+// run runs the specified Git subcommand, returning its stdout.
+// It will use the given error prefix instead of one derived from the arguments.
+func (g *Git) run(ctx context.Context, errPrefix string, args ...string) (string, error) {
+	c := g.Command(ctx, args...)
+	stdout := new(strings.Builder)
+	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
+	stderr := new(bytes.Buffer)
+	c.Stderr = &limitWriter{w: stdout, n: 1 << 20 /* 1 MiB */}
 	if err := sigterm.Run(ctx, c); err != nil {
-		return wrapError(errorSubject(args), err)
+		return stdout.String(), commandError(errPrefix, err, stderr.Bytes())
 	}
-	return nil
+	return stdout.String(), nil
 }
 
-// RunOneLiner starts the specified Git subcommand, reads a single
-// "line" delimited by the given byte from stdout, and waits for it to
-// finish.
-//
-// RunOneLiner will return (nil, nil) iff the output is entirely empty.
-// Any data after the first occurrence of the delimiter byte will be
-// considered an error.
-//
-// stderr will be sent to the writer specified in the tool's options.
-// stdin will be connected to the null device.
-func (g *Git) RunOneLiner(ctx context.Context, delim byte, args ...string) ([]byte, error) {
-	const max = 4096
-	p, err := g.Start(ctx, args...)
-	if err != nil {
-		return nil, err
+// oneLine verifies that s contains a single line delimited by '\n' and
+// trims the trailing '\n'.
+func oneLine(s string) (string, error) {
+	if s == "" {
+		return "", io.EOF
 	}
-	br := bufio.NewReaderSize(p, max)
-	buf, peekErr := br.Peek(max)
-	i := bytes.IndexByte(buf, delim)
+	i := strings.IndexByte(s, '\n')
 	if i == -1 {
-		if err := p.Wait(); IsExitError(err) {
-			// Not finding the delimiter is probably due to a command failure.
-			return nil, err
-		}
-		if len(buf) == 0 && peekErr == io.EOF {
-			return nil, nil
-		}
-		if peekErr != nil {
-			return nil, fmt.Errorf("run %s: %v", errorSubject(args), peekErr)
-		}
-		return nil, fmt.Errorf("run %s: delimiter not found in first %d bytes of output", errorSubject(args), max)
+		return "", io.ErrUnexpectedEOF
 	}
-	out := make([]byte, i)
-	copy(out, buf)
-	if _, err := br.Discard(i + 1); err != nil {
-		panic(err)
+	if i < len(s)-1 {
+		return "", errors.New("multiple lines present")
 	}
-	_, overErr := br.ReadByte()
-	waitErr := p.Wait()
-	if overErr == nil {
-		return nil, fmt.Errorf("run %s: found data past delimiter", errorSubject(args))
-	}
-	return out, waitErr
-}
-
-// Start starts the specified Git subcommand and pipes its stdout.
-//
-// stderr will be sent to the writer specified in the tool's options.
-// stdin will be connected to the null device.
-func (g *Git) Start(ctx context.Context, args ...string) (*Process, error) {
-	c := g.cmd(ctx, args)
-	rc, err := c.StdoutPipe()
-	if err != nil {
-		return nil, fmt.Errorf("run %s: %v", errorSubject(args), err)
-	}
-	wait, err := sigterm.Start(ctx, c)
-	if err != nil {
-		return nil, fmt.Errorf("run %s: %v", errorSubject(args), err)
-	}
-	return &Process{
-		wait:    wait,
-		pipe:    rc,
-		subject: errorSubject(args),
-	}, nil
-}
-
-// Process is a running Git subprocess that can be read from.
-type Process struct {
-	wait    func() error
-	pipe    io.ReadCloser
-	subject string
-}
-
-// Read reads from the process's stdout.
-func (p *Process) Read(b []byte) (int, error) {
-	return p.pipe.Read(b)
-}
-
-// Wait waits for the Git subprocess to exit and consumes any remaining
-// data from the subprocess's stdout.
-func (p *Process) Wait() error {
-	io.Copy(ioutil.Discard, p.pipe)
-	p.pipe.Close()
-	if err := p.wait(); err != nil {
-		return wrapError(p.subject, err)
-	}
-	return nil
-}
-
-type exitError struct {
-	msg      string
-	signaled bool // Terminated by signal.
-}
-
-func wrapError(subject string, e error) error {
-	msg := fmt.Sprintf("run %s: %v", subject, e)
-	if e, ok := e.(*exec.ExitError); ok {
-		return &exitError{
-			msg:      msg,
-			signaled: wasSignaled(e.ProcessState),
-		}
-	}
-	return errors.New(msg)
-}
-
-// IsExitError reports whether e indicates an unsuccessful exit by a
-// Git command.
-func IsExitError(e error) bool {
-	_, ok := e.(*exitError)
-	return ok
-}
-
-func (ee *exitError) Error() string {
-	return ee.msg
+	return s[:len(s)-1], nil
 }
 
 func errorSubject(args []string) string {

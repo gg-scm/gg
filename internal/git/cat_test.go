@@ -48,16 +48,16 @@ func TestCat(t *testing.T) {
 	if err := env.root.Apply(filesystem.Write("foo.txt", content1)); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
+	if _, err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.Run(ctx, "commit", "-m", "commit 1"); err != nil {
+	if _, err := env.g.Run(ctx, "commit", "-m", "commit 1"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", content2)); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.Run(ctx, "commit", "-a", "-m", "commit 2"); err != nil {
+	if _, err := env.g.Run(ctx, "commit", "-a", "-m", "commit 2"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", wcContent)); err != nil {
@@ -110,10 +110,10 @@ func TestCatDoesNotExist(t *testing.T) {
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
+	if _, err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.Run(ctx, "commit", "-m", "initial commit"); err != nil {
+	if _, err := env.g.Run(ctx, "commit", "-m", "initial commit"); err != nil {
 		t.Fatal(err)
 	}
 	r, err := env.g.Cat(ctx, "HEAD", "bar.txt")

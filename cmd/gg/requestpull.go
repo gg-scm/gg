@@ -226,10 +226,10 @@ aliases: pr
 	return nil
 }
 
-func inferPullRequestMessage(ctx context.Context, git *git.Git, base, head string) (title, body string, _ error) {
+func inferPullRequestMessage(ctx context.Context, g *git.Git, base, head string) (title, body string, _ error) {
 	// Read commit messages of divergent commits.
 	const logFormat = "%B"
-	p, err := git.Start(ctx, "log",
+	logData, err := g.Run(ctx, "log",
 		"-z",
 		"--reverse",
 		"--no-merges",
@@ -239,17 +239,9 @@ func inferPullRequestMessage(ctx context.Context, git *git.Git, base, head strin
 	if err != nil {
 		return "", "", fmt.Errorf("infer PR message: %v", err)
 	}
-	logData, err := ioutil.ReadAll(p)
-	waitErr := p.Wait()
-	if waitErr != nil {
-		return "", "", fmt.Errorf("infer PR message: %v", waitErr)
-	}
-	if err != nil {
-		return "", "", fmt.Errorf("infer PR message: %v", err)
-	}
 
 	// Split apart by commit (NUL byte).
-	messages := bytes.SplitAfter(logData, []byte{0})
+	messages := strings.SplitAfter(logData, "\x00")
 	if len(messages[len(messages)-1]) > 0 {
 		return "", "", errors.New("infer PR message: parse log: unexpected EOF")
 	}
@@ -259,15 +251,15 @@ func inferPullRequestMessage(ctx context.Context, git *git.Git, base, head strin
 	}
 	// Strip trailing NULs.
 	for i := range messages {
-		messages[i] = bytes.TrimSuffix(messages[i], []byte{0})
+		messages[i] = strings.TrimSuffix(messages[i], "\x00")
 	}
 	// First line of first commit message is the title.
-	if i := bytes.IndexByte(messages[0], '\n'); i != -1 {
-		title = string(bytes.TrimSpace(messages[0][:i]))
+	if i := strings.IndexByte(messages[0], '\n'); i != -1 {
+		title = strings.TrimSpace(messages[0][:i])
 		messages[0] = messages[0][i+1:]
 	} else {
-		title = string(bytes.TrimSpace(messages[0]))
-		messages[0] = nil
+		title = string(strings.TrimSpace(messages[0]))
+		messages[0] = ""
 	}
 	// Join rest of messages by bullets into body.
 	bodyBuilder := new(strings.Builder)
@@ -275,7 +267,7 @@ func inferPullRequestMessage(ctx context.Context, git *git.Git, base, head strin
 		if i > 0 {
 			bodyBuilder.WriteString("\n\n* ")
 		}
-		bodyBuilder.Write(bytes.TrimSpace(msg))
+		bodyBuilder.WriteString(strings.TrimSpace(msg))
 	}
 	body = strings.TrimSpace(bodyBuilder.String())
 	return title, body, nil

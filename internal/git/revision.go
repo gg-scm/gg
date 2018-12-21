@@ -15,12 +15,9 @@
 package git
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strings"
-
-	"gg-scm.io/pkg/internal/sigterm"
 )
 
 // Head returns the working copy's branch revision.
@@ -30,43 +27,55 @@ func (g *Git) Head(ctx context.Context) (*Rev, error) {
 
 // ParseRev parses a revision.
 func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
+	errPrefix := fmt.Sprintf("parse revision %q", refspec)
+	if refspec == "" {
+		return nil, fmt.Errorf("%s: empty revision", errPrefix)
+	}
 	if strings.HasPrefix(refspec, "-") {
-		return nil, fmt.Errorf("parse revision %q: cannot start with '-'", refspec)
+		return nil, fmt.Errorf("%s: cannot start with '-'", errPrefix)
 	}
 
-	commitHex, err := g.RunOneLiner(ctx, '\n', "rev-parse", "-q", "--verify", "--revs-only", refspec)
+	out, err := g.run(ctx, errPrefix, "rev-parse", "-q", "--verify", "--revs-only", refspec)
 	if err != nil {
-		return nil, fmt.Errorf("parse revision %q: %v", refspec, err)
+		return nil, err
 	}
-	h, err := ParseHash(string(commitHex))
+	commitHex, err := oneLine(out)
 	if err != nil {
-		return nil, fmt.Errorf("parse revision %q: %v", refspec, err)
+		return nil, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	h, err := ParseHash(commitHex)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %v", errPrefix, err)
 	}
 
-	refname, err := g.RunOneLiner(ctx, '\n', "rev-parse", "-q", "--verify", "--revs-only", "--symbolic-full-name", refspec)
+	out, err = g.run(ctx, errPrefix, "rev-parse", "-q", "--verify", "--revs-only", "--symbolic-full-name", refspec)
 	if err != nil {
-		return nil, fmt.Errorf("parse revision %q: %v", refspec, err)
+		return nil, err
+	}
+	if out == "" {
+		// No associated ref name, but is a valid commit.
+		return &Rev{Commit: h}, nil
+	}
+	refName, err := oneLine(out)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %v", errPrefix, err)
 	}
 	return &Rev{
 		Commit: h,
-		Ref:    Ref(refname),
+		Ref:    Ref(refName),
 	}, nil
 }
 
 // ListRefs lists all of the refs in the repository.
 func (g *Git) ListRefs(ctx context.Context) (map[Ref]*Rev, error) {
 	const errPrefix = "git show-ref"
-	c := g.Command(ctx, "show-ref", "--dereference")
-	stdout := new(strings.Builder)
-	c.Stdout = &limitWriter{w: stdout, n: 1 << 20 /* 1 MiB, roughly 17K refs */}
-	stderr := new(bytes.Buffer)
-	c.Stderr = &limitWriter{w: stderr, n: 4096}
-	if err := sigterm.Run(ctx, c); err != nil {
-		return nil, commandError(errPrefix, err, stderr.Bytes())
+	out, err := g.run(ctx, errPrefix, "show-ref", "--dereference")
+	if err != nil {
+		return nil, err
 	}
 	refs := make(map[Ref]*Rev)
 	tags := make(map[Ref]bool)
-	for out := stdout.String(); len(out) > 0; {
+	for len(out) > 0 {
 		eol := strings.IndexByte(out, '\n')
 		if eol == -1 {
 			return refs, fmt.Errorf("%s: unexpected EOF", errPrefix)

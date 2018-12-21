@@ -17,67 +17,45 @@ package git
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
+
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 // Config is a collection of configuration settings.
 type Config struct {
-	first []byte
-	next  [][]byte
+	data []byte
 }
 
 // ReadConfig reads all the configuration settings from Git.
 func (g *Git) ReadConfig(ctx context.Context) (*Config, error) {
-	p, err := g.Start(ctx, "config", "-z", "--list")
+	c := g.Command(ctx, "config", "-z", "--list")
+	stdout := new(bytes.Buffer)
+	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
+	stderr := new(bytes.Buffer)
+	c.Stderr = &limitWriter{w: stdout, n: 1 << 20 /* 1 MiB */}
+	if err := sigterm.Run(ctx, c); err != nil {
+		return nil, commandError("read git config", err, stderr.Bytes())
+	}
+	cfg, err := parseConfig(stdout.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("read git config: %v", err)
-	}
-	cfg, parseErr := parseConfig(p)
-	waitErr := p.Wait()
-	if waitErr != nil {
-		return nil, fmt.Errorf("read git config: %v", waitErr)
-	}
-	if parseErr != nil {
-		return nil, fmt.Errorf("read git config: %v", parseErr)
 	}
 	return cfg, nil
 }
 
-func parseConfig(r io.Reader) (*Config, error) {
-	const chunkSize = 4096
+func parseConfig(data []byte) (*Config, error) {
 	cfg := &Config{
-		first: make([]byte, 0, chunkSize),
+		data: data,
 	}
-	for buf, off := &cfg.first, 0; ; {
-		n, err := r.Read((*buf)[len(*buf):cap(*buf)])
-		if err != nil && err != io.EOF {
-			return nil, err
+	for off := 0; off < len(data); {
+		k, _, end := splitConfigEntry(data[off:])
+		if end == -1 {
+			return nil, io.ErrUnexpectedEOF
 		}
-		*buf = (*buf)[:len(*buf)+n]
-		for {
-			k, _, end := splitConfigEntry((*buf)[off:])
-			if end == -1 {
-				break
-			}
-			toLower(k)
-			off += end
-		}
-		if len(*buf) == cap(*buf) {
-			if off == 0 {
-				return nil, errors.New("configuration setting too large")
-			}
-			carry := (*buf)[off:]
-			*buf = (*buf)[:off]
-			cfg.next = append(cfg.next, make([]byte, len(carry), chunkSize))
-			buf = &cfg.next[len(cfg.next)-1]
-			off = 0
-			copy(*buf, carry)
-		}
-		if err == io.EOF {
-			break
-		}
+		toLower(k)
+		off += end
 	}
 	return cfg, nil
 }
@@ -137,8 +115,8 @@ func (cfg *Config) Bool(name string) (bool, error) {
 func (cfg *Config) findLast(name string) (value []byte, found bool) {
 	norm := []byte(name)
 	toLower(norm)
-	for i := 0; i < len(cfg.first); {
-		k, v, end := splitConfigEntry(cfg.first[i:])
+	for off := 0; off < len(cfg.data); {
+		k, v, end := splitConfigEntry(cfg.data[off:])
 		if end == -1 {
 			break
 		}
@@ -146,20 +124,7 @@ func (cfg *Config) findLast(name string) (value []byte, found bool) {
 			value = v
 			found = true
 		}
-		i += end
-	}
-	for _, buf := range cfg.next {
-		for i := 0; i < len(cfg.first); {
-			k, v, end := splitConfigEntry(buf[i:])
-			if end == -1 {
-				break
-			}
-			if bytes.Equal(k, norm) {
-				value = v
-				found = true
-			}
-			i += end
-		}
+		off += end
 	}
 	return
 }

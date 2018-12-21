@@ -142,7 +142,7 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "checkout", "-b", "feature", "HEAD~"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "-b", "feature", "HEAD~"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", "Change B\n")); err != nil {
@@ -151,10 +151,10 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "checkout", "master"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "master"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "merge", "--no-ff", "feature"); err == nil {
+	if _, err := env.git.Run(ctx, "merge", "--no-ff", "feature"); err == nil {
 		t.Fatal("Merge did not exit; want conflict")
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", "I resolved it!\n")); err != nil {
@@ -202,7 +202,7 @@ func TestAdd_Directory(t *testing.T) {
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "checkout", "-b", "feature", "HEAD~"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "-b", "feature", "HEAD~"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo/bar.txt", "Change B\n")); err != nil {
@@ -211,10 +211,10 @@ func TestAdd_Directory(t *testing.T) {
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "checkout", "master"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "master"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "merge", "--no-ff", "feature"); err == nil {
+	if _, err := env.git.Run(ctx, "merge", "--no-ff", "feature"); err == nil {
 		t.Fatal("Merge did not exit; want conflict")
 	}
 	err = env.root.Apply(

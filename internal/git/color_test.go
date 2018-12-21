@@ -213,7 +213,7 @@ func TestConfigColorBool(t *testing.T) {
 		}
 		for _, isTerm := range []bool{false, true} {
 			got, gotErr := cfg.ColorBool(test.name, isTerm)
-			out, wantErr := env.g.RunOneLiner(ctx, '\n', "config", "--get-colorbool", test.name, fmt.Sprint(isTerm))
+			out, wantErr := env.g.Run(ctx, "config", "--get-colorbool", test.name, fmt.Sprint(isTerm))
 			if wantErr != nil {
 				if gotErr == nil {
 					t.Errorf("For %q, cfg.ColorBool(%q, %t) = _, <nil>; want error", test.config, test.name, isTerm)
@@ -225,11 +225,11 @@ func TestConfigColorBool(t *testing.T) {
 				continue
 			}
 			switch string(out) {
-			case "true":
+			case "true\n":
 				if !got {
 					t.Errorf("For %q, cfg.ColorBool(%q, %t) = false; want true", test.config, test.name, isTerm)
 				}
-			case "false":
+			case "false\n":
 				if got {
 					t.Errorf("For %q, cfg.ColorBool(%q, %t) = true; want false", test.config, test.name, isTerm)
 				}

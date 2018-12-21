@@ -15,14 +15,13 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const cloneSynopsis = "make a copy of an existing repository"
@@ -50,11 +49,19 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 		dst = defaultCloneDest(src)
 	}
 	if *branch == git.Head.String() {
-		if err := cc.git.RunInteractive(ctx, "clone", "--", src, dst); err != nil {
+		c := cc.git.Command(ctx, "clone", "--", src, dst)
+		c.Stdin = cc.stdin
+		c.Stdout = cc.stdout
+		c.Stderr = cc.stderr
+		if err := sigterm.Run(ctx, c); err != nil {
 			return err
 		}
 	} else {
-		if err := cc.git.RunInteractive(ctx, "clone", "--branch="+*branch, "--", src, dst); err != nil {
+		c := cc.git.Command(ctx, "clone", "--branch="+*branch, "--", src, dst)
+		c.Stdin = cc.stdin
+		c.Stdout = cc.stdout
+		c.Stderr = cc.stderr
+		if err := sigterm.Run(ctx, c); err != nil {
 			return err
 		}
 	}
@@ -80,7 +87,7 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 			continue
 		}
 		if _, hasLocal := branches[string(name)]; !hasLocal {
-			if err := cc.git.Run(ctx, "branch", "--track", "--", name, r.String()); err != nil {
+			if _, err := cc.git.Run(ctx, "branch", "--track", "--", name, r.String()); err != nil {
 				return fmt.Errorf("mirroring local branch %q: %v", name, err)
 			}
 		}
@@ -91,48 +98,6 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	return nil
-}
-
-type refList []refListEntry
-
-type refListEntry struct {
-	name   git.Ref
-	commit git.Hash
-}
-
-func listRefs(ctx context.Context, g *git.Git) (refList, error) {
-	p, err := g.Start(ctx, "show-ref")
-	if err != nil {
-		return nil, err
-	}
-	calledWait := false
-	defer func() {
-		if !calledWait {
-			p.Wait()
-		}
-	}()
-	s := bufio.NewScanner(p)
-	var refs refList
-	for s.Scan() {
-		line := s.Bytes()
-		const spaceLoc = len(refListEntry{}.commit) * 2
-		if spaceLoc >= len(line) || line[spaceLoc] != ' ' {
-			return refs, errors.New("parse git show-ref: line must start with commit hash")
-		}
-		h, err := git.ParseHash(string(line[:spaceLoc]))
-		if err != nil {
-			return refs, fmt.Errorf("parse git show-ref: %v", err)
-		}
-		refs = append(refs, refListEntry{
-			name:   git.Ref(line[spaceLoc+1:]),
-			commit: h,
-		})
-	}
-	calledWait = true
-	if err := p.Wait(); err != nil {
-		return refs, err
-	}
-	return refs, nil
 }
 
 func defaultCloneDest(url string) string {

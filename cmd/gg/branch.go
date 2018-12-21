@@ -21,6 +21,7 @@ import (
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const branchSynopsis = "list or manage branches"
@@ -63,7 +64,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		branchArgs = append(branchArgs, "--")
 		branchArgs = append(branchArgs, f.Args()...)
-		if err := cc.git.Run(ctx, branchArgs...); err != nil {
+		if _, err := cc.git.Run(ctx, branchArgs...); err != nil {
 			return err
 		}
 	case f.NArg() == 0:
@@ -74,7 +75,11 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		if *rev != "" {
 			return usagef("can't pass -r without branch names")
 		}
-		return cc.git.RunInteractive(ctx, "--no-pager", "branch")
+		c := cc.git.Command(ctx, "--no-pager", "branch")
+		c.Stdin = cc.stdin
+		c.Stdout = cc.stdout
+		c.Stderr = cc.stderr
+		return sigterm.Run(ctx, c)
 	default:
 		// Create or update
 		for _, b := range f.Args() {
@@ -121,18 +126,19 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 				exists = err == nil
 			}
 			branchArgs[len(branchArgs)-2] = b
-			if err := cc.git.Run(ctx, branchArgs...); err != nil {
+			if _, err := cc.git.Run(ctx, branchArgs...); err != nil {
 				return fmt.Errorf("branch %q: %v", b, err)
 			}
 			if len(upstreamArgs) > 0 && !exists {
 				upstreamArgs[len(upstreamArgs)-1] = b
-				if err := cc.git.Run(ctx, upstreamArgs...); err != nil {
+				if _, err := cc.git.Run(ctx, upstreamArgs...); err != nil {
 					return fmt.Errorf("branch %q: %v", b, err)
 				}
 			}
 		}
 		if *rev == "" {
-			return cc.git.Run(ctx, "symbolic-ref", "-m", "gg branch", git.Head.String(), git.BranchRef(f.Arg(0)).String())
+			_, err := cc.git.Run(ctx, "symbolic-ref", "-m", "gg branch", git.Head.String(), git.BranchRef(f.Arg(0)).String())
+			return err
 		}
 	}
 	return nil

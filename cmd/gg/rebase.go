@@ -15,7 +15,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -24,6 +23,7 @@ import (
 	"gg-scm.io/pkg/internal/escape"
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const rebaseSynopsis = "move revision (and descendants) to a different branch"
@@ -57,16 +57,24 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("can't specify other options with --abort or --continue")
 	}
 	if *abort {
-		return cc.git.RunInteractive(ctx, "rebase", "--abort")
+		c := cc.git.Command(ctx, "rebase", "--abort")
+		c.Stdin = cc.stdin
+		c.Stdout = cc.stdout
+		c.Stderr = cc.stderr
+		return sigterm.Run(ctx, c)
 	}
 	if *continue_ {
-		return continueRebase(ctx, cc.git)
+		return continueRebase(ctx, cc)
 	}
 	switch {
 	case *base != "" && *src != "":
 		return usagef("can't specify both -s and -b")
 	case *base != "":
-		return cc.git.RunInteractive(ctx, "rebase", "--onto="+*dst, "--no-fork-point", "--", *base)
+		c := cc.git.Command(ctx, "rebase", "--onto="+*dst, "--no-fork-point", "--", *base)
+		c.Stdin = cc.stdin
+		c.Stdout = cc.stdout
+		c.Stderr = cc.stderr
+		return sigterm.Run(ctx, c)
 	case *src != "":
 		if strings.HasPrefix(*src, "-") {
 			return fmt.Errorf("revision cannot start with '-'")
@@ -77,7 +85,11 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		if ancestor {
 			// Simple case: this is an ancestor revision.
-			return cc.git.RunInteractive(ctx, "rebase", "--onto="+*dst, "--no-fork-point", "--", *src+"~")
+			c := cc.git.Command(ctx, "rebase", "--onto="+*dst, "--no-fork-point", "--", *src+"~")
+			c.Stdin = cc.stdin
+			c.Stdout = cc.stdout
+			c.Stderr = cc.stderr
+			return sigterm.Run(ctx, c)
 		}
 
 		// More complicated: this is on an unrelated branch.
@@ -97,15 +109,23 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		editorCmd := fmt.Sprintf(
 			"%s log --reverse --first-parent --pretty='tformat:pick %%H' %s~..%s >",
 			escape.Shell(cc.git.Path()), escape.Shell(*src), escape.Shell(descend[0].String()))
-		return cc.git.RunInteractive(ctx,
+		c := cc.git.Command(ctx,
 			"-c", "sequence.editor="+editorCmd,
 			"rebase",
 			"-i",
 			"--onto="+*dst,
 			"--no-fork-point",
 			git.Head.String())
+		c.Stdin = cc.stdin
+		c.Stdout = cc.stdout
+		c.Stderr = cc.stderr
+		return sigterm.Run(ctx, c)
 	default:
-		return cc.git.RunInteractive(ctx, "rebase", "--onto="+*dst, "--no-fork-point")
+		c := cc.git.Command(ctx, "rebase", "--onto="+*dst, "--no-fork-point")
+		c.Stdin = cc.stdin
+		c.Stdout = cc.stdout
+		c.Stderr = cc.stderr
+		return sigterm.Run(ctx, c)
 	}
 }
 
@@ -144,11 +164,12 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		if upstream == "" {
 			upstream = "@{upstream}"
 		}
-		mergeBaseBytes, err := cc.git.RunOneLiner(ctx, '\n', "merge-base", upstream, git.Head.String())
+		// TODO(soon): Use MergeBase API when available.
+		mergeBaseHex, err := cc.git.Run(ctx, "merge-base", upstream, git.Head.String())
 		if err != nil {
 			return err
 		}
-		mergeBase, err := git.ParseHash(string(mergeBaseBytes))
+		mergeBase, err := git.ParseHash(strings.TrimSuffix(mergeBaseHex, "\n"))
 		if err != nil {
 			return fmt.Errorf("parse merge base: %v", err)
 		}
@@ -157,22 +178,34 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 			rebaseArgs = append(rebaseArgs, "--exec="+cmd)
 		}
 		rebaseArgs = append(rebaseArgs, "--", mergeBase.String())
-		return cc.git.RunInteractive(ctx, rebaseArgs...)
+		c := cc.git.Command(ctx, rebaseArgs...)
+		c.Stdin = cc.stdin
+		c.Stdout = cc.stdout
+		c.Stderr = cc.stderr
+		return sigterm.Run(ctx, c)
 	case *abort && !*continue_ && !*editPlan:
 		if f.NArg() != 0 {
 			return usagef("can't pass arguments with --abort")
 		}
-		return cc.git.RunInteractive(ctx, "rebase", "--abort")
+		c := cc.git.Command(ctx, "rebase", "--abort")
+		c.Stdin = cc.stdin
+		c.Stdout = cc.stdout
+		c.Stderr = cc.stderr
+		return sigterm.Run(ctx, c)
 	case !*abort && *continue_ && !*editPlan:
 		if f.NArg() != 0 {
 			return usagef("can't pass arguments with --continue")
 		}
-		return continueRebase(ctx, cc.git)
+		return continueRebase(ctx, cc)
 	case !*abort && !*continue_ && *editPlan:
 		if f.NArg() != 0 {
 			return usagef("can't pass arguments with --edit-todo")
 		}
-		return cc.git.RunInteractive(ctx, "rebase", "--edit-todo")
+		c := cc.git.Command(ctx, "rebase", "--edit-todo")
+		c.Stdin = cc.stdin
+		c.Stdout = cc.stdout
+		c.Stderr = cc.stderr
+		return sigterm.Run(ctx, c)
 	default:
 		return usagef("must specify at most one of --abort, --continue, or --edit-plan")
 	}
@@ -180,8 +213,8 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 
 // continueRebase adds any modified files to the index and then runs
 // `git rebase --continue`.
-func continueRebase(ctx context.Context, g *git.Git) error {
-	addFiles, err := inferCommitFiles(ctx, g)
+func continueRebase(ctx context.Context, cc *cmdContext) error {
+	addFiles, err := inferCommitFiles(ctx, cc.git)
 	if err != nil {
 		return err
 	}
@@ -190,11 +223,15 @@ func continueRebase(ctx context.Context, g *git.Git) error {
 		for _, f := range addFiles {
 			addPathspec = append(addPathspec, f.Pathspec())
 		}
-		if err := g.Add(ctx, addPathspec, git.AddOptions{}); err != nil {
+		if err := cc.git.Add(ctx, addPathspec, git.AddOptions{}); err != nil {
 			return err
 		}
 	}
-	return g.RunInteractive(ctx, "rebase", "--continue")
+	c := cc.git.Command(ctx, "rebase", "--continue")
+	c.Stdin = cc.stdin
+	c.Stdout = cc.stdout
+	c.Stderr = cc.stderr
+	return sigterm.Run(ctx, c)
 }
 
 // findDescendants returns the set of distinct heads under refs/heads/
@@ -228,27 +265,14 @@ func findDescendants(ctx context.Context, git *git.Git, object string) ([]git.Re
 // branchesContaining returns the set of refs under refs/heads/ that
 // contain the given commit object. The order is undefined.
 func branchesContaining(ctx context.Context, g *git.Git, object string) ([]git.Ref, error) {
-	p, err := g.Start(ctx, "for-each-ref", "--contains="+object, "--format=%(refname)", "--", "refs/heads/*")
+	// TODO(soon): Turn this into an API.
+	out, err := g.Run(ctx, "for-each-ref", "--contains="+object, "--format=%(refname)", "--", "refs/heads/*")
 	if err != nil {
 		return nil, fmt.Errorf("list branches: %v", err)
 	}
-	calledWait := false
-	defer func() {
-		if !calledWait {
-			p.Wait()
-		}
-	}()
-	s := bufio.NewScanner(p)
 	var refs []git.Ref
-	for s.Scan() {
-		refs = append(refs, git.Ref(s.Text()))
-	}
-	calledWait = true
-	if err := p.Wait(); err != nil {
-		return nil, fmt.Errorf("list branches: %v", err)
-	}
-	if err := s.Err(); err != nil {
-		return nil, fmt.Errorf("list branches: %v", err)
+	for _, line := range strings.Split(strings.TrimSuffix(out, "\n"), "\n") {
+		refs = append(refs, git.Ref(line))
 	}
 	return refs, nil
 }

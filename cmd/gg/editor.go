@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"gg-scm.io/pkg/internal/escape"
 	"gg-scm.io/pkg/internal/git"
@@ -43,10 +44,11 @@ type editor struct {
 // open opens the default Git editor with the given initial
 // content and waits for it to return.
 func (e *editor) open(ctx context.Context, basename string, initial []byte) ([]byte, error) {
-	editor, err := e.git.RunOneLiner(ctx, '\n', "var", "GIT_EDITOR")
+	editor, err := e.git.Run(ctx, "var", "GIT_EDITOR")
 	if err != nil {
 		return nil, fmt.Errorf("open editor: %v", err)
 	}
+	editor = strings.TrimSuffix(editor, "\n")
 	dir, err := ioutil.TempDir(e.tempRoot, "gg_editor")
 	if err != nil {
 		return nil, fmt.Errorf("open editor: %v", err)

@@ -39,7 +39,7 @@ func TestMerge(t *testing.T) {
 	}
 
 	// Make a change on a feature branch.
-	if err := env.git.Run(ctx, "checkout", "--quiet", "-b", "feature"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "--quiet", "-b", "feature"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
@@ -54,7 +54,7 @@ func TestMerge(t *testing.T) {
 	}
 
 	// Make a non-conflicting change on master.
-	if err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
@@ -138,7 +138,7 @@ func TestMerge_Conflict(t *testing.T) {
 	}
 
 	// Make a change on a feature branch.
-	if err := env.git.Run(ctx, "checkout", "--quiet", "-b", "feature"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "--quiet", "-b", "feature"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", "feature content\n")); err != nil {
@@ -150,7 +150,7 @@ func TestMerge_Conflict(t *testing.T) {
 	}
 
 	// Make a conflicting change on master.
-	if err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", "boring text\n")); err != nil {

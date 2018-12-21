@@ -21,6 +21,7 @@ import (
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const commitSynopsis = "commit the specified files or all outstanding changes"
@@ -90,7 +91,11 @@ aliases: ci
 			commitArgs = append(commitArgs, f.Pathspec().String())
 		}
 	}
-	return cc.git.WithDir(top).RunInteractive(ctx, commitArgs...)
+	c := cc.git.WithDir(top).Command(ctx, commitArgs...)
+	c.Stdin = cc.stdin
+	c.Stdout = cc.stdout
+	c.Stderr = cc.stderr
+	return sigterm.Run(ctx, c)
 }
 
 // argsToFiles finds the files named by the arguments.

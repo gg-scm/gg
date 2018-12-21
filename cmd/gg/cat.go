@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"gg-scm.io/pkg/internal/flag"
@@ -52,12 +53,21 @@ func cat(ctx context.Context, cc *cmdContext, args []string) error {
 }
 
 func catFile(ctx context.Context, cc *cmdContext, rev *git.Rev, path string) error {
-	// Find path relative to top of repository. ls-files outputs files in
-	// a different order than its arguments, so we have to do this one at
-	// a time.
-	topPath, err := cc.git.RunOneLiner(ctx, 0, "ls-tree", "-z", "--name-only", "--full-name", rev.Commit.String(), "--", git.LiteralPath(path).String())
+	// Find path relative to top of repository.
+	paths, err := cc.git.ListTree(ctx, rev.Commit.String(), []git.Pathspec{git.LiteralPath(path)})
 	if err != nil {
 		return err
+	}
+	if len(paths) == 0 {
+		return fmt.Errorf("%s does not exist at %v", path, rev.Commit)
+	}
+	if len(paths) > 1 {
+		return fmt.Errorf("%s names multiple paths at %v", path, rev.Commit)
+	}
+	var topPath git.TopPath
+	for p := range paths {
+		// Guaranteed to be one iteration.
+		topPath = p
 	}
 
 	// Send file to stdout.

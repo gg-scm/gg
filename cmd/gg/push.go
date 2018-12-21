@@ -15,8 +15,6 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -24,6 +22,7 @@ import (
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const pushSynopsis = "push changes to the specified destination"
@@ -117,7 +116,11 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 		pushArgs = append(pushArgs, "--dry-run")
 	}
 	pushArgs = append(pushArgs, "--", dstRepo, src.Commit.String()+":"+dstRef.String())
-	return cc.git.RunInteractive(ctx, pushArgs...)
+	c := cc.git.Command(ctx, pushArgs...)
+	c.Stdin = cc.stdin
+	c.Stdout = cc.stdout
+	c.Stderr = cc.stderr
+	return sigterm.Run(ctx, c)
 }
 
 const mailSynopsis = "creates or updates a Gerrit change"
@@ -207,7 +210,11 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 		*dstBranch = strings.TrimPrefix(*dstBranch, "refs/for/")
 	}
 	ref := gerritPushRef(*dstBranch, gopts)
-	return cc.git.RunInteractive(ctx, "push", "--", dstRepo, src.Commit.String()+":"+ref.String())
+	c := cc.git.Command(ctx, "push", "--", dstRepo, src.Commit.String()+":"+ref.String())
+	c.Stdin = cc.stdin
+	c.Stdout = cc.stdout
+	c.Stderr = cc.stderr
+	return sigterm.Run(ctx, c)
 }
 
 type gerritOptions struct {
@@ -289,44 +296,29 @@ func escapeGerritMessage(sb *strings.Builder, msg string) {
 // verifyPushRemoteRef returns nil if the given ref exists in the
 // remote. remote may either be a URL or the name of a remote, in
 // which case the remote's push URL will be queried.
-func verifyPushRemoteRef(ctx context.Context, git *git.Git, remote string, ref git.Ref) error {
-	remotes, _ := listRemotes(ctx, git)
+func verifyPushRemoteRef(ctx context.Context, g *git.Git, remote string, ref git.Ref) error {
+	remotes, _ := listRemotes(ctx, g)
 	if _, isRemote := remotes[remote]; isRemote {
-		pushURL, err := git.RunOneLiner(ctx, '\n', "remote", "get-url", "--push", "--", remote)
+		var err error
+		remote, err = g.Run(ctx, "remote", "get-url", "--push", "--", remote)
 		if err != nil {
 			return err
 		}
-		remote = string(pushURL)
+		remote = strings.TrimSuffix(remote, "\n")
 	}
-	p, err := git.Start(ctx, "ls-remote", "--quiet", remote, ref.String())
+	// TODO(soon): Turn ls-remote into an API.
+	out, err := g.Run(ctx, "ls-remote", "--quiet", remote, ref.String())
 	if err != nil {
 		return fmt.Errorf("verify remote ref %s: %v", ref, err)
 	}
-	calledWait := false
-	defer func() {
-		if !calledWait {
-			p.Wait()
-		}
-	}()
-	refBytes := []byte(ref)
-	s := bufio.NewScanner(p)
-	for s.Scan() {
+	for _, line := range strings.Split(strings.TrimSuffix(out, "\n"), "\n") {
 		const tabLoc = 40
-		line := s.Bytes()
 		if tabLoc >= len(line) || line[tabLoc] != '\t' || !isHex(line[:tabLoc]) {
 			return errors.New("parse git ls-remote: line must start with SHA1")
 		}
-		remoteRef := line[tabLoc+1:]
-		if bytes.Equal(remoteRef, refBytes) {
+		if remoteRef := git.Ref(line[tabLoc+1:]); remoteRef == ref {
 			return nil
 		}
-	}
-	if s.Err() != nil {
-		return fmt.Errorf("verify remote ref %s: %v", ref, err)
-	}
-	calledWait = true
-	if err := p.Wait(); err != nil {
-		return fmt.Errorf("verify remote ref %s: %v", ref, err)
 	}
 	return fmt.Errorf("remote %s does not have ref %s", remote, ref)
 }
@@ -370,9 +362,9 @@ func isClean(ctx context.Context, g *git.Git) (bool, error) {
 	return true, nil
 }
 
-func isHex(b []byte) bool {
-	for _, bb := range b {
-		if !(bb >= '0' && bb <= '9') && !(bb >= 'a' && bb <= 'f') && !(bb >= 'A' && bb <= 'F') {
+func isHex(s string) bool {
+	for _, c := range s {
+		if !(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F') {
 			return false
 		}
 	}

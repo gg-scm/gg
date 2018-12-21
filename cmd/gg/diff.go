@@ -18,8 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const diffSynopsis = "diff repository (or selected files)"
@@ -93,17 +95,21 @@ func diff(ctx context.Context, cc *cmdContext, args []string) error {
 			// HEAD not found; repository has not been initialized.
 			// Compare to the null tree.
 
-			// RunOneLiner connects stdin to /dev/null.
-			zeroHash, err := cc.git.RunOneLiner(ctx, '\n', "hash-object", "-t", "tree", "--stdin")
+			// Run connects stdin to /dev/null.
+			zeroHash, err := cc.git.Run(ctx, "hash-object", "-t", "tree", "--stdin")
 			if err != nil {
 				return err
 			}
-			diffArgs = append(diffArgs, string(zeroHash))
+			diffArgs = append(diffArgs, strings.TrimSuffix(zeroHash, "\n"))
 		}
 	}
 	diffArgs = append(diffArgs, "--")
 	diffArgs = append(diffArgs, f.Args()...)
-	return cc.git.RunInteractive(ctx, diffArgs...)
+	c := cc.git.Command(ctx, diffArgs...)
+	c.Stdin = cc.stdin
+	c.Stdout = cc.stdout
+	c.Stderr = cc.stderr
+	return sigterm.Run(ctx, c)
 }
 
 type revFlag struct {

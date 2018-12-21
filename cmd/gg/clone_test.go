@@ -46,7 +46,7 @@ func TestClone(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
-	if err := gitA.Run(ctx, "branch", "foo"); err != nil {
+	if _, err := gitA.Run(ctx, "branch", "foo"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -109,7 +109,7 @@ func TestClone_Branch(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
-	if err := gitA.Run(ctx, "branch", "foo"); err != nil {
+	if _, err := gitA.Run(ctx, "branch", "foo"); err != nil {
 		t.Fatal(err)
 	}
 

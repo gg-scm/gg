@@ -109,8 +109,7 @@ func TestCommit(t *testing.T) {
 			t.Fatal(err)
 		}
 		// (Use command-line directly, so as not to depend on system-under-test.)
-		err = env.g.Run(ctx, "commit", "-m", "initial import")
-		if err != nil {
+		if _, err := env.g.Run(ctx, "commit", "-m", "initial import"); err != nil {
 			t.Fatal(err)
 		}
 		r1, err := env.g.Head(ctx)
@@ -274,8 +273,7 @@ func TestCommitFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 		// (Use command-line directly, so as not to depend on system-under-test.)
-		err = env.g.Run(ctx, "commit", "-m", "initial import")
-		if err != nil {
+		if _, err := env.g.Run(ctx, "commit", "-m", "initial import"); err != nil {
 			t.Fatal(err)
 		}
 		r1, err := env.g.Head(ctx)
@@ -371,8 +369,7 @@ func TestCommitAll(t *testing.T) {
 		t.Fatal(err)
 	}
 	// (Use command-line directly, so as not to depend on system-under-test.)
-	err = env.g.Run(ctx, "commit", "-m", "initial import")
-	if err != nil {
+	if _, err := env.g.Run(ctx, "commit", "-m", "initial import"); err != nil {
 		t.Fatal(err)
 	}
 	r1, err := env.g.Head(ctx)

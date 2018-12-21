@@ -29,28 +29,46 @@ import (
 // WorkTree determines the absolute path of the root of the current
 // working tree given the configuration. Any symlinks are resolved.
 func (g *Git) WorkTree(ctx context.Context) (string, error) {
-	line, err := g.RunOneLiner(ctx, '\n', "rev-parse", "--show-toplevel")
+	const errPrefix = "find git work tree root"
+	out, err := g.run(ctx, errPrefix, "rev-parse", "--show-toplevel")
 	if err != nil {
 		return "", err
 	}
-	return filepath.EvalSymlinks(string(line))
+	line, err := oneLine(out)
+	if err != nil {
+		return "", fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	evaled, err := filepath.EvalSymlinks(line)
+	if err != nil {
+		return "", fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	return evaled, nil
 }
 
 // CommonDir determines the absolute path of the Git directory, possibly
 // shared among different working trees, given the configuration. Any
 // symlinks are resolved.
 func (g *Git) CommonDir(ctx context.Context) (string, error) {
-	line, err := g.RunOneLiner(ctx, '\n', "rev-parse", "--git-common-dir")
+	const errPrefix = "find .git directory"
+	out, err := g.run(ctx, errPrefix, "rev-parse", "--git-common-dir")
 	if err != nil {
 		return "", err
 	}
-	path := string(line)
-	if filepath.IsAbs(path) {
-		path = filepath.Clean(path)
-	} else {
-		path = filepath.Join(g.dir, path)
+	line, err := oneLine(out)
+	if err != nil {
+		return "", fmt.Errorf("%s: %v", errPrefix, err)
 	}
-	return filepath.EvalSymlinks(path)
+	var path string
+	if filepath.IsAbs(line) {
+		path = filepath.Clean(line)
+	} else {
+		path = filepath.Join(g.dir, line)
+	}
+	evaled, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	return evaled, nil
 }
 
 // IsMerging reports whether the index has a pending merge commit.
@@ -105,16 +123,12 @@ func (g *Git) ListTree(ctx context.Context, rev string, pathspecs []Pathspec) (m
 			args = append(args, p.String())
 		}
 	}
-	c := g.Command(ctx, args...)
-	stdout := new(strings.Builder)
-	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
-	stderr := new(bytes.Buffer)
-	c.Stderr = &limitWriter{w: stderr, n: 4096}
-	if err := sigterm.Run(ctx, c); err != nil {
-		return nil, commandError(errPrefix, err, stderr.Bytes())
+	out, err := g.run(ctx, errPrefix, args...)
+	if err != nil {
+		return nil, err
 	}
 	paths := make(map[TopPath]struct{})
-	for out := stdout.String(); len(out) > 0; {
+	for len(out) > 0 {
 		i := strings.IndexByte(out, 0)
 		if i == -1 {
 			return paths, fmt.Errorf("%s: unexpected EOF", errPrefix)

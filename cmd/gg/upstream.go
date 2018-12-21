@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const upstreamSynopsis = "query or set upstream branch"
@@ -61,5 +62,9 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 		fmt.Fprintln(cc.stdout, rev.Ref)
 		return nil
 	}
-	return cc.git.RunInteractive(ctx, "branch", "--set-upstream-to="+f.Arg(0), "--", *branch)
+	c := cc.git.Command(ctx, "branch", "--set-upstream-to="+f.Arg(0), "--", *branch)
+	c.Stdin = cc.stdin
+	c.Stdout = cc.stdout
+	c.Stderr = cc.stderr
+	return sigterm.Run(ctx, c)
 }

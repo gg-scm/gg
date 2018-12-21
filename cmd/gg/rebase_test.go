@@ -43,7 +43,7 @@ func TestRebase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
+		if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("mainline.txt", dummyContent)); err != nil {
@@ -56,7 +56,7 @@ func TestRebase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+		if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
@@ -167,7 +167,7 @@ func TestRebase_Src(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
+	if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("mainline.txt", dummyContent)); err != nil {
@@ -180,7 +180,7 @@ func TestRebase_Src(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
@@ -265,7 +265,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "checkout", "--quiet", "--track", "-b", "topic"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "--quiet", "--track", "-b", "topic"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
@@ -295,7 +295,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	}
 
 	// Call gg on master to rebase the second commit onto master.
-	if err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := env.gg(ctx, env.root.String(), "rebase", "-src="+c2.String(), "-dst=HEAD"); err != nil {
@@ -355,7 +355,7 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
+	if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("mainline.txt", dummyContent)); err != nil {
@@ -368,7 +368,7 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
@@ -391,7 +391,7 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "branch", "--quiet", "--track", "magic"); err != nil {
+	if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "magic"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("baz.txt", dummyContent)); err != nil {
@@ -404,7 +404,7 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "checkout", "--quiet", "magic"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "--quiet", "magic"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("shazam.txt", dummyContent)); err != nil {
@@ -428,7 +428,7 @@ func TestRebase_Base(t *testing.T) {
 
 	// Call gg on the topic branch to rebase everything past the merge
 	// point of topic and magic (change 2) onto topic's upstream (master).
-	if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+	if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := env.gg(ctx, env.root.String(), "rebase", "-base="+magic.String()); err != nil {
@@ -505,12 +505,12 @@ func TestRebase_ResetUpstream(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create topic branch with the new commit.
-		if err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
+		if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
 			t.Fatal(err)
 		}
 		// Move master branch back to the base commit.
 		// Importantly, this will be recorded in the reflog.
-		if err := env.git.Run(ctx, "reset", "--hard", baseRev.Commit.String()); err != nil {
+		if _, err := env.git.Run(ctx, "reset", "--hard", baseRev.Commit.String()); err != nil {
 			t.Fatal(err)
 		}
 		// Create a new commit on master.
@@ -533,7 +533,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 		// Call gg on the topic branch to rebase all changes past the merge
 		// point of master and topic (the base revision) on top of the new
 		// master commit.
-		if err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+		if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
 			t.Fatal(err)
 		}
 		rebaseArgs := []string{"rebase", "-dst=master"}
@@ -592,7 +592,7 @@ func TestHistedit(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create a new branch.
-		if err := env.git.Run(ctx, "branch", "--quiet", "--track", "foo"); err != nil {
+		if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "foo"); err != nil {
 			t.Fatal(err)
 		}
 		// Create a commit on master.
@@ -607,7 +607,7 @@ func TestHistedit(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Check out foo and create a commit.
-		if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
+		if _, err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
@@ -701,7 +701,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create a new branch.
-		if err := env.git.Run(ctx, "branch", "--quiet", "--track", "foo"); err != nil {
+		if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "foo"); err != nil {
 			t.Fatal(err)
 		}
 		// Create a commit on master.
@@ -716,7 +716,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create two commits on foo.
-		if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
+		if _, err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("foo.txt", "This is the original data\n")); err != nil {
@@ -863,7 +863,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create a new branch.
-		if err := env.git.Run(ctx, "branch", "--quiet", "--track", "foo"); err != nil {
+		if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "foo"); err != nil {
 			t.Fatal(err)
 		}
 		// Create a commit on master.
@@ -878,7 +878,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create two commits on foo.
-		if err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
+		if _, err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("foo.txt", "This is the original data\n")); err != nil {

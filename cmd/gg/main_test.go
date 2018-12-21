@@ -368,14 +368,14 @@ func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file s
 	} else if curr.Ref.Branch() != branch {
 		if _, err := g.ParseRev(ctx, "refs/heads/"+branch); err != nil {
 			// Branch doesn't exist, create it.
-			if err := g.Run(ctx, "branch", "--", branch); err != nil {
+			if _, err := g.Run(ctx, "branch", "--", branch); err != nil {
 				return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 			}
-			if err := g.Run(ctx, "branch", "--set-upstream-to="+curr.Ref.String(), "--", branch); err != nil {
+			if _, err := g.Run(ctx, "branch", "--set-upstream-to="+curr.Ref.String(), "--", branch); err != nil {
 				return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 			}
 		}
-		if err := g.Run(ctx, "checkout", "--quiet", branch); err != nil {
+		if _, err := g.Run(ctx, "checkout", "--quiet", branch); err != nil {
 			return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 		}
 	}

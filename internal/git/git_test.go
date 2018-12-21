@@ -116,7 +116,7 @@ func TestRun(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if err := env.g.Run(ctx, "init", "repo"); err != nil {
+	if _, err := env.g.Run(ctx, "init", "repo"); err != nil {
 		t.Fatal(err)
 	}
 	gitDir := env.root.FromSlash("repo/.git")

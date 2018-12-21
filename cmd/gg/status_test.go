@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
@@ -127,19 +126,11 @@ func TestStatus_RenamedLocally(t *testing.T) {
 	}
 	// Check for buggy Git (see https://github.com/zombiezen/gg/issues/60).
 	// Useful for debugging.
-	p, err := env.git.Start(ctx, "status", "--porcelain", "-z", "-unormal")
+	statusOut, err := env.git.Run(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}
-	statusOut, err := ioutil.ReadAll(p)
-	waitErr := p.Wait()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if waitErr != nil {
-		t.Fatal(err)
-	}
-	isBuggyGit := bytes.Equal(statusOut, []byte(" R foo.txt\x00"))
+	isBuggyGit := statusOut == " R foo.txt\x00"
 	if isBuggyGit {
 		t.Log("This is a buggy Git version.")
 	}

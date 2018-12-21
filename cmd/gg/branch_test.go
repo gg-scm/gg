@@ -78,7 +78,7 @@ func TestBranch_Upstream(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.Run(ctx, "clone", "repo1", "repo2"); err != nil {
+	if _, err := env.git.Run(ctx, "clone", "repo1", "repo2"); err != nil {
 		t.Fatal(err)
 	}
 

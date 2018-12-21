@@ -15,14 +15,13 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
+	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const evolveSynopsis = "sync with Gerrit changes in upstream"
@@ -60,11 +59,13 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 			return err
 		}
 	}
-	mergeBaseBytes, err := cc.git.RunOneLiner(ctx, '\n', "merge-base", dstRev.Commit.String(), git.Head.String())
+	// TODO(soon): Refactor into MergeBase API.
+	mergeBase, err := cc.git.Run(ctx, "merge-base", dstRev.Commit.String(), git.Head.String())
 	if err != nil {
 		return err
 	}
-	mergeBase := string(mergeBaseBytes)
+	mergeBase = strings.TrimSuffix(mergeBase, "\n")
+	// TODO(soon): This should probably throw an error if there are merge commits.
 	featureChanges, err := readChanges(ctx, cc.git, git.Head.String(), mergeBase)
 	if err != nil {
 		return err
@@ -107,7 +108,11 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 	if last >= len(featureChanges) {
 		return nil
 	}
-	return cc.git.RunInteractive(ctx, "rebase", "--onto="+submitted[featureChanges[last].id], "--no-fork-point", "--", featureChanges[last].commitHex)
+	c := cc.git.Command(ctx, "rebase", "--onto="+submitted[featureChanges[last].id], "--no-fork-point", "--", featureChanges[last].commitHex)
+	c.Stdin = cc.stdin
+	c.Stdout = cc.stdout
+	c.Stderr = cc.stderr
+	return sigterm.Run(ctx, c)
 }
 
 type change struct {
@@ -119,90 +124,65 @@ type change struct {
 // ancestors.  The commits will be in topological order: children to
 // ancestors.
 func readChanges(ctx context.Context, git *git.Git, head, base string) ([]change, error) {
-	// TODO(soon): this should probably throw an error if there are merge commits.
+	// TODO(soon): Refactor this into Log API.
 
 	// Can't use %(trailers) because it's not supported on 2.7.4.
-	p, err := git.Start(ctx, "log", "--date-order", "--pretty=format:%H%x00%B%x00", head, "^"+base)
+	out, err := git.Run(ctx, "log", "--date-order", "--pretty=format:%H%x00%B%x00", head, "^"+base)
 	if err != nil {
 		return nil, fmt.Errorf("read changes %s..%s: %v", base, head, err)
 	}
-	calledWait := false
-	defer func() {
-		if !calledWait {
-			p.Wait()
-		}
-	}()
-	s := bufio.NewScanner(p)
-	s.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if len(data) == 0 {
-			return 0, nil, nil
-		}
-		i := bytes.IndexByte(data, 0)
-		if i == -1 {
-			if atEOF {
-				return 0, nil, errors.New("EOF without NUL byte")
-			}
-			return 0, nil, nil
-		}
-		return i + 1, data[:i], nil
-	})
+	if len(out) == 0 {
+		return nil, nil
+	}
+	if !strings.HasSuffix(out, "\x00") {
+		return nil, fmt.Errorf("read changes %s..%s: unexpected EOF", base, head)
+	}
+	out = out[:len(out)-1]
+	fields := strings.Split(out, "\x00")
 	var changes []change
-	for i := 0; s.Scan(); i++ {
-		hexBytes := s.Bytes()
+	for i := 0; i < len(fields); i++ {
+		hex := fields[i]
 		if i > 0 {
 			// log places a newline between entries.
-			hexBytes = bytes.TrimPrefix(hexBytes, []byte{'\n'})
+			hex = strings.TrimPrefix(hex, "\n")
 		}
-		hex := string(hexBytes)
 		if len(hex) != 40 {
 			return nil, fmt.Errorf("read changes %s..%s: parse log: invalid commit hash %q", base, head, hex)
 		}
-		if !s.Scan() {
-			if err := s.Err(); err != nil {
-				return nil, fmt.Errorf("read changes %s..%s: parse log: %v", base, head, err)
-			}
-			calledWait = true
-			if err := p.Wait(); err != nil {
-				return nil, fmt.Errorf("read changes %s..%s: %v", base, head, err)
-			}
+
+		i++
+		if i >= len(fields) {
 			return nil, fmt.Errorf("read changes %s..%s: parse log: unexpected EOF", base, head)
 		}
-		id := findChangeID(s.Bytes())
+		id := findChangeID(fields[i])
 		changes = append(changes, change{
 			id:        id,
 			commitHex: hex,
 		})
 	}
-	if err := s.Err(); err != nil {
-		return nil, fmt.Errorf("read changes %s..%s: parse log: %v", base, head, err)
-	}
-	calledWait = true
-	if err := p.Wait(); err != nil {
-		return nil, fmt.Errorf("read changes %s..%s: %v", base, head, err)
-	}
 	return changes, nil
 }
 
-func findChangeID(commitMsg []byte) string {
-	commitMsg = bytes.TrimSpace(commitMsg)
-	i := bytes.LastIndex(commitMsg, []byte("\n\n"))
+func findChangeID(commitMsg string) string {
+	commitMsg = strings.TrimSpace(commitMsg)
+	i := strings.LastIndex(commitMsg, "\n\n")
 	if i == -1 {
 		return ""
 	}
-	trailers := bytes.TrimSpace(commitMsg[i+2:])
-	prefix := []byte("Change-Id:")
+	trailers := strings.TrimSpace(commitMsg[i+2:])
+	const prefix = "Change-Id:"
 	for len(trailers) > 0 {
-		var line []byte
-		if i := bytes.LastIndexByte(trailers, '\n'); i != -1 {
+		var line string
+		if i := strings.LastIndexByte(trailers, '\n'); i != -1 {
 			line = trailers[i+1:]
 		} else {
 			line = trailers
 		}
-		if bytes.HasPrefix(line, prefix) {
-			return string(bytes.TrimSpace(line[len(prefix):]))
+		if strings.HasPrefix(line, prefix) {
+			return strings.TrimSpace(line[len(prefix):])
 		}
 		trailers = trailers[:len(trailers)-len(line)]
-		trailers = bytes.TrimSuffix(trailers, []byte{'\n'})
+		trailers = strings.TrimSuffix(trailers, "\n")
 	}
 	return ""
 }

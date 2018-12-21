@@ -39,7 +39,8 @@ func update(ctx context.Context, cc *cmdContext, args []string) error {
 	switch {
 	case f.NArg() == 0 && *rev == "":
 		// TODO(someday): how to apply --merge?
-		return cc.git.Run(ctx, "merge", "--quiet", "--ff-only")
+		_, err := cc.git.Run(ctx, "merge", "--quiet", "--ff-only")
+		return err
 	case f.NArg() == 0 && *rev != "":
 		var err error
 		r, err = cc.git.ParseRev(ctx, *rev)
@@ -66,5 +67,6 @@ func update(ctx context.Context, cc *cmdContext, args []string) error {
 		coArgs = append(coArgs, "--detach", r.Commit.String())
 	}
 	coArgs = append(coArgs, "--")
-	return cc.git.Run(ctx, coArgs...)
+	_, err := cc.git.Run(ctx, coArgs...)
+	return err
 }

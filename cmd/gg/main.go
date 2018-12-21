@@ -116,10 +116,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		}
 	}
 	opts := git.Options{
-		Env:    pctx.env,
-		Stdin:  pctx.stdin,
-		Stdout: pctx.stdout,
-		Stderr: pctx.stderr,
+		Env: pctx.env,
 	}
 	if *showArgs {
 		opts.LogHook = func(_ context.Context, args []string) {
@@ -160,6 +157,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 			},
 		},
 		httpClient: pctx.httpClient,
+		stdin:      pctx.stdin,
 		stdout:     pctx.stdout,
 		stderr:     pctx.stderr,
 	}
@@ -189,6 +187,7 @@ type cmdContext struct {
 	editor     *editor
 	httpClient *http.Client
 
+	stdin  io.Reader
 	stdout io.Writer
 	stderr io.Writer
 }
@@ -326,7 +325,10 @@ func showVersion(ctx context.Context, cc *cmdContext) error {
 	if err != nil {
 		return err
 	}
-	return cc.git.RunInteractive(ctx, "--version")
+	c := cc.git.Command(ctx, "--version")
+	c.Stdout = cc.stdout
+	c.Stderr = cc.stderr
+	return sigterm.Run(ctx, c)
 }
 
 func userAgentString() string {

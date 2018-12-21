@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const logSynopsis = "show revision history of entire repository or files"
@@ -68,5 +69,9 @@ aliases: history`)
 	logArgs = append(logArgs, *rev...)
 	logArgs = append(logArgs, "--")
 	logArgs = append(logArgs, f.Args()...)
-	return cc.git.RunInteractive(ctx, logArgs...)
+	c := cc.git.Command(ctx, logArgs...)
+	c.Stdin = cc.stdin
+	c.Stdout = cc.stdout
+	c.Stderr = cc.stderr
+	return sigterm.Run(ctx, c)
 }

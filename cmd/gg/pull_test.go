@@ -41,12 +41,12 @@ func TestPull(t *testing.T) {
 		t.Fatal(err)
 	}
 	commit1 := rev1.Commit
-	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+	if _, err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
 
 	// Make changes in repository A: add a tag and a new commit.
-	if err := gitA.Run(ctx, "tag", "first"); err != nil {
+	if _, err := gitA.Run(ctx, "tag", "first"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
@@ -124,12 +124,12 @@ func TestPullWithArgument(t *testing.T) {
 		t.Fatal(err)
 	}
 	commit1 := rev1.Commit
-	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+	if _, err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
 
 	// Make changes in repository A: add a tag and a new commit.
-	if err := gitA.Run(ctx, "tag", "first"); err != nil {
+	if _, err := gitA.Run(ctx, "tag", "first"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
@@ -145,7 +145,7 @@ func TestPullWithArgument(t *testing.T) {
 
 	// Move HEAD to a different commit in repository A.
 	// We want to check that the corresponding branch is pulled independently of HEAD.
-	if err := gitA.Run(ctx, "checkout", "--quiet", "--detach", "HEAD^"); err != nil {
+	if _, err := gitA.Run(ctx, "checkout", "--quiet", "--detach", "HEAD^"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -219,7 +219,7 @@ func TestPullUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	commit1 := rev1.Commit
-	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+	if _, err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -294,7 +294,7 @@ func TestInferUpstream(t *testing.T) {
 	}
 	for _, test := range tests {
 		if test.merge != "" {
-			if err := env.git.Run(ctx, "config", "--local", "branch."+test.localBranch+".merge", test.merge.String()); err != nil {
+			if _, err := env.git.Run(ctx, "config", "--local", "branch."+test.localBranch+".merge", test.merge.String()); err != nil {
 				t.Errorf("for localBranch = %q, merge = %q: %v", test.localBranch, test.merge, err)
 				continue
 			}
@@ -302,7 +302,7 @@ func TestInferUpstream(t *testing.T) {
 		cfg, err := env.git.ReadConfig(ctx)
 		if test.merge != "" {
 			// Cleanup
-			if err := env.git.Run(ctx, "config", "--local", "--unset", "branch."+test.localBranch+".merge"); err != nil {
+			if _, err := env.git.Run(ctx, "config", "--local", "--unset", "branch."+test.localBranch+".merge"); err != nil {
 				t.Errorf("cleaning up localBranch = %q, merge = %q: %v", test.localBranch, test.merge, err)
 			}
 		}

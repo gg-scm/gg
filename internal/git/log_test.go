@@ -59,7 +59,7 @@ func TestCommitInfo(t *testing.T) {
 		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
+		if _, err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
 			t.Fatal(err)
 		}
 		// Message does not have trailing newline to verify verbatim processing.
@@ -100,10 +100,10 @@ func TestCommitInfo(t *testing.T) {
 		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
+		if _, err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "commit", "-m", "initial import"); err != nil {
+		if _, err := env.g.Run(ctx, "commit", "-m", "initial import"); err != nil {
 			t.Fatal(err)
 		}
 		rev1, err := env.g.Head(ctx)
@@ -152,45 +152,45 @@ func TestCommitInfo(t *testing.T) {
 		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
+		if _, err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "commit", "-m", "initial import"); err != nil {
+		if _, err := env.g.Run(ctx, "commit", "-m", "initial import"); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "add", "bar.txt"); err != nil {
+		if _, err := env.g.Run(ctx, "add", "bar.txt"); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "commit", "-m", "first parent"); err != nil {
+		if _, err := env.g.Run(ctx, "commit", "-m", "first parent"); err != nil {
 			t.Fatal(err)
 		}
 		rev1, err := env.g.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "checkout", "--quiet", "-b", "diverge", "HEAD~"); err != nil {
+		if _, err := env.g.Run(ctx, "checkout", "--quiet", "-b", "diverge", "HEAD~"); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("baz.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "add", "baz.txt"); err != nil {
+		if _, err := env.g.Run(ctx, "add", "baz.txt"); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "commit", "-m", "second parent"); err != nil {
+		if _, err := env.g.Run(ctx, "commit", "-m", "second parent"); err != nil {
 			t.Fatal(err)
 		}
 		rev2, err := env.g.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+		if _, err := env.g.Run(ctx, "checkout", "--quiet", "master"); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.Run(ctx, "merge", "diverge"); err != nil {
+		if _, err := env.g.Run(ctx, "merge", "diverge"); err != nil {
 			t.Fatal(err)
 		}
 

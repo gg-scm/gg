@@ -18,7 +18,6 @@ import (
 	"context"
 	"strings"
 	"testing"
-	"testing/iotest"
 
 	"gg-scm.io/pkg/internal/filesystem"
 )
@@ -42,7 +41,7 @@ func TestParseConfig(t *testing.T) {
 		{bigPrefix + "foo\nbar\x00baz\nquux\x00", "salad", ""},
 	}
 	for _, test := range tests {
-		cfg, err := parseConfig(strings.NewReader(test.config))
+		cfg, err := parseConfig([]byte(test.config))
 		if err != nil {
 			t.Errorf("parseConfig(%q): %v", test.config, err)
 			continue
@@ -51,42 +50,6 @@ func TestParseConfig(t *testing.T) {
 			t.Errorf("parseConfig(%q).Value(%q) = %q; want %q", test.config, test.name, got, test.want)
 		}
 	}
-	t.Run("DataErr", func(t *testing.T) {
-		for _, test := range tests {
-			cfg, err := parseConfig(iotest.DataErrReader(strings.NewReader(test.config)))
-			if err != nil {
-				t.Errorf("parseConfig(%q): %v", test.config, err)
-				continue
-			}
-			if got := cfg.Value(test.name); got != test.want {
-				t.Errorf("parseConfig(%q).Value(%q) = %q; want %q", test.config, test.name, got, test.want)
-			}
-		}
-	})
-	t.Run("Half", func(t *testing.T) {
-		for _, test := range tests {
-			cfg, err := parseConfig(iotest.HalfReader(strings.NewReader(test.config)))
-			if err != nil {
-				t.Errorf("parseConfig(%q): %v", test.config, err)
-				continue
-			}
-			if got := cfg.Value(test.name); got != test.want {
-				t.Errorf("parseConfig(%q).Value(%q) = %q; want %q", test.config, test.name, got, test.want)
-			}
-		}
-	})
-	t.Run("OneByte", func(t *testing.T) {
-		for _, test := range tests {
-			cfg, err := parseConfig(iotest.OneByteReader(strings.NewReader(test.config)))
-			if err != nil {
-				t.Errorf("parseConfig(%q): %v", test.config, err)
-				continue
-			}
-			if got := cfg.Value(test.name); got != test.want {
-				t.Errorf("parseConfig(%q).Value(%q) = %q; want %q", test.config, test.name, got, test.want)
-			}
-		}
-	})
 }
 
 func TestConfigValue(t *testing.T) {
@@ -126,12 +89,14 @@ func TestConfigValue(t *testing.T) {
 			t.Errorf("For %q: %v", test.config, err)
 			continue
 		}
-		want, err := env.g.RunOneLiner(ctx, 0, "config", "-z", test.name)
-		if err != nil {
-			want = nil
+		want, err := env.g.Run(ctx, "config", "-z", test.name)
+		if err == nil && strings.HasSuffix(want, "\x00") {
+			want = want[:len(want)-1]
+		} else {
+			want = ""
 		}
 		got := cfg.Value(test.name)
-		if got != string(want) {
+		if got != want {
 			t.Errorf("For %q, cfg.Value(%q) = %q; want %q", test.config, test.name, got, want)
 		}
 	}
@@ -183,7 +148,7 @@ func TestConfigBool(t *testing.T) {
 			continue
 		}
 		got, gotErr := cfg.Bool(test.name)
-		out, wantErr := env.g.RunOneLiner(ctx, 0, "config", "-z", "--bool", test.name)
+		out, wantErr := env.g.Run(ctx, "config", "-z", "--bool", test.name)
 		if wantErr != nil {
 			if gotErr == nil {
 				t.Errorf("For %q, cfg.Bool(%q) = _, <nil>; want error", test.config, test.name)
@@ -195,10 +160,10 @@ func TestConfigBool(t *testing.T) {
 			continue
 		}
 		var want bool
-		switch string(out) {
-		case "true":
+		switch out {
+		case "true\x00":
 			want = true
-		case "false":
+		case "false\x00":
 			want = false
 		default:
 			t.Errorf("For %q, `git config --bool %s` printed unknown value %q", test.config, test.name, out)
@@ -280,6 +245,6 @@ func BenchmarkOneConfigLine(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		env.g.RunOneLiner(ctx, '\n', "config", "user.email")
+		env.g.Run(ctx, "config", "user.email")
 	}
 }

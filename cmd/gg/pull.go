@@ -15,13 +15,14 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const pullSynopsis = "pull changes from the specified source"
@@ -89,7 +90,11 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		gitArgs = append(gitArgs, "--tags")
 	}
 	gitArgs = append(gitArgs, "--", repo, remoteRef.String()+":")
-	return cc.git.Run(ctx, gitArgs...)
+	c := cc.git.Command(ctx, gitArgs...)
+	c.Stdin = cc.stdin
+	c.Stdout = cc.stdout
+	c.Stderr = cc.stderr
+	return sigterm.Run(ctx, c)
 }
 
 func currentBranch(ctx context.Context, cc *cmdContext) string {
@@ -113,26 +118,17 @@ func inferUpstream(cfg *git.Config, localBranch string) git.Ref {
 	return git.BranchRef(localBranch)
 }
 
-func listRemotes(ctx context.Context, git *git.Git) (map[string]struct{}, error) {
-	p, err := git.Start(ctx, "remote")
+func listRemotes(ctx context.Context, g *git.Git) (map[string]struct{}, error) {
+	// TODO(soon): Turn this into an API.
+
+	out, err := g.Run(ctx, "remote")
 	if err != nil {
 		return nil, err
 	}
-	calledWait := false
-	defer func() {
-		if !calledWait {
-			p.Wait()
-		}
-	}()
-	s := bufio.NewScanner(p)
+	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
 	remotes := make(map[string]struct{})
-	for s.Scan() {
-		remotes[s.Text()] = struct{}{}
+	for _, line := range lines {
+		remotes[line] = struct{}{}
 	}
-	if s.Err() != nil {
-		return remotes, s.Err()
-	}
-	calledWait = true
-	err = p.Wait()
-	return remotes, err
+	return remotes, nil
 }
