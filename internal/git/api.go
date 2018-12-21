@@ -83,7 +83,8 @@ func (g *Git) IsAncestor(ctx context.Context, rev1, rev2 string) (bool, error) {
 }
 
 // ListTree returns the list of files at a given revision.
-func (g *Git) ListTree(ctx context.Context, rev string) (map[TopPath]struct{}, error) {
+// If pathspecs is not empty, then it is used to filter the paths.
+func (g *Git) ListTree(ctx context.Context, rev string, pathspecs []Pathspec) (map[TopPath]struct{}, error) {
 	errPrefix := fmt.Sprintf("git ls-tree %q", rev)
 	if rev == "" {
 		return nil, fmt.Errorf("%s: empty revision", errPrefix)
@@ -91,7 +92,20 @@ func (g *Git) ListTree(ctx context.Context, rev string) (map[TopPath]struct{}, e
 	if strings.HasPrefix(rev, "-") {
 		return nil, fmt.Errorf("%s: revision cannot begin with dash", errPrefix)
 	}
-	c := g.Command(ctx, "ls-tree", "-z", "-r", "--name-only", "--full-tree", rev)
+	args := []string{"ls-tree", "-z", "-r", "--name-only"}
+	if len(pathspecs) == 0 {
+		args = append(args, "--full-tree", rev)
+	} else {
+		// Use --full-name, as --full-tree interprets the path arguments
+		// relative to the top of the directory.
+		//
+		// TODO(soon): Add tests to catch issues with a pathspec like "../foo.txt".
+		args = append(args, "--full-name", rev, "--")
+		for _, p := range pathspecs {
+			args = append(args, p.String())
+		}
+	}
+	c := g.Command(ctx, args...)
 	stdout := new(strings.Builder)
 	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
 	stderr := new(bytes.Buffer)

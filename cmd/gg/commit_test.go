@@ -722,7 +722,7 @@ func catBlob(ctx context.Context, g *git.Git, rev string, path git.TopPath) ([]b
 }
 
 func objectExists(ctx context.Context, g *git.Git, rev string, path git.TopPath) error {
-	tree, err := g.ListTree(ctx, rev)
+	tree, err := g.ListTree(ctx, rev, nil)
 	if err != nil {
 		return err
 	}

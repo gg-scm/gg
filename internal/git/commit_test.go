@@ -159,7 +159,7 @@ func TestCommit(t *testing.T) {
 		}
 
 		// Verify contents of commit.
-		if tree, err := env.g.ListTree(ctx, "HEAD"); err != nil {
+		if tree, err := env.g.ListTree(ctx, "HEAD", nil); err != nil {
 			t.Error(err)
 		} else {
 			if _, exists := tree["added.txt"]; !exists {

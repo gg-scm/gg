@@ -59,15 +59,31 @@ func TestListTree(t *testing.T) {
 		t.Fatal(err)
 	}
 	tests := []struct {
-		rev  string
-		want map[TopPath]struct{}
+		name      string
+		rev       string
+		pathspecs []Pathspec
+		want      map[TopPath]struct{}
 	}{
-		{"HEAD~", map[TopPath]struct{}{"foo.txt": {}}},
-		{"HEAD", map[TopPath]struct{}{"foo.txt": {}, "bar.txt": {}}},
+		{
+			name: "SingleFile",
+			rev:  "HEAD~",
+			want: map[TopPath]struct{}{"foo.txt": {}},
+		},
+		{
+			name: "MultipleFiles",
+			rev:  "HEAD",
+			want: map[TopPath]struct{}{"foo.txt": {}, "bar.txt": {}},
+		},
+		{
+			name:      "MultipleFilesFiltered",
+			rev:       "HEAD",
+			pathspecs: []Pathspec{"foo.txt"},
+			want:      map[TopPath]struct{}{"foo.txt": {}},
+		},
 	}
 	for _, test := range tests {
-		t.Run(test.rev, func(t *testing.T) {
-			got, err := env.g.ListTree(ctx, test.rev)
+		t.Run(test.name, func(t *testing.T) {
+			got, err := env.g.ListTree(ctx, test.rev, test.pathspecs)
 			if err != nil {
 				t.Fatal("ListTree error:", err)
 			}
