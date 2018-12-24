@@ -142,7 +142,7 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "checkout", "-b", "feature", "HEAD~"); err != nil {
+	if err := env.git.NewBranch(ctx, "feature", git.BranchOptions{Checkout: true, StartPoint: "HEAD~"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", "Change B\n")); err != nil {
@@ -202,7 +202,7 @@ func TestAdd_Directory(t *testing.T) {
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "checkout", "-b", "feature", "HEAD~"); err != nil {
+	if err := env.git.NewBranch(ctx, "feature", git.BranchOptions{Checkout: true, StartPoint: "HEAD~"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo/bar.txt", "Change B\n")); err != nil {

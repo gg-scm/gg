@@ -39,7 +39,7 @@ func TestMerge(t *testing.T) {
 	}
 
 	// Make a change on a feature branch.
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "-b", "feature"); err != nil {
+	if err := env.git.NewBranch(ctx, "feature", git.BranchOptions{Checkout: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
@@ -138,7 +138,7 @@ func TestMerge_Conflict(t *testing.T) {
 	}
 
 	// Make a change on a feature branch.
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "-b", "feature"); err != nil {
+	if err := env.git.NewBranch(ctx, "feature", git.BranchOptions{Checkout: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", "feature content\n")); err != nil {

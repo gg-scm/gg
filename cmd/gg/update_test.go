@@ -45,7 +45,7 @@ func TestUpdate_NoArgsFastForward(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "-b", "upstream"); err != nil {
+	if err := env.git.NewBranch(ctx, "upstream", git.BranchOptions{Checkout: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", "Banana\n")); err != nil {
@@ -108,7 +108,7 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 	}
 
 	// Create a commit on another branch.
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "-b", "foo"); err != nil {
+	if err := env.git.NewBranch(ctx, "foo", git.BranchOptions{Checkout: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {

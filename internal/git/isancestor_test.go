@@ -50,7 +50,7 @@ func TestIsAncestor(t *testing.T) {
 	if err := env.g.Commit(ctx, "commit 1"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "checkout", "--quiet", "-b", "a"); err != nil {
+	if err := env.g.NewBranch(ctx, "a", BranchOptions{Checkout: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent+"a\n")); err != nil {
@@ -59,7 +59,7 @@ func TestIsAncestor(t *testing.T) {
 	if err := env.g.CommitAll(ctx, "commit 2"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "checkout", "--quiet", "-b", "b", "master"); err != nil {
+	if err := env.g.NewBranch(ctx, "b", BranchOptions{StartPoint: "master", Checkout: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent+"b\n")); err != nil {

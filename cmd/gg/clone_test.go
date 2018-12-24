@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
+	"gg-scm.io/pkg/internal/git"
 )
 
 const cloneFileMsg = "Hello, World!\n"
@@ -46,7 +47,7 @@ func TestClone(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
-	if _, err := gitA.Run(ctx, "branch", "foo"); err != nil {
+	if err := gitA.NewBranch(ctx, "foo", git.BranchOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -109,7 +110,7 @@ func TestClone_Branch(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
-	if _, err := gitA.Run(ctx, "branch", "foo"); err != nil {
+	if err := gitA.NewBranch(ctx, "foo", git.BranchOptions{}); err != nil {
 		t.Fatal(err)
 	}
 

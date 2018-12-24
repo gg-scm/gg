@@ -103,19 +103,13 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 			}
 			upstream = branchUpstream(cfg, b)
 		}
-		var branchArgs []string
-		branchArgs = append(branchArgs, "branch", "--quiet")
-		if *force {
-			branchArgs = append(branchArgs, "--force")
-		}
-		branchArgs = append(branchArgs, "--", "XXX", target)
 		var upstreamArgs []string
 		if upstream != "" {
 			// TODO(soon): This should copy the configuration directly
 			// instead of relying on the default tracking branch pattern.
 			upstreamArgs = append(upstreamArgs, "branch", "--quiet", "--set-upstream-to="+upstream, "--", "XXX")
 		}
-		for _, b := range f.Args() {
+		for i, b := range f.Args() {
 			exists := false
 			if len(upstreamArgs) > 0 && *force {
 				// This check for existence is only necessary during -force,
@@ -125,8 +119,12 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 				_, err := cc.git.ParseRev(ctx, git.BranchRef(b).String())
 				exists = err == nil
 			}
-			branchArgs[len(branchArgs)-2] = b
-			if _, err := cc.git.Run(ctx, branchArgs...); err != nil {
+			err := cc.git.NewBranch(ctx, b, git.BranchOptions{
+				Overwrite:  *force,
+				StartPoint: r.Commit.String(),
+				Checkout:   i == 0 && *rev == "",
+			})
+			if err != nil {
 				return fmt.Errorf("branch %q: %v", b, err)
 			}
 			if len(upstreamArgs) > 0 && !exists {
@@ -135,10 +133,6 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 					return fmt.Errorf("branch %q: %v", b, err)
 				}
 			}
-		}
-		if *rev == "" {
-			_, err := cc.git.Run(ctx, "symbolic-ref", "-m", "gg branch", git.Head.String(), git.BranchRef(f.Arg(0)).String())
-			return err
 		}
 	}
 	return nil

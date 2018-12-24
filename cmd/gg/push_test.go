@@ -80,7 +80,7 @@ func TestPush(t *testing.T) {
 	} else if r.Commit != commit2 {
 		names := map[git.Hash]string{
 			rev1.Commit: "shared commit",
-			commit2:       "local commit",
+			commit2:     "local commit",
 		}
 		t.Errorf("refs/heads/master = %s; want %s",
 			prettyCommit(r.Commit, names),
@@ -527,8 +527,8 @@ func TestPush_AncestorInferDst(t *testing.T) {
 	} else if r.Commit != commit2 {
 		commitNames := map[git.Hash]string{
 			rev1.Commit: "first commit",
-			commit2:       "second commit",
-			commit3:       "third commit",
+			commit2:     "second commit",
+			commit3:     "third commit",
 		}
 		t.Errorf("remote refs/heads/master = %s; want %s",
 			prettyCommit(r.Commit, commitNames),
@@ -669,7 +669,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	}
 
 	// Create a new branch in repo A called "newbranch".
-	if _, err := gitA.Run(ctx, "checkout", "--quiet", "-b", "newbranch"); err != nil {
+	if err := gitA.NewBranch(ctx, "newbranch", git.BranchOptions{Checkout: true}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -679,7 +679,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	}
 	repoCPath := env.root.FromSlash("repoC")
 	gitC := env.git.WithDir(repoCPath)
-	if _, err := gitC.Run(ctx, "branch", "newbranch", "master"); err != nil {
+	if err := gitC.NewBranch(ctx, "newbranch", git.BranchOptions{StartPoint: "master"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoCPath); err != nil {
@@ -694,7 +694,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	// Verify that repo C's branch "newbranch" was moved to the new commit.
 	commitNames := map[git.Hash]string{
 		rev1.Commit: "shared commit",
-		commit2:       "local commit",
+		commit2:     "local commit",
 	}
 	if r, err := gitC.ParseRev(ctx, "newbranch"); err != nil {
 		t.Error("In push repo:", err)

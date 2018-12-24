@@ -53,7 +53,7 @@ func TestCheckoutBranch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := templateGit.Run(ctx, "checkout", "--quiet", "-b", "foo"); err != nil {
+	if err := templateGit.NewBranch(ctx, "foo", BranchOptions{Checkout: true}); err != nil {
 		t.Fatal(err)
 	}
 	const fooContent = masterContent + "content B\n"
@@ -67,6 +67,7 @@ func TestCheckoutBranch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Use raw command to avoid depending on system-under-test.
 	if _, err := templateGit.Run(ctx, "checkout", "--quiet", "master"); err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +151,7 @@ func TestCheckoutBranch(t *testing.T) {
 			}()
 			// Reconstruct local branches, since clone will only make the branch for HEAD.
 			g := env.g.WithDir(env.root.FromSlash("wc"))
-			if _, err := g.Run(ctx, "branch", "--track", "foo", "origin/foo"); err != nil {
+			if err := g.NewBranch(ctx, "foo", BranchOptions{Track: true, StartPoint: "origin/foo"}); err != nil {
 				t.Fatal(err)
 			}
 			// Make local changes to file.

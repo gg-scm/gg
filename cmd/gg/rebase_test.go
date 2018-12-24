@@ -43,7 +43,7 @@ func TestRebase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
+		if err := env.git.NewBranch(ctx, "topic", git.BranchOptions{Track: true}); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("mainline.txt", dummyContent)); err != nil {
@@ -167,7 +167,7 @@ func TestRebase_Src(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
+	if err := env.git.NewBranch(ctx, "topic", git.BranchOptions{Track: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("mainline.txt", dummyContent)); err != nil {
@@ -265,7 +265,7 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "--track", "-b", "topic"); err != nil {
+	if err := env.git.NewBranch(ctx, "topic", git.BranchOptions{Checkout: true, Track: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
@@ -355,7 +355,7 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
+	if err := env.git.NewBranch(ctx, "topic", git.BranchOptions{Track: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("mainline.txt", dummyContent)); err != nil {
@@ -391,7 +391,7 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "magic"); err != nil {
+	if err := env.git.NewBranch(ctx, "magic", git.BranchOptions{Track: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("baz.txt", dummyContent)); err != nil {
@@ -505,7 +505,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create topic branch with the new commit.
-		if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "topic"); err != nil {
+		if err := env.git.NewBranch(ctx, "topic", git.BranchOptions{Track: true}); err != nil {
 			t.Fatal(err)
 		}
 		// Move master branch back to the base commit.
@@ -592,7 +592,7 @@ func TestHistedit(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create a new branch.
-		if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "foo"); err != nil {
+		if err := env.git.NewBranch(ctx, "foo", git.BranchOptions{Track: true}); err != nil {
 			t.Fatal(err)
 		}
 		// Create a commit on master.
@@ -701,7 +701,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create a new branch.
-		if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "foo"); err != nil {
+		if err := env.git.NewBranch(ctx, "foo", git.BranchOptions{Track: true}); err != nil {
 			t.Fatal(err)
 		}
 		// Create a commit on master.
@@ -863,7 +863,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create a new branch.
-		if _, err := env.git.Run(ctx, "branch", "--quiet", "--track", "foo"); err != nil {
+		if err := env.git.NewBranch(ctx, "foo", git.BranchOptions{Track: true}); err != nil {
 			t.Fatal(err)
 		}
 		// Create a commit on master.

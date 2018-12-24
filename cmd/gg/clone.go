@@ -87,7 +87,11 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 			continue
 		}
 		if _, hasLocal := branches[string(name)]; !hasLocal {
-			if _, err := cc.git.Run(ctx, "branch", "--track", "--", name, r.String()); err != nil {
+			err := cc.git.NewBranch(ctx, name, git.BranchOptions{
+				StartPoint: r.String(),
+				Track:      true,
+			})
+			if err != nil {
 				return fmt.Errorf("mirroring local branch %q: %v", name, err)
 			}
 		}

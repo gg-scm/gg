@@ -169,6 +169,16 @@ func (env *testEnv) cleanup() {
 	os.RemoveAll(env.top.String())
 }
 
+// prettyCommit annotates the hex-encoded hash with a name if present
+// in the given map.
+func prettyCommit(h Hash, names map[Hash]string) string {
+	n := names[h]
+	if n == "" {
+		return h.String()
+	}
+	return h.String() + " (" + n + ")"
+}
+
 var gitPathCache struct {
 	mu  sync.Mutex
 	val string

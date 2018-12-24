@@ -394,7 +394,7 @@ type CheckoutOptions struct {
 // CheckoutBranch returns an error.
 func (g *Git) CheckoutBranch(ctx context.Context, branch string, opts CheckoutOptions) error {
 	errPrefix := fmt.Sprintf("git checkout %q", branch)
-	if err := validateRev(branch); err != nil {
+	if err := validateBranch(branch); err != nil {
 		return fmt.Errorf("%s: %v", errPrefix, err)
 	}
 	// Verify that the branch exists. `git checkout` will attempt to
@@ -410,6 +410,71 @@ func (g *Git) CheckoutBranch(ctx context.Context, branch string, opts CheckoutOp
 		args = append(args, "--merge")
 	}
 	args = append(args, branch, "--")
+	if _, err := g.run(ctx, errPrefix, args); err != nil {
+		return err
+	}
+	return nil
+}
+
+// BranchOptions specifies options for a new branch.
+type BranchOptions struct {
+	// StartPoint is a revision to start from. If empty, then HEAD is used.
+	StartPoint string
+	// If Checkout is true, then HEAD and the working copy will be
+	// switched to the new branch.
+	Checkout bool
+	// If Overwrite is true and a branch with the given name already
+	// exists, then it will be reset to the start point. No other branch
+	// information is modified, like the upstream.
+	Overwrite bool
+	// If Track is true and StartPoint names a ref, then the upstream of
+	// the branch will be set to the ref named by StartPoint.
+	Track bool
+}
+
+// NewBranch creates a new branch, a ref of the form "refs/heads/NAME",
+// where NAME is the name argument.
+func (g *Git) NewBranch(ctx context.Context, name string, opts BranchOptions) error {
+	errPrefix := fmt.Sprintf("git branch %q", name)
+	if err := validateBranch(name); err != nil {
+		return fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	if opts.StartPoint != "" {
+		if err := validateRev(opts.StartPoint); err != nil {
+			return fmt.Errorf("%s: %v", errPrefix, err)
+		}
+	}
+	var args []string
+	if opts.Checkout {
+		args = append(args, "checkout", "--quiet")
+		if opts.Track {
+			args = append(args, "--track")
+		} else {
+			args = append(args, "--no-track")
+		}
+		if opts.Overwrite {
+			args = append(args, "-B", name)
+		} else {
+			args = append(args, "-b", name)
+		}
+		if opts.StartPoint != "" {
+			args = append(args, opts.StartPoint, "--")
+		}
+	} else {
+		args = append(args, "branch", "--quiet")
+		if opts.Track {
+			args = append(args, "--track")
+		} else {
+			args = append(args, "--no-track")
+		}
+		if opts.Overwrite {
+			args = append(args, "--force")
+		}
+		args = append(args, name)
+		if opts.StartPoint != "" {
+			args = append(args, opts.StartPoint)
+		}
+	}
 	if _, err := g.run(ctx, errPrefix, args); err != nil {
 		return err
 	}
@@ -439,6 +504,16 @@ func validateRev(rev string) error {
 	}
 	if strings.HasPrefix(rev, "-") {
 		return errors.New("revision cannot begin with dash")
+	}
+	return nil
+}
+
+func validateBranch(branch string) error {
+	if branch == "" {
+		return errors.New("empty branch")
+	}
+	if strings.HasPrefix(branch, "-") {
+		return errors.New("branch cannot begin with dash")
 	}
 	return nil
 }
