@@ -164,14 +164,9 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		if upstream == "" {
 			upstream = "@{upstream}"
 		}
-		// TODO(soon): Use MergeBase API when available.
-		mergeBaseHex, err := cc.git.Run(ctx, "merge-base", upstream, git.Head.String())
+		mergeBase, err := cc.git.MergeBase(ctx, upstream, git.Head.String())
 		if err != nil {
 			return err
-		}
-		mergeBase, err := git.ParseHash(strings.TrimSuffix(mergeBaseHex, "\n"))
-		if err != nil {
-			return fmt.Errorf("parse merge base: %v", err)
 		}
 		rebaseArgs := []string{"rebase", "-i", "--onto=" + mergeBase.String(), "--no-fork-point"}
 		for _, cmd := range *exec {

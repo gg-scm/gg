@@ -87,7 +87,29 @@ func (g *Git) IsMerging(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
+// MergeBase returns the best common ancestor between two commits to use
+// in a three-way merge.
+func (g *Git) MergeBase(ctx context.Context, rev1, rev2 string) (Hash, error) {
+	errPrefix := fmt.Sprintf("git merge-base %q %q", rev1, rev2)
+	if err := validateRev(rev1); err != nil {
+		return Hash{}, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	if err := validateRev(rev2); err != nil {
+		return Hash{}, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	out, err := g.run(ctx, errPrefix, []string{"merge-base", rev1, rev2})
+	if err != nil {
+		return Hash{}, err
+	}
+	h, err := ParseHash(strings.TrimSuffix(out, "\n"))
+	if err != nil {
+		return Hash{}, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	return h, nil
+}
+
 // IsAncestor reports whether rev1 is an ancestor of rev2.
+// If rev1 == rev2, then IsAncestor returns true.
 func (g *Git) IsAncestor(ctx context.Context, rev1, rev2 string) (bool, error) {
 	errPrefix := fmt.Sprintf("git: check %q ancestor of %q", rev1, rev2)
 	if err := validateRev(rev1); err != nil {

@@ -59,18 +59,16 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 			return err
 		}
 	}
-	// TODO(soon): Refactor into MergeBase API.
-	mergeBase, err := cc.git.Run(ctx, "merge-base", dstRev.Commit.String(), git.Head.String())
+	mergeBase, err := cc.git.MergeBase(ctx, dstRev.Commit.String(), git.Head.String())
 	if err != nil {
 		return err
 	}
-	mergeBase = strings.TrimSuffix(mergeBase, "\n")
 	// TODO(soon): This should probably throw an error if there are merge commits.
-	featureChanges, err := readChanges(ctx, cc.git, git.Head.String(), mergeBase)
+	featureChanges, err := readChanges(ctx, cc.git, git.Head.String(), mergeBase.String())
 	if err != nil {
 		return err
 	}
-	upstreamChanges, err := readChanges(ctx, cc.git, dstRev.Commit.String(), mergeBase)
+	upstreamChanges, err := readChanges(ctx, cc.git, dstRev.Commit.String(), mergeBase.String())
 	if err != nil {
 		return err
 	}
