@@ -57,7 +57,7 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 			submit1: "submitted change 1",
 		}
 
-		if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+		if err := env.git.CheckoutBranch(ctx, "topic", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 		out, err := env.gg(ctx, env.root.String(), appendNonEmpty([]string{"evolve", "-l"}, argFunc(submit1))...)
@@ -137,7 +137,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 			other: "upstream",
 		}
 
-		if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+		if err := env.git.CheckoutBranch(ctx, "topic", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 		out, err := env.gg(ctx, env.root.String(), appendNonEmpty([]string{"evolve", "-l"}, argFunc(other))...)
@@ -230,7 +230,7 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 			other:   "upstream",
 		}
 
-		if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+		if err := env.git.CheckoutBranch(ctx, "topic", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 		out, err := env.gg(ctx, env.root.String(), appendNonEmpty([]string{"evolve", "-l"}, argFunc(other))...)
@@ -311,7 +311,7 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 			submit2: "submitted change 2",
 		}
 
-		if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+		if err := env.git.CheckoutBranch(ctx, "topic", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 		out, err := env.gg(ctx, env.root.String(), appendNonEmpty([]string{"evolve", "-l"}, argFunc(submit2))...)

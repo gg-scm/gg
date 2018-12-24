@@ -56,17 +56,16 @@ func update(ctx context.Context, cc *cmdContext, args []string) error {
 	default:
 		return usagef("can pass only one revision")
 	}
-	var coArgs []string
-	coArgs = append(coArgs, "checkout", "--quiet")
+	if b := r.Ref.Branch(); b != "" {
+		return cc.git.CheckoutBranch(ctx, b, git.CheckoutOptions{
+			Merge: *merge,
+		})
+	}
+	coArgs := []string{"checkout", "--quiet"}
 	if *merge {
 		coArgs = append(coArgs, "--merge")
 	}
-	if b := r.Ref.Branch(); b != "" {
-		coArgs = append(coArgs, b)
-	} else {
-		coArgs = append(coArgs, "--detach", r.Commit.String())
-	}
-	coArgs = append(coArgs, "--")
+	coArgs = append(coArgs, "--detach", r.Commit.String(), "--")
 	_, err := cc.git.Run(ctx, coArgs...)
 	return err
 }

@@ -55,7 +55,7 @@ func TestUpdate_NoArgsFastForward(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := env.git.Run(ctx, "branch", "--quiet", "--set-upstream-to=upstream"); err != nil {
@@ -123,7 +123,7 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 	}
 
 	// Check out master branch.
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -140,7 +140,7 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 		if r.Commit != h2 {
 			names := map[git.Hash]string{
 				initRev.Commit: "first commit",
-				h2:               "second commit",
+				h2:             "second commit",
 			}
 			t.Errorf("after update foo, HEAD = %s; want %s",
 				prettyCommit(r.Commit, names),

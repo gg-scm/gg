@@ -631,7 +631,7 @@ func TestCommit_Merge(t *testing.T) {
 	}
 
 	// Create another commit on master.
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", "boring text\n")); err != nil {

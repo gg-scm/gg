@@ -54,7 +54,7 @@ func TestMerge(t *testing.T) {
 	}
 
 	// Make a non-conflicting change on master.
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
@@ -84,8 +84,8 @@ func TestMerge(t *testing.T) {
 	}
 	names := map[git.Hash]string{
 		baseRev.Commit: "initial commit",
-		upstream:         "master commit",
-		feature:          "branch commit",
+		upstream:       "master commit",
+		feature:        "branch commit",
 	}
 	if curr.Commit != upstream {
 		t.Errorf("after merge, HEAD = %s; want %s",
@@ -150,7 +150,7 @@ func TestMerge_Conflict(t *testing.T) {
 	}
 
 	// Make a conflicting change on master.
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", "boring text\n")); err != nil {

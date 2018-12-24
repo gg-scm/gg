@@ -381,6 +381,41 @@ func (g *Git) CommitFiles(ctx context.Context, message string, pathspecs []Paths
 	return nil
 }
 
+// CheckoutOptions specifies the command-line options for `git checkout`.
+type CheckoutOptions struct {
+	// If Merge is true and there are local changes to one or more files
+	// that differ between the current branch and the branch being
+	// switched to, then Git performs a three-way merge on the files.
+	Merge bool
+}
+
+// CheckoutBranch switches HEAD to another branch and updates the
+// working copy to match. If the branch does not exist, then
+// CheckoutBranch returns an error.
+func (g *Git) CheckoutBranch(ctx context.Context, branch string, opts CheckoutOptions) error {
+	errPrefix := fmt.Sprintf("git checkout %q", branch)
+	if err := validateRev(branch); err != nil {
+		return fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	// Verify that the branch exists. `git checkout` will attempt to
+	// create branches if they don't exist if there's a remote tracking
+	// branch of the same name.
+	if _, err := g.ParseRev(ctx, BranchRef(branch).String()); err != nil {
+		return fmt.Errorf("%s: %v", errPrefix, err)
+	}
+
+	// Run checkout with branch name.
+	args := []string{"checkout", "--quiet"}
+	if opts.Merge {
+		args = append(args, "--merge")
+	}
+	args = append(args, branch, "--")
+	if _, err := g.run(ctx, errPrefix, args); err != nil {
+		return err
+	}
+	return nil
+}
+
 // commandError returns a new error with the information from an
 // unsuccessful run of a subprocess.
 func commandError(prefix string, runError error, stderr []byte) error {

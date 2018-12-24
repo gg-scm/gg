@@ -30,6 +30,7 @@ import (
 
 	"gg-scm.io/pkg/internal/escape"
 	"gg-scm.io/pkg/internal/filesystem"
+	"gg-scm.io/pkg/internal/git"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -187,7 +188,7 @@ func TestRequestPull(t *testing.T) {
 				}()
 			}
 			for _, b := range []string{"shared", "myfork"} {
-				if _, err := localGit.Run(ctx, "checkout", "--quiet", b); err != nil {
+				if err := localGit.CheckoutBranch(ctx, b, git.CheckoutOptions{}); err != nil {
 					t.Fatal(err)
 				}
 				if err := env.root.Apply(filesystem.Write("local/blah.txt", dummyContent)); err != nil {
@@ -200,7 +201,7 @@ func TestRequestPull(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			if _, err := localGit.Run(ctx, "checkout", "--quiet", test.branch); err != nil {
+			if err := localGit.CheckoutBranch(ctx, test.branch, git.CheckoutOptions{}); err != nil {
 				t.Fatal(err)
 			}
 
@@ -790,7 +791,7 @@ func TestInferPullRequestMessage(t *testing.T) {
 			if _, err := env.newCommit(ctx, "."); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := env.git.Run(ctx, "checkout", "--quiet", "feature"); err != nil {
+			if err := env.git.CheckoutBranch(ctx, "feature", git.CheckoutOptions{}); err != nil {
 				t.Fatal(err)
 			}
 			for i, msg := range test.messages {

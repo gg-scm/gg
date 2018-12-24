@@ -375,7 +375,7 @@ func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file s
 				return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 			}
 		}
-		if _, err := g.Run(ctx, "checkout", "--quiet", branch); err != nil {
+		if err := g.CheckoutBranch(ctx, branch, git.CheckoutOptions{}); err != nil {
 			return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
 		}
 	}

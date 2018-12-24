@@ -56,7 +56,7 @@ func TestRebase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+		if err := env.git.CheckoutBranch(ctx, "topic", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
@@ -81,9 +81,9 @@ func TestRebase(t *testing.T) {
 		}
 		names := map[git.Hash]string{
 			baseRev.Commit: "initial import",
-			c1:               "change 1",
-			c2:               "change 2",
-			head:             "mainline change",
+			c1:             "change 1",
+			c2:             "change 2",
+			head:           "mainline change",
 		}
 
 		// Call gg with the rebase arguments to move onto master.
@@ -180,7 +180,7 @@ func TestRebase_Src(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+	if err := env.git.CheckoutBranch(ctx, "topic", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
@@ -205,9 +205,9 @@ func TestRebase_Src(t *testing.T) {
 	}
 	names := map[git.Hash]string{
 		baseRev.Commit: "initial import",
-		c1:               "change 1",
-		c2:               "change 2",
-		head:             "mainline change",
+		c1:             "change 1",
+		c2:             "change 2",
+		head:           "mainline change",
 	}
 
 	// Call gg to rebase just the second change onto its upstream branch (master).
@@ -290,12 +290,12 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	}
 	names := map[git.Hash]string{
 		baseRev.Commit: "initial import",
-		c1:               "change 1",
-		c2:               "change 2",
+		c1:             "change 1",
+		c2:             "change 2",
 	}
 
 	// Call gg on master to rebase the second commit onto master.
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := env.gg(ctx, env.root.String(), "rebase", "-src="+c2.String(), "-dst=HEAD"); err != nil {
@@ -368,7 +368,7 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+	if err := env.git.CheckoutBranch(ctx, "topic", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
@@ -404,7 +404,7 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "magic"); err != nil {
+	if err := env.git.CheckoutBranch(ctx, "magic", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("shazam.txt", dummyContent)); err != nil {
@@ -419,16 +419,16 @@ func TestRebase_Base(t *testing.T) {
 	}
 	names := map[git.Hash]string{
 		baseRev.Commit: "initial import",
-		c1:               "change 1",
-		c2:               "change 2",
-		c3:               "change 3",
-		magic:            "magic",
-		head:             "mainline change",
+		c1:             "change 1",
+		c2:             "change 2",
+		c3:             "change 3",
+		magic:          "magic",
+		head:           "mainline change",
 	}
 
 	// Call gg on the topic branch to rebase everything past the merge
 	// point of topic and magic (change 2) onto topic's upstream (master).
-	if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+	if err := env.git.CheckoutBranch(ctx, "topic", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := env.gg(ctx, env.root.String(), "rebase", "-base="+magic.String()); err != nil {
@@ -526,14 +526,14 @@ func TestRebase_ResetUpstream(t *testing.T) {
 		}
 		names := map[git.Hash]string{
 			baseRev.Commit: "initial import",
-			feature:          "feature change",
-			upstream:         "upstream change",
+			feature:        "feature change",
+			upstream:       "upstream change",
 		}
 
 		// Call gg on the topic branch to rebase all changes past the merge
 		// point of master and topic (the base revision) on top of the new
 		// master commit.
-		if _, err := env.git.Run(ctx, "checkout", "--quiet", "topic"); err != nil {
+		if err := env.git.CheckoutBranch(ctx, "topic", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 		rebaseArgs := []string{"rebase", "-dst=master"}
@@ -607,7 +607,7 @@ func TestHistedit(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Check out foo and create a commit.
-		if _, err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
+		if err := env.git.CheckoutBranch(ctx, "foo", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
@@ -622,8 +622,8 @@ func TestHistedit(t *testing.T) {
 		}
 		names := map[git.Hash]string{
 			baseRev.Commit: "initial import",
-			c:                "branch change",
-			head:             "mainline change",
+			c:              "branch change",
+			head:           "mainline change",
 		}
 
 		// Call gg histedit on foo branch.
@@ -716,7 +716,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create two commits on foo.
-		if _, err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
+		if err := env.git.CheckoutBranch(ctx, "foo", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("foo.txt", "This is the original data\n")); err != nil {
@@ -750,7 +750,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 			baseRev.Commit: "initial import",
 			rev1.Commit:    "branch change 1",
 			rev2.Commit:    "branch change 2",
-			head:             "mainline change",
+			head:           "mainline change",
 		}
 
 		// Call gg histedit on foo branch.
@@ -878,7 +878,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create two commits on foo.
-		if _, err := env.git.Run(ctx, "checkout", "--quiet", "foo"); err != nil {
+		if err := env.git.CheckoutBranch(ctx, "foo", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("foo.txt", "This is the original data\n")); err != nil {
@@ -913,7 +913,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			baseRev.Commit: "initial import",
 			rev1.Commit:    "branch change 1",
 			rev2.Commit:    "branch change 2",
-			head:             "mainline change",
+			head:           "mainline change",
 		}
 
 		// Call gg histedit on foo branch.
