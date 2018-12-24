@@ -400,8 +400,8 @@ func (g *Git) CheckoutBranch(ctx context.Context, branch string, opts CheckoutOp
 	// Verify that the branch exists. `git checkout` will attempt to
 	// create branches if they don't exist if there's a remote tracking
 	// branch of the same name.
-	if _, err := g.ParseRev(ctx, BranchRef(branch).String()); err != nil {
-		return fmt.Errorf("%s: %v", errPrefix, err)
+	if _, err := g.run(ctx, errPrefix, []string{"rev-parse", "-q", "--verify", "--revs-only", BranchRef(branch).String()}); err != nil {
+		return err
 	}
 
 	// Run checkout with branch name.
