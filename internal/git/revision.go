@@ -28,11 +28,8 @@ func (g *Git) Head(ctx context.Context) (*Rev, error) {
 // ParseRev parses a revision.
 func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 	errPrefix := fmt.Sprintf("parse revision %q", refspec)
-	if refspec == "" {
-		return nil, fmt.Errorf("%s: empty revision", errPrefix)
-	}
-	if strings.HasPrefix(refspec, "-") {
-		return nil, fmt.Errorf("%s: cannot start with '-'", errPrefix)
+	if err := validateRev(refspec); err != nil {
+		return nil, fmt.Errorf("%s: %v", errPrefix, err)
 	}
 
 	out, err := g.run(ctx, errPrefix, "rev-parse", "-q", "--verify", "--revs-only", refspec)

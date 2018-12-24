@@ -281,14 +281,18 @@ type DiffStatusOptions struct {
 // See https://git-scm.com/docs/git-diff#git-diff---name-status for more
 // details.
 func (g *Git) DiffStatus(ctx context.Context, opts DiffStatusOptions) ([]DiffStatusEntry, error) {
-	if opts.Commit1 == "" && opts.Commit2 != "" {
-		return nil, errors.New("diff status: Commit2 set without Commit1 being set")
+	if opts.Commit1 != "" {
+		if err := validateRev(opts.Commit1); err != nil {
+			return nil, fmt.Errorf("diff status: %v", err)
+		}
 	}
-	if strings.HasPrefix(opts.Commit1, "-") {
-		return nil, fmt.Errorf("diff status: commit %q should not start with '-'", opts.Commit1)
-	}
-	if strings.HasPrefix(opts.Commit2, "-") {
-		return nil, fmt.Errorf("diff status: commit %q should not start with '-'", opts.Commit2)
+	if opts.Commit2 != "" {
+		if opts.Commit1 == "" {
+			return nil, errors.New("diff status: Commit2 set without Commit1 being set")
+		}
+		if err := validateRev(opts.Commit2); err != nil {
+			return nil, fmt.Errorf("diff status: %v", err)
+		}
 	}
 	args := make([]string, 0, 6+len(opts.Pathspecs))
 	args = append(args, "diff", "--name-status", "-z")
@@ -307,19 +311,12 @@ func (g *Git) DiffStatus(ctx context.Context, opts DiffStatusOptions) ([]DiffSta
 			args = append(args, string(p))
 		}
 	}
-	c := g.Command(ctx, args...)
-	stdout := new(strings.Builder)
-	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
-	stderr := new(bytes.Buffer)
-	c.Stderr = &limitWriter{w: stderr, n: 4096}
-	if err := sigterm.Run(ctx, c); err != nil {
-		if stderr.Len() == 0 {
-			return nil, fmt.Errorf("git diff --name-status: %v", err)
-		}
-		return nil, fmt.Errorf("git diff --name-status: %v\n%s", err, stderr)
+	stdout, err := g.run(ctx, "diff status", args...)
+	if err != nil {
+		return nil, err
 	}
 	var entries []DiffStatusEntry
-	for stdout := stdout.String(); len(stdout) > 0; {
+	for len(stdout) > 0 {
 		var ent DiffStatusEntry
 		var err error
 		ent, stdout, err = readDiffStatusEntry(stdout)

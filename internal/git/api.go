@@ -17,6 +17,7 @@ package git
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -88,6 +89,13 @@ func (g *Git) IsMerging(ctx context.Context) (bool, error) {
 
 // IsAncestor reports whether rev1 is an ancestor of rev2.
 func (g *Git) IsAncestor(ctx context.Context, rev1, rev2 string) (bool, error) {
+	errPrefix := fmt.Sprintf("git: check %q ancestor of %q", rev1, rev2)
+	if err := validateRev(rev1); err != nil {
+		return false, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	if err := validateRev(rev2); err != nil {
+		return false, fmt.Errorf("%s: %v", errPrefix, err)
+	}
 	c := g.Command(ctx, "merge-base", "--is-ancestor", rev1, rev2)
 	stderr := new(bytes.Buffer)
 	c.Stderr = stderr
@@ -95,7 +103,7 @@ func (g *Git) IsAncestor(ctx context.Context, rev1, rev2 string) (bool, error) {
 		if err, ok := err.(*exec.ExitError); ok && exitStatus(err.ProcessState) == 1 {
 			return false, nil
 		}
-		return false, commandError(fmt.Sprintf("git: check %q ancestor of %q", rev1, rev2), err, stderr.Bytes())
+		return false, commandError(errPrefix, err, stderr.Bytes())
 	}
 	return true, nil
 }
@@ -104,11 +112,8 @@ func (g *Git) IsAncestor(ctx context.Context, rev1, rev2 string) (bool, error) {
 // If pathspecs is not empty, then it is used to filter the paths.
 func (g *Git) ListTree(ctx context.Context, rev string, pathspecs []Pathspec) (map[TopPath]struct{}, error) {
 	errPrefix := fmt.Sprintf("git ls-tree %q", rev)
-	if rev == "" {
-		return nil, fmt.Errorf("%s: empty revision", errPrefix)
-	}
-	if strings.HasPrefix(rev, "-") {
-		return nil, fmt.Errorf("%s: revision cannot begin with dash", errPrefix)
+	if err := validateRev(rev); err != nil {
+		return nil, fmt.Errorf("%s: %v", errPrefix, err)
 	}
 	args := []string{"ls-tree", "-z", "-r", "--name-only"}
 	if len(pathspecs) == 0 {
@@ -144,8 +149,8 @@ func (g *Git) ListTree(ctx context.Context, rev string, pathspecs []Pathspec) (m
 // if the returned error is nil.
 func (g *Git) Cat(ctx context.Context, rev string, path TopPath) (io.ReadCloser, error) {
 	errPrefix := fmt.Sprintf("git cat %q @ %q", path, rev)
-	if rev == "" {
-		return nil, fmt.Errorf("%s: empty revision", errPrefix)
+	if err := validateRev(rev); err != nil {
+		return nil, fmt.Errorf("%s: %v", errPrefix, err)
 	}
 	if strings.Contains(rev, ":") {
 		return nil, fmt.Errorf("%s: revision contains ':'", errPrefix)
@@ -391,6 +396,16 @@ func commandError(prefix string, runError error, stderr []byte) error {
 		return fmt.Errorf("%s:\n%s", prefix, stderr)
 	}
 	return fmt.Errorf("%s: %v\n%s", prefix, runError, stderr)
+}
+
+func validateRev(rev string) error {
+	if rev == "" {
+		return errors.New("empty revision")
+	}
+	if strings.HasPrefix(rev, "-") {
+		return errors.New("revision cannot begin with dash")
+	}
+	return nil
 }
 
 type nopReader struct{}

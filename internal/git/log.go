@@ -15,13 +15,10 @@
 package git
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strings"
 	"time"
-
-	"gg-scm.io/pkg/internal/sigterm"
 )
 
 // CommitInfo stores information about a single commit.
@@ -52,11 +49,8 @@ func (u User) String() string {
 // CommitInfo obtains information about a single commit.
 func (g *Git) CommitInfo(ctx context.Context, rev string) (*CommitInfo, error) {
 	errPrefix := fmt.Sprintf("git log %q", rev)
-	if rev == "" {
-		return nil, fmt.Errorf("%s: empty revision", errPrefix)
-	}
-	if strings.HasPrefix(rev, "-") {
-		return nil, fmt.Errorf("%s: revision cannot begin with dash", errPrefix)
+	if err := validateRev(rev); err != nil {
+		return nil, fmt.Errorf("%s: %v", errPrefix, err)
 	}
 	if strings.HasPrefix(rev, "^") {
 		return nil, fmt.Errorf("%s: revision cannot be an exclusion", errPrefix)
@@ -68,15 +62,10 @@ func (g *Git) CommitInfo(ctx context.Context, rev string) (*CommitInfo, error) {
 		return nil, fmt.Errorf("%s: revision cannot use parent shorthand", errPrefix)
 	}
 
-	c := g.Command(ctx, "log", "--max-count=1", "-z", "--pretty=tformat:%H%x00%P%x00%an%x00%ae%x00%aI%x00%cn%x00%ce%x00%cI%x00%B", rev, "--")
-	stdout := new(strings.Builder)
-	c.Stdout = &limitWriter{w: stdout, n: 1 << 20 /* 1 MiB */}
-	stderr := new(bytes.Buffer)
-	c.Stderr = &limitWriter{w: stderr, n: 4096}
-	if err := sigterm.Run(ctx, c); err != nil {
-		return nil, commandError(errPrefix, err, stderr.Bytes())
+	out, err := g.run(ctx, errPrefix, "log", "--max-count=1", "-z", "--pretty=tformat:%H%x00%P%x00%an%x00%ae%x00%aI%x00%cn%x00%ce%x00%cI%x00%B", rev, "--")
+	if err != nil {
+		return nil, err
 	}
-	out := stdout.String()
 	if !strings.HasSuffix(out, "\x00") {
 		return nil, fmt.Errorf("%s: could not parse output", errPrefix)
 	}
