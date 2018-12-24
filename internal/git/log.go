@@ -62,7 +62,14 @@ func (g *Git) CommitInfo(ctx context.Context, rev string) (*CommitInfo, error) {
 		return nil, fmt.Errorf("%s: revision cannot use parent shorthand", errPrefix)
 	}
 
-	out, err := g.run(ctx, errPrefix, "log", "--max-count=1", "-z", "--pretty=tformat:%H%x00%P%x00%an%x00%ae%x00%aI%x00%cn%x00%ce%x00%cI%x00%B", rev, "--")
+	out, err := g.run(ctx, errPrefix, []string{
+		"log",
+		"--max-count=1",
+		"-z",
+		"--pretty=tformat:%H%x00%P%x00%an%x00%ae%x00%aI%x00%cn%x00%ce%x00%cI%x00%B",
+		rev,
+		"--",
+	})
 	if err != nil {
 		return nil, err
 	}

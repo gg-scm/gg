@@ -311,7 +311,7 @@ func (g *Git) DiffStatus(ctx context.Context, opts DiffStatusOptions) ([]DiffSta
 			args = append(args, string(p))
 		}
 	}
-	stdout, err := g.run(ctx, "diff status", args...)
+	stdout, err := g.run(ctx, "diff status", args)
 	if err != nil {
 		return nil, err
 	}

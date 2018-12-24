@@ -135,7 +135,7 @@ func (g *Git) getVersion(ctx context.Context) (string, error) {
 	g.versionMu.Unlock()
 
 	// Run git --version.
-	v, err := g.run(ctx, "git --version", "--version")
+	v, err := g.run(ctx, "git --version", []string{"--version"})
 	g.versionMu.Lock()
 	close(g.versionCond)
 	g.versionCond = nil
@@ -163,12 +163,12 @@ func (g *Git) WithDir(dir string) *Git {
 
 // Run runs the specified Git subcommand, returning its stdout.
 func (g *Git) Run(ctx context.Context, args ...string) (string, error) {
-	return g.run(ctx, errorSubject(args), args...)
+	return g.run(ctx, errorSubject(args), args)
 }
 
 // run runs the specified Git subcommand, returning its stdout.
 // It will use the given error prefix instead of one derived from the arguments.
-func (g *Git) run(ctx context.Context, errPrefix string, args ...string) (string, error) {
+func (g *Git) run(ctx context.Context, errPrefix string, args []string) (string, error) {
 	c := g.Command(ctx, args...)
 	stdout := new(strings.Builder)
 	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}

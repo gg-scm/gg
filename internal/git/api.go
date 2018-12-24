@@ -31,7 +31,7 @@ import (
 // working tree given the configuration. Any symlinks are resolved.
 func (g *Git) WorkTree(ctx context.Context) (string, error) {
 	const errPrefix = "find git work tree root"
-	out, err := g.run(ctx, errPrefix, "rev-parse", "--show-toplevel")
+	out, err := g.run(ctx, errPrefix, []string{"rev-parse", "--show-toplevel"})
 	if err != nil {
 		return "", err
 	}
@@ -51,7 +51,7 @@ func (g *Git) WorkTree(ctx context.Context) (string, error) {
 // symlinks are resolved.
 func (g *Git) CommonDir(ctx context.Context) (string, error) {
 	const errPrefix = "find .git directory"
-	out, err := g.run(ctx, errPrefix, "rev-parse", "--git-common-dir")
+	out, err := g.run(ctx, errPrefix, []string{"rev-parse", "--git-common-dir"})
 	if err != nil {
 		return "", err
 	}
@@ -128,7 +128,7 @@ func (g *Git) ListTree(ctx context.Context, rev string, pathspecs []Pathspec) (m
 			args = append(args, p.String())
 		}
 	}
-	out, err := g.run(ctx, errPrefix, args...)
+	out, err := g.run(ctx, errPrefix, args)
 	if err != nil {
 		return nil, err
 	}
