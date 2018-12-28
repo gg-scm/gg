@@ -115,7 +115,7 @@ type testEnv struct {
 	// topDir is the path to the temporary directory created by newTestEnv.
 	topDir filesystem.Dir
 
-	stderr   *bytes.Buffer
+	stderr   bytes.Buffer
 	tb       testing.TB
 	editFile int
 }
@@ -151,7 +151,6 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	}
 	root := topFS.FromSlash("scratch")
 	xdgConfigDir := topFS.FromSlash("xdgconfig")
-	stderr := new(bytes.Buffer)
 	git, err := git.New(gitPath, root, &git.Options{
 		Env: append(os.Environ(),
 			"GIT_CONFIG_NOSYSTEM=1",
@@ -159,7 +158,6 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 			"XDG_CONFIG_HOME="+xdgConfigDir,
 			"XDG_CONFIG_DIRS="+xdgConfigDir,
 		),
-		Stderr: stderr,
 	})
 	if err != nil {
 		os.RemoveAll(topDir)
@@ -170,7 +168,6 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 		root:         filesystem.Dir(root),
 		git:          git,
 		roundTripper: stubRoundTripper{},
-		stderr:       stderr,
 		tb:           tb,
 	}
 	if err := env.writeConfig(nil); err != nil {
@@ -229,7 +226,7 @@ func (env *testEnv) editorCmd(content []byte) (string, error) {
 
 func (env *testEnv) cleanup() {
 	if env.tb.Failed() && env.stderr.Len() > 0 {
-		env.tb.Log("stderr:", env.stderr)
+		env.tb.Log("stderr:", env.stderr.String())
 	}
 	if err := os.RemoveAll(string(env.topDir)); err != nil {
 		env.tb.Error("cleanup:", err)
@@ -249,7 +246,7 @@ func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte,
 		},
 		tempDir:    env.topDir.FromSlash("temp"),
 		stdout:     out,
-		stderr:     env.stderr,
+		stderr:     &env.stderr,
 		httpClient: &http.Client{Transport: env.roundTripper},
 		lookPath: func(name string) (string, error) {
 			if name == "git" {

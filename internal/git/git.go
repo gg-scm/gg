@@ -53,14 +53,6 @@ type Options struct {
 
 	// Env specifies the environment of the subprocess.
 	Env []string
-
-	// Stderr will receive the stderr from the Git subprocess.
-	Stderr io.Writer
-
-	// Stdin and Stdout are hooked up to the Git subprocess during
-	// RunInteractive.
-	Stdin  io.Reader
-	Stdout io.Writer
 }
 
 // New creates a new Git context.
