@@ -228,49 +228,40 @@ aliases: pr
 
 func inferPullRequestMessage(ctx context.Context, g *git.Git, base, head string) (title, body string, _ error) {
 	// Read commit messages of divergent commits.
-	const logFormat = "%B"
-	logData, err := g.Run(ctx, "log",
-		"-z",
-		"--reverse",
-		"--no-merges",
-		"--first-parent",
-		"--pretty=tformat:%B",
-		base+".."+head, "--")
+	commits, err := g.Log(ctx, git.LogOptions{
+		Revs:        []string{base + ".." + head},
+		Reverse:     true,
+		MaxParents:  1,
+		FirstParent: true,
+	})
 	if err != nil {
 		return "", "", fmt.Errorf("infer PR message: %v", err)
 	}
-
-	// Split apart by commit (NUL byte).
-	messages := strings.SplitAfter(logData, "\x00")
-	if len(messages[len(messages)-1]) > 0 {
-		return "", "", errors.New("infer PR message: parse log: unexpected EOF")
-	}
-	messages = messages[:len(messages)-1]
-	if len(messages) == 0 {
-		return "", "", errors.New("infer PR message: no divergent commits")
-	}
-	// Strip trailing NULs.
-	for i := range messages {
-		messages[i] = strings.TrimSuffix(messages[i], "\x00")
-	}
-	// First line of first commit message is the title.
-	if i := strings.IndexByte(messages[0], '\n'); i != -1 {
-		title = strings.TrimSpace(messages[0][:i])
-		messages[0] = messages[0][i+1:]
-	} else {
-		title = string(strings.TrimSpace(messages[0]))
-		messages[0] = ""
-	}
-	// Join rest of messages by bullets into body.
 	bodyBuilder := new(strings.Builder)
-	for i, msg := range messages {
-		if i > 0 {
-			bodyBuilder.WriteString("\n\n* ")
+	i := 0
+	for ; commits.Next(); i++ {
+		msg := commits.CommitInfo().Message
+		if i == 0 {
+			// First line of first commit message is the title.
+			if j := strings.IndexByte(msg, '\n'); j != -1 {
+				title = strings.TrimSpace(msg[:j])
+				bodyBuilder.WriteString(strings.TrimSpace(msg[j+1:]))
+			} else {
+				title = string(strings.TrimSpace(msg))
+			}
+			continue
 		}
+		// Join rest of messages by bullets into body.
+		bodyBuilder.WriteString("\n\n* ")
 		bodyBuilder.WriteString(strings.TrimSpace(msg))
 	}
-	body = strings.TrimSpace(bodyBuilder.String())
-	return title, body, nil
+	if err := commits.Close(); err != nil {
+		return "", "", fmt.Errorf("infer PR message: %v", err)
+	}
+	if i == 0 {
+		return "", "", errors.New("infer PR message: no divergent commits")
+	}
+	return title, strings.TrimSpace(bodyBuilder.String()), nil
 }
 
 func parseEditedPullRequestMessage(b []byte) (title, body string, _ error) {

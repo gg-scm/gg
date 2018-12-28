@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestCommitInfo(t *testing.T) {
@@ -202,4 +204,128 @@ func TestCommitInfo(t *testing.T) {
 			t.Errorf("info.Parents = %v; want %v", info.Parents, []Hash{rev1.Commit, rev2.Commit})
 		}
 	})
+}
+
+func TestLog(t *testing.T) {
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, gitPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	// Create a repository with a merge commit.
+	if err := env.g.Init(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Add(ctx, []Pathspec{"foo.txt"}, AddOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	const wantMessage0 = "initial import\n"
+	if err := env.g.Commit(ctx, wantMessage0); err != nil {
+		t.Fatal(err)
+	}
+	rev0, err := env.g.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Add(ctx, []Pathspec{"bar.txt"}, AddOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	const wantMessage1 = "first parent\n"
+	if err := env.g.Commit(ctx, wantMessage1); err != nil {
+		t.Fatal(err)
+	}
+	rev1, err := env.g.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := env.g.NewBranch(ctx, "diverge", BranchOptions{Checkout: true, StartPoint: "HEAD~"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("baz.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Add(ctx, []Pathspec{"baz.txt"}, AddOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	const wantMessage2 = "second parent\n"
+	if err := env.g.Commit(ctx, wantMessage2); err != nil {
+		t.Fatal(err)
+	}
+	rev2, err := env.g.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.CheckoutBranch(ctx, "master", CheckoutOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	const wantMessage3 = "i merged\n"
+	if _, err := env.g.Run(ctx, "merge", "-m", wantMessage3, "diverge"); err != nil {
+		t.Fatal(err)
+	}
+	rev3, err := env.g.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log, err := env.g.Log(ctx, LogOptions{})
+	if err != nil {
+		t.Fatal("Log:", err)
+	}
+	var got []*CommitInfo
+	for log.Next() {
+		got = append(got, log.CommitInfo())
+	}
+	if err := log.Close(); err != nil {
+		t.Error("Close:", err)
+	}
+	currUser := User{Name: "User", Email: "foo@example.com"} // from newTestEnv
+	want := []*CommitInfo{
+		{
+			Hash:      rev3.Commit,
+			Parents:   []Hash{rev1.Commit, rev2.Commit},
+			Author:    currUser,
+			Committer: currUser,
+			Message:   wantMessage3,
+		},
+		{
+			Hash:      rev1.Commit,
+			Parents:   []Hash{rev0.Commit},
+			Author:    currUser,
+			Committer: currUser,
+			Message:   wantMessage1,
+		},
+		{
+			Hash:      rev2.Commit,
+			Parents:   []Hash{rev0.Commit},
+			Author:    currUser,
+			Committer: currUser,
+			Message:   wantMessage2,
+		},
+		{
+			Hash:      rev0.Commit,
+			Author:    currUser,
+			Committer: currUser,
+			Message:   wantMessage0,
+		},
+	}
+	diff := cmp.Diff(want, got,
+		cmpopts.EquateEmpty(),
+		cmpopts.IgnoreFields(CommitInfo{}, "AuthorTime", "CommitTime"))
+	if diff != "" {
+		t.Errorf("log diff (-want +got):\n%s", diff)
+	}
 }

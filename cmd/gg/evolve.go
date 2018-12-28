@@ -121,42 +121,23 @@ type change struct {
 // readChanges lists the commits in head that are not base or its
 // ancestors.  The commits will be in topological order: children to
 // ancestors.
-func readChanges(ctx context.Context, git *git.Git, head, base string) ([]change, error) {
-	// TODO(soon): Refactor this into Log API.
-
-	// Can't use %(trailers) because it's not supported on 2.7.4.
-	out, err := git.Run(ctx, "log", "--date-order", "--pretty=format:%H%x00%B%x00", head, "^"+base)
+func readChanges(ctx context.Context, g *git.Git, head, base string) ([]change, error) {
+	commits, err := g.Log(ctx, git.LogOptions{
+		Revs: []string{head, "^" + base},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("read changes %s..%s: %v", base, head, err)
 	}
-	if len(out) == 0 {
-		return nil, nil
-	}
-	if !strings.HasSuffix(out, "\x00") {
-		return nil, fmt.Errorf("read changes %s..%s: unexpected EOF", base, head)
-	}
-	out = out[:len(out)-1]
-	fields := strings.Split(out, "\x00")
 	var changes []change
-	for i := 0; i < len(fields); i++ {
-		hex := fields[i]
-		if i > 0 {
-			// log places a newline between entries.
-			hex = strings.TrimPrefix(hex, "\n")
-		}
-		if len(hex) != 40 {
-			return nil, fmt.Errorf("read changes %s..%s: parse log: invalid commit hash %q", base, head, hex)
-		}
-
-		i++
-		if i >= len(fields) {
-			return nil, fmt.Errorf("read changes %s..%s: parse log: unexpected EOF", base, head)
-		}
-		id := findChangeID(fields[i])
+	for commits.Next() {
+		info := commits.CommitInfo()
 		changes = append(changes, change{
-			id:        id,
-			commitHex: hex,
+			id:        findChangeID(info.Message),
+			commitHex: info.Hash.String(),
 		})
+	}
+	if err := commits.Close(); err != nil {
+		return nil, fmt.Errorf("read changes %s..%s: %v", base, head, err)
 	}
 	return changes, nil
 }

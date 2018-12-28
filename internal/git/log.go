@@ -15,10 +15,16 @@
 package git
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
+
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 // CommitInfo stores information about a single commit.
@@ -73,16 +79,29 @@ func (g *Git) CommitInfo(ctx context.Context, rev string) (*CommitInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	info, err := parseCommitInfo(out)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	return info, nil
+}
+
+const (
+	commitInfoPrettyFormat = "tformat:%H%x00%P%x00%an%x00%ae%x00%aI%x00%cn%x00%ce%x00%cI%x00%B"
+	commitInfoFieldCount   = 9
+)
+
+func parseCommitInfo(out string) (*CommitInfo, error) {
 	if !strings.HasSuffix(out, "\x00") {
-		return nil, fmt.Errorf("%s: could not parse output", errPrefix)
+		return nil, errors.New("parse commit: invalid format")
 	}
 	fields := strings.Split(out[:len(out)-1], "\x00")
-	if len(fields) != 9 {
-		return nil, fmt.Errorf("%s: could not parse output", errPrefix)
+	if len(fields) != commitInfoFieldCount {
+		return nil, errors.New("parse commit: invalid format")
 	}
 	hash, err := ParseHash(fields[0])
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", errPrefix, err)
+		return nil, fmt.Errorf("parse commit: hash: %v", err)
 	}
 
 	var parents []Hash
@@ -91,18 +110,18 @@ func (g *Git) CommitInfo(ctx context.Context, rev string) (*CommitInfo, error) {
 		for _, s := range parentStrings {
 			p, err := ParseHash(s)
 			if err != nil {
-				return nil, fmt.Errorf("%s: %v", errPrefix, err)
+				return nil, fmt.Errorf("parse commit: parents: %v", err)
 			}
 			parents = append(parents, p)
 		}
 	}
 	authorTime, err := time.Parse(time.RFC3339, fields[4])
 	if err != nil {
-		return nil, fmt.Errorf("%s: parse author time: %v", errPrefix, err)
+		return nil, fmt.Errorf("parse commit: author time: %v", err)
 	}
 	commitTime, err := time.Parse(time.RFC3339, fields[7])
 	if err != nil {
-		return nil, fmt.Errorf("%s: parse commit time: %v", errPrefix, err)
+		return nil, fmt.Errorf("parse commit: commit time: %v", err)
 	}
 	return &CommitInfo{
 		Hash:    hash,
@@ -119,4 +138,187 @@ func (g *Git) CommitInfo(ctx context.Context, rev string) (*CommitInfo, error) {
 		CommitTime: commitTime,
 		Message:    fields[8],
 	}, nil
+}
+
+// LogOptions specifies filters and ordering on a log listing.
+type LogOptions struct {
+	// Revs specifies the set of commits to list. When empty, it defaults
+	// to all commits reachable from HEAD.
+	Revs []string
+
+	// MaxParents sets an inclusive upper limit on the number of parents
+	// on revisions to return from Log. If MaxParents is zero, then it is
+	// treated as no limit unless AllowZeroMaxParents is true.
+	MaxParents          int
+	AllowZeroMaxParents bool
+
+	// If FirstParent is true, then follow only the first parent commit
+	// upon seeing a merge commit.
+	FirstParent bool
+
+	// Limit specifies the upper bound on the number of revisions to return from Log.
+	// Zero means no limit.
+	Limit int
+
+	// If Reverse is true, then commits will be returned in reverse order.
+	Reverse bool
+}
+
+// Log starts fetching information about a set of commits. The context's
+// deadline and cancelation will apply to the entire read from the Log.
+func (g *Git) Log(ctx context.Context, opts LogOptions) (*Log, error) {
+	// TODO(someday): Add an example for this method.
+
+	const errPrefix = "git log"
+	for _, rev := range opts.Revs {
+		if err := validateRev(rev); err != nil {
+			return nil, fmt.Errorf("%s: %v", errPrefix, err)
+		}
+	}
+	args := []string{"log", "-z", "--pretty=" + commitInfoPrettyFormat}
+	if opts.MaxParents > 0 || opts.AllowZeroMaxParents {
+		args = append(args, fmt.Sprintf("--max-parents=%d", opts.MaxParents))
+	}
+	if opts.FirstParent {
+		args = append(args, "--first-parent")
+	}
+	if opts.Limit > 0 {
+		args = append(args, fmt.Sprintf("--max-count=%d", opts.Limit))
+	}
+	if opts.Reverse {
+		args = append(args, "--reverse")
+	}
+	args = append(args, opts.Revs...)
+	args = append(args, "--")
+	c := g.Command(ctx, args...)
+	pipe, err := c.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	stderr := new(bytes.Buffer)
+	c.Stderr = &limitWriter{w: stderr, n: 4096}
+	ctx, cancel := context.WithCancel(ctx)
+	wait, err := sigterm.Start(ctx, c)
+	if err != nil {
+		cancel()
+		pipe.Close()
+		return nil, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	r := bufio.NewReaderSize(pipe, 1<<20 /* 1 MiB */)
+	if _, err := r.Peek(1); err != nil && err != io.EOF {
+		cancel()
+		waitErr := wait()
+		return nil, commandError(errPrefix, waitErr, stderr.Bytes())
+	}
+	return &Log{
+		r:      r,
+		cancel: cancel,
+		wait:   wait,
+	}, nil
+}
+
+// Log is an open handle to a `git log` subprocess. Closing the Log
+// stops the subprocess.
+type Log struct {
+	r      *bufio.Reader
+	cancel context.CancelFunc
+	wait   func() error
+
+	scanErr  error
+	scanDone bool
+	info     *CommitInfo
+}
+
+// Next attempts to scan the next log entry and returns whether there is a new entry.
+func (l *Log) Next() bool {
+	if l.scanDone {
+		return false
+	}
+
+	// Continue growing buffer until we've fit a log entry.
+	end := -1
+	for n := l.r.Buffered(); n < l.r.Size(); {
+		data, err := l.r.Peek(n)
+		end = findCommitInfoEnd(data)
+		if end != -1 {
+			break
+		}
+		if err != nil {
+			switch {
+			case err == io.EOF && l.r.Buffered() == 0:
+				l.abort(nil)
+			case err == io.EOF && l.r.Buffered() > 0:
+				l.abort(io.ErrUnexpectedEOF)
+			default:
+				l.abort(err)
+			}
+			return false
+		}
+		if l.r.Buffered() > n {
+			n = l.r.Buffered()
+		} else {
+			n++
+		}
+	}
+	if end == -1 {
+		l.abort(bufio.ErrBufferFull)
+		return false
+	}
+
+	// Parse entry.
+	data, err := l.r.Peek(end)
+	if err != nil {
+		// Should already be buffered.
+		panic(err)
+	}
+	info, err := parseCommitInfo(string(data))
+	if err != nil {
+		l.abort(err)
+		return false
+	}
+	if _, err := l.r.Discard(end); err != nil {
+		// Should already be buffered.
+		panic(err)
+	}
+	l.info = info
+	return true
+}
+
+func (l *Log) abort(e error) {
+	l.r = nil
+	l.scanErr = e
+	l.scanDone = true
+	l.info = nil
+	l.cancel()
+}
+
+func findCommitInfoEnd(b []byte) int {
+	nuls := 0
+	for i := range b {
+		if b[i] != 0 {
+			continue
+		}
+		nuls++
+		if nuls == commitInfoFieldCount {
+			return i + 1
+		}
+	}
+	return -1
+}
+
+// CommitInfo returns the most recently scanned log entry.
+// Next must be called at least once before calling CommitInfo.
+func (l *Log) CommitInfo() *CommitInfo {
+	return l.info
+}
+
+// Close ends the log subprocess and waits for it to finish.
+// Close returns an error if Next returned false due to a parse failure.
+func (l *Log) Close() error {
+	// Not safe to call multiple times, but interface for Close doesn't
+	// require this to be supported.
+
+	l.cancel()
+	l.wait() // Ignore error, since it's probably from interrupting.
+	return l.scanErr
 }
