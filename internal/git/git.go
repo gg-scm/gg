@@ -146,7 +146,13 @@ func (g *Git) Path() string {
 }
 
 // WithDir returns a new instance that is changed to use dir as its working directory.
+// Any relative paths will be interpreted relative to g's working directory.
 func (g *Git) WithDir(dir string) *Git {
+	if filepath.IsAbs(dir) {
+		dir = filepath.Clean(dir)
+	} else {
+		dir = filepath.Join(g.dir, dir)
+	}
 	g2 := new(Git)
 	*g2 = *g
 	g2.dir = dir
