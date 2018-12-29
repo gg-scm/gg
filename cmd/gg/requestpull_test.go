@@ -197,7 +197,7 @@ func TestRequestPull(t *testing.T) {
 				if err := env.addFiles(ctx, "local/blah.txt"); err != nil {
 					t.Fatal(err)
 				}
-				if err := localGit.Commit(ctx, "Commit title\n\nCommit description"); err != nil {
+				if err := localGit.Commit(ctx, "Commit title\n\nCommit description", git.CommitOptions{}); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -808,7 +808,7 @@ func TestInferPullRequestMessage(t *testing.T) {
 				if err := env.addFiles(ctx, name); err != nil {
 					t.Fatal(err)
 				}
-				if err := env.git.Commit(ctx, msg); err != nil {
+				if err := env.git.Commit(ctx, msg, git.CommitOptions{}); err != nil {
 					t.Fatal(err)
 				}
 			}

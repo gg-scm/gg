@@ -207,7 +207,7 @@ func TestNewBranch(t *testing.T) {
 			if err := env.g.Add(ctx, []Pathspec{"file.txt"}, AddOptions{}); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.g.Commit(ctx, dummyContent); err != nil {
+			if err := env.g.Commit(ctx, dummyContent, CommitOptions{}); err != nil {
 				t.Fatal(err)
 			}
 			commit1, err := env.g.Head(ctx)
@@ -217,7 +217,7 @@ func TestNewBranch(t *testing.T) {
 			if err := env.root.Apply(filesystem.Write("file.txt", content2)); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.g.CommitAll(ctx, dummyContent); err != nil {
+			if err := env.g.CommitAll(ctx, dummyContent, CommitOptions{}); err != nil {
 				t.Fatal(err)
 			}
 			commit2, err := env.g.Head(ctx)
@@ -234,7 +234,7 @@ func TestNewBranch(t *testing.T) {
 			if err := env.root.Apply(filesystem.Write("file.txt", content3)); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.g.CommitAll(ctx, dummyContent); err != nil {
+			if err := env.g.CommitAll(ctx, dummyContent, CommitOptions{}); err != nil {
 				t.Fatal(err)
 			}
 			commit3, err := env.g.Head(ctx)

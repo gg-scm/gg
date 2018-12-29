@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestLog(t *testing.T) {
@@ -40,7 +41,7 @@ func TestLog(t *testing.T) {
 		t.Fatal(err)
 	}
 	const wantMsg = "First post!!"
-	if err := env.git.Commit(ctx, wantMsg); err != nil {
+	if err := env.git.Commit(ctx, wantMsg, git.CommitOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	rev, err := env.git.Head(ctx)

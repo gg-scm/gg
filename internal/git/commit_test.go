@@ -19,8 +19,11 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"gg-scm.io/pkg/internal/filesystem"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestCommit(t *testing.T) {
@@ -61,8 +64,7 @@ func TestCommit(t *testing.T) {
 				if err := env.g.Add(ctx, []Pathspec{"foo.txt"}, AddOptions{}); err != nil {
 					t.Fatal(err)
 				}
-				err = env.g.Commit(ctx, test.msg)
-				if err != nil {
+				if err := env.g.Commit(ctx, test.msg, CommitOptions{}); err != nil {
 					if !test.wantErr {
 						t.Error("Commit error:", err)
 					}
@@ -134,39 +136,73 @@ func TestCommit(t *testing.T) {
 		}
 
 		// Call g.Commit.
-		const wantMessage = "\n\ninternal/git made this commit"
-		if err := env.g.Commit(ctx, wantMessage); err != nil {
+		const (
+			wantAuthorName     = "Lisbeth Salander"
+			wantAuthorEmail    = "lisbeth@example.com"
+			wantCommitterName  = "Octo Cat"
+			wantCommitterEmail = "noreply@github.com"
+			wantMessage        = "\n\ninternal/git made this commit"
+		)
+		wantAuthorTime := time.Date(2018, time.February, 20, 15, 47, 42, 0, time.FixedZone("UTC-8", -8*60*60))
+		wantCommitTime := time.Date(2018, time.December, 29, 8, 58, 24, 0, time.FixedZone("UTC-8", -8*60*60))
+		err = env.g.Commit(ctx, wantMessage, CommitOptions{
+			Author: User{
+				Name:  wantAuthorName,
+				Email: wantAuthorEmail,
+			},
+			AuthorTime: wantAuthorTime,
+			Committer: User{
+				Name:  wantCommitterName,
+				Email: wantCommitterEmail,
+			},
+			CommitTime: wantCommitTime,
+		})
+		if err != nil {
 			t.Error("Commit error:", err)
 		}
 
-		// Verify that HEAD was moved to a new commit.
-		r2, err := env.g.Head(ctx)
+		got, err := env.g.CommitInfo(ctx, "HEAD")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if r2.Commit == r1.Commit {
+		// Verify that HEAD was moved to a new commit.
+		if got.Hash == r1.Commit {
 			t.Error("new HEAD = initial import")
 		}
-		if r2.Ref != r1.Ref {
-			t.Errorf("HEAD ref = %s; want %s", r2.Ref, r1.Ref)
+		// Verify all the other commit fields.
+		want := &CommitInfo{
+			Parents: []Hash{r1.Commit},
+			Author: User{
+				Name:  wantAuthorName,
+				Email: wantAuthorEmail,
+			},
+			AuthorTime: wantAuthorTime,
+			Committer: User{
+				Name:  wantCommitterName,
+				Email: wantCommitterEmail,
+			},
+			CommitTime: wantCommitTime,
+			Message:    wantMessage,
 		}
-		// Verify that the commit's parent is the initial commit.
-		if parent, err := env.g.ParseRev(ctx, "HEAD~"); err != nil {
+		if diff := cmp.Diff(want, got, cmpopts.IgnoreFields(CommitInfo{}, "Hash"), equateTruncatedTime(time.Second)); diff != "" {
+			t.Errorf("CommitInfo(ctx, \"HEAD\") diff (-want +got):\n%s", diff)
+		}
+		// Verify that HEAD is still pointing to master.
+		if head, err := env.g.Head(ctx); err != nil {
 			t.Error(err)
-		} else if parent.Commit != r1.Commit {
-			t.Errorf("HEAD~ = %v; want %v", parent.Commit, r1.Commit)
+		} else if head.Ref != "refs/heads/master" {
+			t.Errorf("HEAD ref = %s; want refs/heads/master", head.Ref)
 		}
-
-		// Verify contents of commit.
+		// Verify file contents of commit.
+		wantTree := map[TopPath]struct{}{
+			"added.txt":             {},
+			"modified_staged.txt":   {},
+			"modified_unstaged.txt": {},
+		}
 		if tree, err := env.g.ListTree(ctx, "HEAD", nil); err != nil {
 			t.Error(err)
-		} else {
-			if _, exists := tree["added.txt"]; !exists {
-				t.Error("added.txt not present in commit")
-			}
-			if _, exists := tree["deleted.txt"]; exists {
-				t.Error("deleted.txt present in commit")
-			}
+		} else if diff := cmp.Diff(wantTree, tree); diff != "" {
+			t.Errorf("ListTree(ctx, \"HEAD\", nil) diff (-want +got):\n%s", diff)
 		}
 		if got, err := catFile(ctx, env.g, "HEAD", "modified_staged.txt"); err != nil {
 			t.Error(err)
@@ -177,13 +213,6 @@ func TestCommit(t *testing.T) {
 			t.Error(err)
 		} else if got != modifiedOld {
 			t.Errorf("modified_unstaged.txt @ HEAD = %q; want %q", got, modifiedOld)
-		}
-
-		// Verify commit message.
-		if info, err := env.g.CommitInfo(ctx, "HEAD"); err != nil {
-			t.Error(err)
-		} else if info.Message != wantMessage {
-			t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
 		}
 	})
 }
@@ -225,7 +254,7 @@ func TestCommitFiles(t *testing.T) {
 
 		// Call g.CommitFiles.
 		const wantMessage = "\n\ninternal/git made this commit\n\n"
-		if err := env.g.CommitFiles(ctx, wantMessage, nil); err != nil {
+		if err := env.g.CommitFiles(ctx, wantMessage, nil, CommitOptions{}); err != nil {
 			t.Error("Commit error:", err)
 		}
 
@@ -294,27 +323,62 @@ func TestCommitFiles(t *testing.T) {
 		}
 
 		// Call g.CommitFiles.
-		const wantMessage = "\n\ninternal/git made this commit"
-		if err := env.g.CommitFiles(ctx, wantMessage, []Pathspec{"unstaged.txt"}); err != nil {
+		const (
+			wantAuthorName     = "Lisbeth Salander"
+			wantAuthorEmail    = "lisbeth@example.com"
+			wantCommitterName  = "Octo Cat"
+			wantCommitterEmail = "noreply@github.com"
+			wantMessage        = "\n\ninternal/git made this commit"
+		)
+		wantAuthorTime := time.Date(2018, time.February, 20, 15, 47, 42, 0, time.FixedZone("UTC-8", -8*60*60))
+		wantCommitTime := time.Date(2018, time.December, 29, 8, 58, 24, 0, time.FixedZone("UTC-8", -8*60*60))
+		err = env.g.CommitFiles(ctx, wantMessage, []Pathspec{"unstaged.txt"}, CommitOptions{
+			Author: User{
+				Name:  wantAuthorName,
+				Email: wantAuthorEmail,
+			},
+			AuthorTime: wantAuthorTime,
+			Committer: User{
+				Name:  wantCommitterName,
+				Email: wantCommitterEmail,
+			},
+			CommitTime: wantCommitTime,
+		})
+		if err != nil {
 			t.Error("Commit error:", err)
 		}
 
-		// Verify that HEAD was moved to a new commit.
-		r2, err := env.g.Head(ctx)
+		got, err := env.g.CommitInfo(ctx, "HEAD")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if r2.Commit == r1.Commit {
+		// Verify that HEAD was moved to a new commit.
+		if got.Hash == r1.Commit {
 			t.Error("new HEAD = initial import")
 		}
-		if r2.Ref != r1.Ref {
-			t.Errorf("HEAD ref = %s; want %s", r2.Ref, r1.Ref)
+		// Verify all the other commit fields.
+		want := &CommitInfo{
+			Parents: []Hash{r1.Commit},
+			Author: User{
+				Name:  wantAuthorName,
+				Email: wantAuthorEmail,
+			},
+			AuthorTime: wantAuthorTime,
+			Committer: User{
+				Name:  wantCommitterName,
+				Email: wantCommitterEmail,
+			},
+			CommitTime: wantCommitTime,
+			Message:    wantMessage,
 		}
-		// Verify that the commit's parent is the initial commit.
-		if parent, err := env.g.ParseRev(ctx, "HEAD~"); err != nil {
+		if diff := cmp.Diff(want, got, cmpopts.IgnoreFields(CommitInfo{}, "Hash"), equateTruncatedTime(time.Second)); diff != "" {
+			t.Errorf("CommitInfo(ctx, \"HEAD\") diff (-want +got):\n%s", diff)
+		}
+		// Verify that HEAD is still pointing to master.
+		if head, err := env.g.Head(ctx); err != nil {
 			t.Error(err)
-		} else if parent.Commit != r1.Commit {
-			t.Errorf("HEAD~ = %v; want %v", parent.Commit, r1.Commit)
+		} else if head.Ref != "refs/heads/master" {
+			t.Errorf("HEAD ref = %s; want refs/heads/master", head.Ref)
 		}
 
 		// Verify contents of commit.
@@ -327,13 +391,6 @@ func TestCommitFiles(t *testing.T) {
 			t.Error(err)
 		} else if got != newContent {
 			t.Errorf("unstaged.txt @ HEAD = %q; want %q", got, newContent)
-		}
-
-		// Verify commit message.
-		if info, err := env.g.CommitInfo(ctx, "HEAD"); err != nil {
-			t.Error(err)
-		} else if info.Message != wantMessage {
-			t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
 		}
 	})
 }
@@ -390,27 +447,62 @@ func TestCommitAll(t *testing.T) {
 	}
 
 	// Call g.CommitAll.
-	const wantMessage = "\n\ninternal/git made this commit"
-	if err := env.g.CommitAll(ctx, wantMessage); err != nil {
+	const (
+		wantAuthorName     = "Lisbeth Salander"
+		wantAuthorEmail    = "lisbeth@example.com"
+		wantCommitterName  = "Octo Cat"
+		wantCommitterEmail = "noreply@github.com"
+		wantMessage        = "\n\ninternal/git made this commit"
+	)
+	wantAuthorTime := time.Date(2018, time.February, 20, 15, 47, 42, 0, time.FixedZone("UTC-8", -8*60*60))
+	wantCommitTime := time.Date(2018, time.December, 29, 8, 58, 24, 0, time.FixedZone("UTC-8", -8*60*60))
+	err = env.g.CommitAll(ctx, wantMessage, CommitOptions{
+		Author: User{
+			Name:  wantAuthorName,
+			Email: wantAuthorEmail,
+		},
+		AuthorTime: wantAuthorTime,
+		Committer: User{
+			Name:  wantCommitterName,
+			Email: wantCommitterEmail,
+		},
+		CommitTime: wantCommitTime,
+	})
+	if err != nil {
 		t.Error("Commit error:", err)
 	}
 
-	// Verify that HEAD was moved to a new commit.
-	r2, err := env.g.Head(ctx)
+	got, err := env.g.CommitInfo(ctx, "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r2.Commit == r1.Commit {
+	// Verify that HEAD was moved to a new commit.
+	if got.Hash == r1.Commit {
 		t.Error("new HEAD = initial import")
 	}
-	if r2.Ref != r1.Ref {
-		t.Errorf("HEAD ref = %s; want %s", r2.Ref, r1.Ref)
+	// Verify all the other commit fields.
+	want := &CommitInfo{
+		Parents: []Hash{r1.Commit},
+		Author: User{
+			Name:  wantAuthorName,
+			Email: wantAuthorEmail,
+		},
+		AuthorTime: wantAuthorTime,
+		Committer: User{
+			Name:  wantCommitterName,
+			Email: wantCommitterEmail,
+		},
+		CommitTime: wantCommitTime,
+		Message:    wantMessage,
 	}
-	// Verify that the commit's parent is the initial commit.
-	if parent, err := env.g.ParseRev(ctx, "HEAD~"); err != nil {
+	if diff := cmp.Diff(want, got, cmpopts.IgnoreFields(CommitInfo{}, "Hash"), equateTruncatedTime(time.Second)); diff != "" {
+		t.Errorf("CommitInfo(ctx, \"HEAD\") diff (-want +got):\n%s", diff)
+	}
+	// Verify that HEAD is still pointing to master.
+	if head, err := env.g.Head(ctx); err != nil {
 		t.Error(err)
-	} else if parent.Commit != r1.Commit {
-		t.Errorf("HEAD~ = %v; want %v", parent.Commit, r1.Commit)
+	} else if head.Ref != "refs/heads/master" {
+		t.Errorf("HEAD ref = %s; want refs/heads/master", head.Ref)
 	}
 
 	// Verify contents of commit.
@@ -423,13 +515,6 @@ func TestCommitAll(t *testing.T) {
 		t.Error(err)
 	} else if got != newContent {
 		t.Errorf("unstaged.txt @ HEAD = %q; want %q", got, newContent)
-	}
-
-	// Verify commit message.
-	if info, err := env.g.CommitInfo(ctx, "HEAD"); err != nil {
-		t.Error(err)
-	} else if info.Message != wantMessage {
-		t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
 	}
 }
 

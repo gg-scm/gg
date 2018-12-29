@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"gg-scm.io/pkg/internal/sigterm"
 )
@@ -354,10 +355,42 @@ func (g *Git) Remove(ctx context.Context, pathspecs []Pathspec, opts RemoveOptio
 	return nil
 }
 
+// CommitOptions overrides the default metadata for a commit. Any fields
+// with zero values will use the value inferred from Git's environment.
+type CommitOptions struct {
+	Author     User
+	AuthorTime time.Time
+	Committer  User
+	CommitTime time.Time
+}
+
+func (opts CommitOptions) addToEnv(env []string) []string {
+	if opts.Author.Name != "" {
+		env = append(env, "GIT_AUTHOR_NAME="+opts.Author.Name)
+	}
+	if opts.Author.Email != "" {
+		env = append(env, "GIT_AUTHOR_EMAIL="+opts.Author.Email)
+	}
+	if !opts.AuthorTime.IsZero() {
+		env = append(env, "GIT_AUTHOR_DATE="+opts.AuthorTime.Format(time.RFC3339))
+	}
+	if opts.Committer.Name != "" {
+		env = append(env, "GIT_COMMITTER_NAME="+opts.Committer.Name)
+	}
+	if opts.Committer.Email != "" {
+		env = append(env, "GIT_COMMITTER_EMAIL="+opts.Committer.Email)
+	}
+	if !opts.CommitTime.IsZero() {
+		env = append(env, "GIT_COMMITTER_DATE="+opts.CommitTime.Format(time.RFC3339))
+	}
+	return env
+}
+
 // Commit creates a new commit on HEAD with the staged content.
 // The message will be used exactly as given.
-func (g *Git) Commit(ctx context.Context, message string) error {
+func (g *Git) Commit(ctx context.Context, message string, opts CommitOptions) error {
 	c := g.command(ctx, []string{g.exe, "commit", "--quiet", "--file=-", "--cleanup=verbatim"})
+	c.Env = opts.addToEnv(c.Env) // c.Env == g.env; len(g.env) == cap(g.env)
 	c.Stdin = strings.NewReader(message)
 	out := new(bytes.Buffer)
 	c.Stdout = &limitWriter{w: out, n: 4096}
@@ -370,8 +403,9 @@ func (g *Git) Commit(ctx context.Context, message string) error {
 
 // CommitAll creates a new commit on HEAD with all of the tracked files.
 // The message will be used exactly as given.
-func (g *Git) CommitAll(ctx context.Context, message string) error {
+func (g *Git) CommitAll(ctx context.Context, message string, opts CommitOptions) error {
 	c := g.command(ctx, []string{g.exe, "commit", "--quiet", "--file=-", "--cleanup=verbatim", "--all"})
+	c.Env = opts.addToEnv(c.Env) // c.Env == g.env; len(g.env) == cap(g.env)
 	c.Stdin = strings.NewReader(message)
 	out := new(bytes.Buffer)
 	c.Stdout = &limitWriter{w: out, n: 4096}
@@ -385,12 +419,13 @@ func (g *Git) CommitAll(ctx context.Context, message string) error {
 // CommitFiles creates a new commit on HEAD that updates the given files
 // to the content in the working copy. The message will be used exactly
 // as given.
-func (g *Git) CommitFiles(ctx context.Context, message string, pathspecs []Pathspec) error {
+func (g *Git) CommitFiles(ctx context.Context, message string, pathspecs []Pathspec, opts CommitOptions) error {
 	args := []string{g.exe, "commit", "--quiet", "--file=-", "--cleanup=verbatim", "--only", "--allow-empty", "--"}
 	for _, spec := range pathspecs {
 		args = append(args, spec.String())
 	}
 	c := g.command(ctx, args)
+	c.Env = opts.addToEnv(c.Env) // c.Env == g.env; len(g.env) == cap(g.env)
 	c.Stdin = strings.NewReader(message)
 	out := new(bytes.Buffer)
 	c.Stdout = &limitWriter{w: out, n: 4096}

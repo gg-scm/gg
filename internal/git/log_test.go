@@ -353,6 +353,30 @@ func TestLog(t *testing.T) {
 	defer env.cleanup()
 
 	// Create a repository with a merge commit.
+	//
+	// The commits created in this test are entirely deterministic
+	// because the dates and users are fixed, so their hashes will always
+	// be the same.
+	const (
+		wantAuthorName     = "Lisbeth Salander"
+		wantAuthorEmail    = "lisbeth@example.com"
+		wantCommitterName  = "Octo Cat"
+		wantCommitterEmail = "noreply@github.com"
+	)
+	commitOpts := func(t time.Time) CommitOptions {
+		return CommitOptions{
+			Author: User{
+				Name:  wantAuthorName,
+				Email: wantAuthorEmail,
+			},
+			AuthorTime: t,
+			Committer: User{
+				Name:  wantCommitterName,
+				Email: wantCommitterEmail,
+			},
+			CommitTime: t,
+		}
+	}
 	if err := env.g.Init(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -363,11 +387,8 @@ func TestLog(t *testing.T) {
 		t.Fatal(err)
 	}
 	const wantMessage0 = "initial import\n"
-	if err := env.g.Commit(ctx, wantMessage0); err != nil {
-		t.Fatal(err)
-	}
-	rev0, err := env.g.Head(ctx)
-	if err != nil {
+	wantTime0 := time.Date(2018, time.February, 20, 15, 47, 42, 0, time.FixedZone("UTC-8", -8*60*60))
+	if err := env.g.Commit(ctx, wantMessage0, commitOpts(wantTime0)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -378,11 +399,8 @@ func TestLog(t *testing.T) {
 		t.Fatal(err)
 	}
 	const wantMessage1 = "first parent\n"
-	if err := env.g.Commit(ctx, wantMessage1); err != nil {
-		t.Fatal(err)
-	}
-	rev1, err := env.g.Head(ctx)
-	if err != nil {
+	wantTime1 := time.Date(2018, time.February, 21, 15, 49, 58, 0, time.FixedZone("UTC-8", -8*60*60))
+	if err := env.g.Commit(ctx, wantMessage1, commitOpts(wantTime1)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -396,22 +414,19 @@ func TestLog(t *testing.T) {
 		t.Fatal(err)
 	}
 	const wantMessage2 = "second parent\n"
-	if err := env.g.Commit(ctx, wantMessage2); err != nil {
-		t.Fatal(err)
-	}
-	rev2, err := env.g.Head(ctx)
-	if err != nil {
+	wantTime2 := time.Date(2018, time.February, 21, 17, 7, 53, 0, time.FixedZone("UTC-8", -8*60*60))
+	if err := env.g.Commit(ctx, wantMessage2, commitOpts(wantTime2)); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.g.CheckoutBranch(ctx, "master", CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	const wantMessage3 = "i merged\n"
-	if _, err := env.g.Run(ctx, "merge", "-m", wantMessage3, "diverge"); err != nil {
+	if _, err := env.g.Run(ctx, "merge", "--no-commit", "diverge"); err != nil {
 		t.Fatal(err)
 	}
-	rev3, err := env.g.Head(ctx)
-	if err != nil {
+	const wantMessage3 = "i merged\n"
+	wantTime3 := time.Date(2018, time.February, 21, 19, 37, 26, 0, time.FixedZone("UTC-8", -8*60*60))
+	if err := env.g.Commit(ctx, wantMessage3, commitOpts(wantTime3)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -426,40 +441,50 @@ func TestLog(t *testing.T) {
 	if err := log.Close(); err != nil {
 		t.Error("Close:", err)
 	}
-	currUser := User{Name: "User", Email: "foo@example.com"} // from newTestEnv
+	author := User{Name: wantAuthorName, Email: wantAuthorEmail}
+	committer := User{Name: wantCommitterName, Email: wantCommitterEmail}
+	hash0 := Hash{0x3b, 0x1b, 0x50, 0xc3, 0xe4, 0x27, 0xa6, 0x8f, 0x73, 0x3f, 0xe8, 0x7a, 0x74, 0x0f, 0x8f, 0x74, 0x3c, 0xe3, 0x13, 0xb7}
+	hash1 := Hash{0x9d, 0x74, 0xc2, 0x89, 0x91, 0x5c, 0x29, 0xbc, 0xda, 0xc1, 0x74, 0xc4, 0x77, 0x85, 0x8c, 0x51, 0x0c, 0x64, 0x7c, 0xf0}
+	hash2 := Hash{0x87, 0x48, 0x1b, 0x55, 0x8a, 0xb3, 0xa3, 0xe4, 0xe1, 0x02, 0xd3, 0x9a, 0x1f, 0x32, 0x2d, 0xd9, 0xe9, 0xf0, 0x23, 0x42}
+	hash3 := Hash{0x1f, 0x56, 0x59, 0x25, 0xf9, 0x90, 0xfb, 0xb2, 0x9a, 0x20, 0xbc, 0x0b, 0x18, 0xa0, 0xac, 0x19, 0xba, 0x2c, 0x19, 0xc8}
 	want := []*CommitInfo{
 		{
-			Hash:      rev3.Commit,
-			Parents:   []Hash{rev1.Commit, rev2.Commit},
-			Author:    currUser,
-			Committer: currUser,
-			Message:   wantMessage3,
+			Hash:       hash3,
+			Parents:    []Hash{hash1, hash2},
+			Author:     author,
+			Committer:  committer,
+			AuthorTime: wantTime3,
+			CommitTime: wantTime3,
+			Message:    wantMessage3,
 		},
 		{
-			Hash:      rev1.Commit,
-			Parents:   []Hash{rev0.Commit},
-			Author:    currUser,
-			Committer: currUser,
-			Message:   wantMessage1,
+			Hash:       hash2,
+			Parents:    []Hash{hash0},
+			Author:     author,
+			Committer:  committer,
+			AuthorTime: wantTime2,
+			CommitTime: wantTime2,
+			Message:    wantMessage2,
 		},
 		{
-			Hash:      rev2.Commit,
-			Parents:   []Hash{rev0.Commit},
-			Author:    currUser,
-			Committer: currUser,
-			Message:   wantMessage2,
+			Hash:       hash1,
+			Parents:    []Hash{hash0},
+			Author:     author,
+			Committer:  committer,
+			AuthorTime: wantTime1,
+			CommitTime: wantTime1,
+			Message:    wantMessage1,
 		},
 		{
-			Hash:      rev0.Commit,
-			Author:    currUser,
-			Committer: currUser,
-			Message:   wantMessage0,
+			Hash:       hash0,
+			Author:     author,
+			Committer:  committer,
+			AuthorTime: wantTime0,
+			CommitTime: wantTime0,
+			Message:    wantMessage0,
 		},
 	}
-	diff := cmp.Diff(want, got,
-		cmpopts.EquateEmpty(),
-		cmpopts.IgnoreFields(CommitInfo{}, "AuthorTime", "CommitTime"))
-	if diff != "" {
+	if diff := cmp.Diff(want, got, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("log diff (-want +got):\n%s", diff)
 	}
 }

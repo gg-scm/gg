@@ -48,7 +48,7 @@ func TestMergeBase(t *testing.T) {
 	if err := env.g.Add(ctx, []Pathspec{"foo.txt"}, AddOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.Commit(ctx, "commit 1"); err != nil {
+	if err := env.g.Commit(ctx, "commit 1", CommitOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	master, err := env.g.Head(ctx)
@@ -61,7 +61,7 @@ func TestMergeBase(t *testing.T) {
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent+"a\n")); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.CommitAll(ctx, "commit 2"); err != nil {
+	if err := env.g.CommitAll(ctx, "commit 2", CommitOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	a, err := env.g.Head(ctx)
@@ -74,7 +74,7 @@ func TestMergeBase(t *testing.T) {
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent+"b\n")); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.CommitAll(ctx, "commit 3"); err != nil {
+	if err := env.g.CommitAll(ctx, "commit 3", CommitOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	b, err := env.g.Head(ctx)
@@ -84,7 +84,7 @@ func TestMergeBase(t *testing.T) {
 	if _, err := env.g.Run(ctx, "checkout", "--orphan", "orphan"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.CommitAll(ctx, "disconnected commit"); err != nil {
+	if err := env.g.CommitAll(ctx, "disconnected commit", CommitOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	orphan, err := env.g.Head(ctx)

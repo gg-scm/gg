@@ -46,7 +46,7 @@ func TestCheckoutBranch(t *testing.T) {
 	if err := templateGit.Add(ctx, []Pathspec{"file.txt"}, AddOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := templateGit.Commit(ctx, dummyContent); err != nil {
+	if err := templateGit.Commit(ctx, dummyContent, CommitOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	master, err := templateGit.Head(ctx)
@@ -60,7 +60,7 @@ func TestCheckoutBranch(t *testing.T) {
 	if err := env.root.Apply(filesystem.Write("template/file.txt", fooContent)); err != nil {
 		t.Fatal(err)
 	}
-	if err := templateGit.CommitAll(ctx, dummyContent); err != nil {
+	if err := templateGit.CommitAll(ctx, dummyContent, CommitOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	foo, err := templateGit.Head(ctx)

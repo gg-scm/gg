@@ -187,7 +187,7 @@ func TestRemove(t *testing.T) {
 			if err := env.g.Add(ctx, []Pathspec{"."}, AddOptions{}); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.g.Commit(ctx, "initial import"); err != nil {
+			if err := env.g.Commit(ctx, "initial import", CommitOptions{}); err != nil {
 				t.Fatal(err)
 			}
 
