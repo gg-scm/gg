@@ -41,7 +41,7 @@ func (g *Git) Status(ctx context.Context, opts StatusOptions) ([]StatusEntry, er
 	if version, err := g.getVersion(ctx); err == nil && affectedByStatusRenameBug(version) {
 		renameBug = true
 	}
-	args := make([]string, 0, 8+len(opts.Pathspecs))
+	args := []string{g.exe}
 	if opts.DisableRenames {
 		args = append(args, "-c", "status.renames=false")
 	}
@@ -55,7 +55,7 @@ func (g *Git) Status(ctx context.Context, opts StatusOptions) ([]StatusEntry, er
 			args = append(args, string(spec))
 		}
 	}
-	c := g.Command(ctx, args...)
+	c := g.command(ctx, args)
 	stdout := new(strings.Builder)
 	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
 	stderr := new(bytes.Buffer)
@@ -294,8 +294,7 @@ func (g *Git) DiffStatus(ctx context.Context, opts DiffStatusOptions) ([]DiffSta
 			return nil, fmt.Errorf("diff status: %v", err)
 		}
 	}
-	args := make([]string, 0, 6+len(opts.Pathspecs))
-	args = append(args, "diff", "--name-status", "-z")
+	args := []string{g.exe, "diff", "--name-status", "-z"}
 	if opts.DisableRenames {
 		args = append(args, "--no-renames")
 	}

@@ -124,7 +124,7 @@ func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 		return nil, fmt.Errorf("%s: %v", errPrefix, err)
 	}
 
-	out, err := g.run(ctx, errPrefix, []string{"rev-parse", "-q", "--verify", "--revs-only", refspec})
+	out, err := g.run(ctx, errPrefix, []string{g.exe, "rev-parse", "-q", "--verify", "--revs-only", refspec})
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 		return nil, fmt.Errorf("%s: %v", errPrefix, err)
 	}
 
-	out, err = g.run(ctx, errPrefix, []string{"rev-parse", "-q", "--verify", "--revs-only", "--symbolic-full-name", refspec})
+	out, err = g.run(ctx, errPrefix, []string{g.exe, "rev-parse", "-q", "--verify", "--revs-only", "--symbolic-full-name", refspec})
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +158,7 @@ func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 // ListRefs lists all of the refs in the repository.
 func (g *Git) ListRefs(ctx context.Context) (map[Ref]*Rev, error) {
 	const errPrefix = "git show-ref"
-	out, err := g.run(ctx, errPrefix, []string{"show-ref", "--dereference"})
+	out, err := g.run(ctx, errPrefix, []string{g.exe, "show-ref", "--dereference"})
 	if err != nil {
 		return nil, err
 	}

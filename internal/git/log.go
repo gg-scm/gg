@@ -69,6 +69,7 @@ func (g *Git) CommitInfo(ctx context.Context, rev string) (*CommitInfo, error) {
 	}
 
 	out, err := g.run(ctx, errPrefix, []string{
+		g.exe,
 		"log",
 		"--max-count=1",
 		"-z",
@@ -175,7 +176,7 @@ func (g *Git) Log(ctx context.Context, opts LogOptions) (*Log, error) {
 			return nil, fmt.Errorf("%s: %v", errPrefix, err)
 		}
 	}
-	args := []string{"log", "-z", "--pretty=" + commitInfoPrettyFormat}
+	args := []string{g.exe, "log", "-z", "--pretty=" + commitInfoPrettyFormat}
 	if opts.MaxParents > 0 || opts.AllowZeroMaxParents {
 		args = append(args, fmt.Sprintf("--max-parents=%d", opts.MaxParents))
 	}
@@ -190,7 +191,7 @@ func (g *Git) Log(ctx context.Context, opts LogOptions) (*Log, error) {
 	}
 	args = append(args, opts.Revs...)
 	args = append(args, "--")
-	c := g.Command(ctx, args...)
+	c := g.command(ctx, args)
 	pipe, err := c.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", errPrefix, err)

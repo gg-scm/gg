@@ -36,16 +36,24 @@ func TestCommand(t *testing.T) {
 		t.Skip("git not found:", err)
 	}
 	tests := []struct {
-		name string
-		env  []string
+		name    string
+		env     []string
+		wantEnv []string
 	}{
 		{
-			name: "NilEnv",
-			env:  nil,
+			name:    "NilEnv",
+			env:     nil,
+			wantEnv: []string{},
 		},
 		{
-			name: "FooEnv",
-			env:  []string{"FOO=bar"},
+			name:    "EmptyEnv",
+			env:     []string{},
+			wantEnv: []string{},
+		},
+		{
+			name:    "FooEnv",
+			env:     []string{"FOO=bar"},
+			wantEnv: []string{"FOO=bar"},
 		},
 	}
 	for _, test := range tests {
@@ -63,9 +71,9 @@ func TestCommand(t *testing.T) {
 			var hookArgs []string
 			var env []string
 			if test.env != nil {
-				env = append([]string(nil), test.env...)
+				env = append([]string{}, test.env...)
 			}
-			git, err := New(gitPath, dir, &Options{
+			git, err := New(gitPath, dir, Options{
 				LogHook: func(_ context.Context, args []string) {
 					hookArgs = append([]string(nil), args...)
 				},
@@ -88,8 +96,8 @@ func TestCommand(t *testing.T) {
 					t.Errorf("c.Args[1:] = %q; want %q", got, want)
 				}
 			}
-			if !cmp.Equal(c.Env, test.env) {
-				t.Errorf("c.Env = %q; want %q", c.Env, test.env)
+			if !cmp.Equal(c.Env, test.wantEnv) {
+				t.Errorf("c.Env = %#v; want %#v", c.Env, test.wantEnv)
 			}
 			if c.Dir != dir {
 				t.Errorf("c.Dir = %q; want %q", c.Dir, dir)
@@ -146,7 +154,7 @@ func newTestEnv(ctx context.Context, gitPath string) (*testEnv, error) {
 		return nil, err
 	}
 	root := filesystem.Dir(top.FromSlash("scratch"))
-	g, err := New(gitPath, root.String(), &Options{
+	g, err := New(gitPath, root.String(), Options{
 		Env: []string{
 			"GIT_CONFIG_NOSYSTEM=1",
 			"HOME=" + topPath,

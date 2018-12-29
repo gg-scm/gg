@@ -151,7 +151,7 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	}
 	root := topFS.FromSlash("scratch")
 	xdgConfigDir := topFS.FromSlash("xdgconfig")
-	git, err := git.New(gitPath, root, &git.Options{
+	git, err := git.New(gitPath, root, git.Options{
 		Env: append(os.Environ(),
 			"GIT_CONFIG_NOSYSTEM=1",
 			"HOME="+topDir,

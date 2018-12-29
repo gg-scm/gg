@@ -37,7 +37,7 @@ import (
 type Git struct {
 	exe string
 	dir string
-	env []string
+	env []string // cap(env) == len(env), guaranteed by New.
 	log func(context.Context, []string)
 
 	versionMu   sync.Mutex
@@ -52,11 +52,12 @@ type Options struct {
 	LogHook func(ctx context.Context, args []string)
 
 	// Env specifies the environment of the subprocess.
+	// If len(Env) == 0, then no environment variables will be set.
 	Env []string
 }
 
 // New creates a new Git context.
-func New(path string, wd string, opts *Options) (*Git, error) {
+func New(path string, wd string, opts Options) (*Git, error) {
 	if !filepath.IsAbs(path) {
 		return nil, fmt.Errorf("path to git must be absolute (got %q)", path)
 	}
@@ -83,12 +84,9 @@ func New(path string, wd string, opts *Options) (*Git, error) {
 		exe: path,
 		dir: wd,
 	}
-	if opts != nil {
-		g.log = opts.LogHook
-		g.env = append([]string(nil), opts.Env...)
-	} else {
-		g.env = []string{}
-	}
+	g.log = opts.LogHook
+	g.env = make([]string, len(opts.Env))
+	copy(g.env, opts.Env)
 	return g, nil
 }
 
@@ -96,13 +94,27 @@ func New(path string, wd string, opts *Options) (*Git, error) {
 // arguments. The returned command does not obey the given Context's deadline
 // or cancelation.
 func (g *Git) Command(ctx context.Context, args ...string) *exec.Cmd {
-	if g.log != nil {
-		g.log(ctx, args)
-	}
-	c := exec.Command(g.exe, args...)
-	c.Env = append([]string(nil), g.env...)
-	c.Dir = g.dir
+	c := g.command(ctx, append([]string{g.exe}, args...))
+	c.Env = append([]string{}, c.Env...) // Defensive copy.
 	return c
+}
+
+// command returns a new *exec.Cmd for the given arguments, whose first
+// element must be g.exe. g.env will be used directly, so make a copy if
+// the return value is going to be exposed (usually just in Command).
+func (g *Git) command(ctx context.Context, argv []string) *exec.Cmd {
+	if g.log != nil {
+		g.log(ctx, argv[1:])
+	}
+	if len(argv) == 0 || argv[0] != g.exe {
+		panic("argv[0] != g.exe")
+	}
+	return &exec.Cmd{
+		Path: g.exe,
+		Args: argv,
+		Env:  g.env,
+		Dir:  g.dir,
+	}
 }
 
 func (g *Git) getVersion(ctx context.Context) (string, error) {
@@ -127,7 +139,7 @@ func (g *Git) getVersion(ctx context.Context) (string, error) {
 	g.versionMu.Unlock()
 
 	// Run git --version.
-	v, err := g.run(ctx, "git --version", []string{"--version"})
+	v, err := g.run(ctx, "git --version", []string{g.exe, "--version"})
 	g.versionMu.Lock()
 	close(g.versionCond)
 	g.versionCond = nil
@@ -159,15 +171,16 @@ func (g *Git) WithDir(dir string) *Git {
 	return g2
 }
 
-// Run runs the specified Git subcommand, returning its stdout.
+// Run runs Git with the given arguments and returns its stdout.
 func (g *Git) Run(ctx context.Context, args ...string) (string, error) {
-	return g.run(ctx, errorSubject(args), args)
+	return g.run(ctx, errorSubject(args), append([]string{g.exe}, args...))
 }
 
 // run runs the specified Git subcommand, returning its stdout.
+// argv is interpreted the same as in command().
 // It will use the given error prefix instead of one derived from the arguments.
-func (g *Git) run(ctx context.Context, errPrefix string, args []string) (string, error) {
-	c := g.Command(ctx, args...)
+func (g *Git) run(ctx context.Context, errPrefix string, argv []string) (string, error) {
+	c := g.command(ctx, argv)
 	stdout := new(strings.Builder)
 	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
 	stderr := new(bytes.Buffer)

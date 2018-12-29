@@ -136,7 +136,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 			pctx.stderr.Write(buf.Bytes())
 		}
 	}
-	git, err := git.New(*gitPath, pctx.dir, &opts)
+	git, err := git.New(*gitPath, pctx.dir, opts)
 	if err != nil {
 		return fmt.Errorf("gg: %v", err)
 	}

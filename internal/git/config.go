@@ -30,7 +30,7 @@ type Config struct {
 
 // ReadConfig reads all the configuration settings from Git.
 func (g *Git) ReadConfig(ctx context.Context) (*Config, error) {
-	c := g.Command(ctx, "config", "-z", "--list")
+	c := g.command(ctx, []string{g.exe, "config", "-z", "--list"})
 	stdout := new(bytes.Buffer)
 	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
 	stderr := new(bytes.Buffer)
