@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -75,15 +76,17 @@ func (g *Git) CommonDir(ctx context.Context) (string, error) {
 
 // IsMerging reports whether the index has a pending merge commit.
 func (g *Git) IsMerging(ctx context.Context) (bool, error) {
-	c := g.command(ctx, []string{g.exe, "cat-file", "-e", "MERGE_HEAD"})
-	stderr := new(bytes.Buffer)
-	c.Stderr = stderr
-	if err := sigterm.Run(ctx, c); err != nil {
-		// TODO(soon): I don't think that cat-file distinguishes. Tests please!
-		if err, ok := err.(*exec.ExitError); ok && exitStatus(err.ProcessState) == 1 {
-			return false, nil
-		}
-		return false, commandError("check git merge", err, stderr.Bytes())
+	const errPrefix = "check git merge"
+	out, err := g.run(ctx, errPrefix, []string{g.exe, "rev-parse", "--absolute-git-dir"})
+	if err != nil {
+		return false, err
+	}
+	_, err = os.Stat(filepath.Join(strings.TrimSuffix(out, "\n"), "MERGE_HEAD"))
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("%s: %v", errPrefix, err)
 	}
 	return true, nil
 }
@@ -434,6 +437,47 @@ func (g *Git) CommitFiles(ctx context.Context, message string, pathspecs []Paths
 		return commandError("git commit", err, out.Bytes())
 	}
 	return nil
+}
+
+// Merge merges changes from the named revisions into the index and the
+// working copy. It updates MERGE_HEAD but does not create a commit.
+// Merge will never perform a fast-forward merge.
+//
+// In case of conflict, Merge will return an error but still update
+// MERGE_HEAD. To check for this condition, call IsMerging after
+// receiving an error from Merge (verifying that IsMerging returned
+// false before calling Merge).
+func (g *Git) Merge(ctx context.Context, revs []string) error {
+	errPrefix := "git merge"
+	if len(revs) == 0 {
+		return errors.New(errPrefix + ": no revisions")
+	}
+	for _, rev := range revs {
+		if err := validateRev(rev); err != nil {
+			return fmt.Errorf("%s: %v", errPrefix, err)
+		}
+	}
+	if len(revs) == 1 {
+		errPrefix += " " + revs[0]
+	}
+	args := []string{g.exe, "merge", "--quiet", "--no-commit", "--no-ff"}
+	args = append(args, revs...)
+	c := g.command(ctx, args)
+	// Merge conflict output goes to stdout and is useful to include in errors.
+	out := new(bytes.Buffer)
+	c.Stdout = &limitWriter{w: out, n: 1 << 20 /* 1 MiB */}
+	c.Stderr = c.Stdout
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError(errPrefix, err, out.Bytes())
+	}
+	return nil
+}
+
+// AbortMerge aborts the current conflict resolution process and tries
+// to reconstruct pre-merge state.
+func (g *Git) AbortMerge(ctx context.Context) error {
+	_, err := g.run(ctx, "git abort merge", []string{g.exe, "merge", "--abort"})
+	return err
 }
 
 // CheckoutOptions specifies the command-line options for `git checkout`.

@@ -154,7 +154,7 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "merge", "--no-ff", "feature"); err == nil {
+	if err := env.git.Merge(ctx, []string{"feature"}); err == nil {
 		t.Fatal("Merge did not exit; want conflict")
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", "I resolved it!\n")); err != nil {
@@ -214,7 +214,7 @@ func TestAdd_Directory(t *testing.T) {
 	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "merge", "--no-ff", "feature"); err == nil {
+	if err := env.git.Merge(ctx, []string{"feature"}); err == nil {
 		t.Fatal("Merge did not exit; want conflict")
 	}
 	err = env.root.Apply(

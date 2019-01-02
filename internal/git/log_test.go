@@ -290,7 +290,7 @@ func TestCommitInfo(t *testing.T) {
 		if _, err := env.g.Run(ctx, "checkout", "--quiet", "master"); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := env.g.Run(ctx, "merge", "--no-commit", "diverge"); err != nil {
+		if err := env.g.Merge(ctx, []string{"diverge"}); err != nil {
 			t.Fatal(err)
 		}
 		const wantMsg = "Merge branch 'diverge' into branch master\n"
@@ -421,7 +421,7 @@ func TestLog(t *testing.T) {
 	if err := env.g.CheckoutBranch(ctx, "master", CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "merge", "--no-commit", "diverge"); err != nil {
+	if err := env.g.Merge(ctx, []string{"diverge"}); err != nil {
 		t.Fatal(err)
 	}
 	const wantMessage3 = "i merged\n"

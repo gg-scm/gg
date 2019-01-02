@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const mergeSynopsis = "merge another revision into working directory"
@@ -37,11 +36,7 @@ func merge(ctx context.Context, cc *cmdContext, args []string) error {
 		if f.NArg() != 0 || *rev != "" {
 			return usagef("cannot specify revision with --abort")
 		}
-		c := cc.git.Command(ctx, "merge", "--abort")
-		c.Stdin = cc.stdin
-		c.Stdout = cc.stdout
-		c.Stderr = cc.stderr
-		return sigterm.Run(ctx, c)
+		return cc.git.AbortMerge(ctx)
 	}
 	if f.NArg() > 1 || (f.Arg(0) != "" && *rev != "") {
 		return usagef("must pass at most one revision to merge")
@@ -49,13 +44,11 @@ func merge(ctx context.Context, cc *cmdContext, args []string) error {
 	if *rev == "" {
 		*rev = f.Arg(0)
 	}
-	mergeArgs := []string{"merge", "--no-ff", "--no-commit"}
-	if *rev != "" {
-		mergeArgs = append(mergeArgs, "--", *rev)
+	if *rev == "" {
+		*rev = "@{upstream}"
 	}
-	c := cc.git.Command(ctx, mergeArgs...)
-	c.Stdin = cc.stdin
-	c.Stdout = cc.stdout
-	c.Stderr = cc.stderr
-	return sigterm.Run(ctx, c)
+	if err := cc.git.Merge(ctx, []string{*rev}); err != nil {
+		return err
+	}
+	return nil
 }
