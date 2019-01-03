@@ -16,6 +16,7 @@ package git
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
@@ -49,10 +50,10 @@ func TestListTree(t *testing.T) {
 	if _, err := env.g.Run(ctx, "commit", "-m", "commit 1"); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
+	if err := env.root.Apply(filesystem.Write("bar/baz.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "add", "bar.txt"); err != nil {
+	if _, err := env.g.Run(ctx, "add", filepath.Join("bar", "baz.txt")); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := env.g.Run(ctx, "commit", "-m", "commit 2"); err != nil {
@@ -60,6 +61,7 @@ func TestListTree(t *testing.T) {
 	}
 	tests := []struct {
 		name      string
+		dir       string
 		rev       string
 		pathspecs []Pathspec
 		want      map[TopPath]struct{}
@@ -72,7 +74,7 @@ func TestListTree(t *testing.T) {
 		{
 			name: "MultipleFiles",
 			rev:  "HEAD",
-			want: map[TopPath]struct{}{"foo.txt": {}, "bar.txt": {}},
+			want: map[TopPath]struct{}{"foo.txt": {}, "bar/baz.txt": {}},
 		},
 		{
 			name:      "MultipleFilesFiltered",
@@ -80,10 +82,27 @@ func TestListTree(t *testing.T) {
 			pathspecs: []Pathspec{"foo.txt"},
 			want:      map[TopPath]struct{}{"foo.txt": {}},
 		},
+		{
+			name: "AllFromSubdir",
+			dir:  "bar",
+			rev:  "HEAD",
+			want: map[TopPath]struct{}{"foo.txt": {}, "bar/baz.txt": {}},
+		},
+		{
+			name:      "FilterFromSubdir",
+			dir:       "bar",
+			rev:       "HEAD",
+			pathspecs: []Pathspec{LiteralPath(filepath.Join("..", "foo.txt"))},
+			want:      map[TopPath]struct{}{"foo.txt": {}},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := env.g.ListTree(ctx, test.rev, test.pathspecs)
+			g := env.g
+			if test.dir != "" {
+				g = g.WithDir(env.root.FromSlash(test.dir))
+			}
+			got, err := g.ListTree(ctx, test.rev, test.pathspecs)
 			if err != nil {
 				t.Fatal("ListTree error:", err)
 			}

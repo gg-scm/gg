@@ -189,8 +189,6 @@ func (g *Git) ListTree(ctx context.Context, rev string, pathspecs []Pathspec) (m
 	} else {
 		// Use --full-name, as --full-tree interprets the path arguments
 		// relative to the top of the directory.
-		//
-		// TODO(soon): Add tests to catch issues with a pathspec like "../foo.txt".
 		args = append(args, "--full-name", rev, "--")
 		for _, p := range pathspecs {
 			args = append(args, p.String())
