@@ -351,48 +351,6 @@ func (env *testEnv) newCommit(ctx context.Context, dir string) (git.Hash, error)
 	return r.Commit, nil
 }
 
-// dummyRev creates a new revision in a repository that adds the given file.
-// If the branch is not the same as the current branch, that branch is either
-// checked out or created.
-func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file string, msg string) (git.Hash, error) {
-	g = g.WithDir(dir)
-	curr, err := g.Head(ctx)
-	if err != nil {
-		// First commit
-		if branch != "master" {
-			return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
-		}
-	} else if curr.Ref.Branch() != branch {
-		if _, err := g.ParseRev(ctx, "refs/heads/"+branch); err != nil {
-			// Branch doesn't exist, create it.
-			if err := g.NewBranch(ctx, branch, git.BranchOptions{}); err != nil {
-				return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
-			}
-			if _, err := g.Run(ctx, "branch", "--set-upstream-to="+curr.Ref.String(), "--", branch); err != nil {
-				return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
-			}
-		}
-		if err := g.CheckoutBranch(ctx, branch, git.CheckoutOptions{}); err != nil {
-			return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
-		}
-	}
-	err = ioutil.WriteFile(filepath.Join(dir, file), []byte("dummy content"), 0666)
-	if err != nil {
-		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
-	}
-	if err := g.Add(ctx, []git.Pathspec{git.LiteralPath(file)}, git.AddOptions{}); err != nil {
-		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
-	}
-	if err := g.Commit(ctx, msg, git.CommitOptions{}); err != nil {
-		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
-	}
-	curr, err = g.Head(ctx)
-	if err != nil {
-		return git.Hash{}, fmt.Errorf("make dummy rev: %v", err)
-	}
-	return curr.Commit, nil
-}
-
 // prettyCommit annotates the hex-encoded hash with a name if present
 // in the given map.
 func prettyCommit(h git.Hash, names map[git.Hash]string) string {
