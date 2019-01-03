@@ -33,7 +33,7 @@ gg is built around three basic principles:
 {{< latestrelease >}} Binaries are available for Linux and macOS.
 
 You must have a moderately recent copy of Git in your `PATH` to run gg. gg is
-tested against Git 2.7.4 and newer. Older versions may work, but are not
+tested against Git 2.11.0 and newer. Older versions may work, but are not
 supported.
 
 Once you have gg installed in your `PATH`, the [Working Locally][] guide will

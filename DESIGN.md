@@ -47,3 +47,7 @@
     Git commands to ensure that the command-line invocations are correct, and
     then gg integration tests use `internal/git` so that they are using
     well-tested and structured Git invocations.
+
+-   gg is tested on the version of Git in the latest Ubuntu LTS release,
+    the version in the latest stable Debian release, and the latest release
+    version.

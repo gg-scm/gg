@@ -13,10 +13,10 @@ jobs:
   include:
     # Default
     - os: linux
-      env: &stdenv "GIT_VERSION=2.18.0 GO111MODULE=on"
-    # Ubuntu Xenial
+      env: &stdenv "GIT_VERSION=2.20.1 GO111MODULE=on"
+    # Ubuntu Bionic
     - os: linux
-      env: GIT_VERSION=2.7.4 GO111MODULE=on
+      env: GIT_VERSION=2.17.1 GO111MODULE=on
     # Debian Stretch
     - os: linux
       env: GIT_VERSION=2.11.0 GO111MODULE=on
