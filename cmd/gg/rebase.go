@@ -209,16 +209,12 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 // continueRebase adds any modified files to the index and then runs
 // `git rebase --continue`.
 func continueRebase(ctx context.Context, cc *cmdContext) error {
-	addFiles, err := inferCommitFiles(ctx, cc.git)
+	hasChanges, err := verifyNoMissingOrUnmerged(ctx, cc.git)
 	if err != nil {
 		return err
 	}
-	if len(addFiles) > 0 {
-		addPathspec := make([]git.Pathspec, 0, len(addFiles))
-		for _, f := range addFiles {
-			addPathspec = append(addPathspec, f.Pathspec())
-		}
-		if err := cc.git.Add(ctx, addPathspec, git.AddOptions{}); err != nil {
+	if hasChanges {
+		if err := cc.git.StageTracked(ctx); err != nil {
 			return err
 		}
 	}

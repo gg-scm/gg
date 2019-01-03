@@ -17,6 +17,7 @@ package git
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
@@ -86,6 +87,18 @@ func splitConfigEntry(b []byte) (k, v []byte, end int) {
 		return nil, nil, -1
 	}
 	return b[:kEnd], b[kEnd+1 : vEnd], vEnd + 1
+}
+
+// CommentChar returns the value of the `core.commentChar` setting.
+func (cfg *Config) CommentChar() (string, error) {
+	v := cfg.Value("core.commentChar")
+	if v == "" {
+		return "#", nil
+	}
+	if v == "auto" {
+		return "", errors.New("git config: core.commentChar=auto not supported")
+	}
+	return v, nil
 }
 
 // Value returns the string value of the configuration setting with the

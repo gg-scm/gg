@@ -15,13 +15,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
+	"strings"
+	"unicode"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
-	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const commitSynopsis = "commit the specified files or all outstanding changes"
@@ -46,84 +50,118 @@ aliases: ci
 	} else if err != nil {
 		return usagef("%v", err)
 	}
-	// git does not always operate correctly on specified files when
-	// running from a subdirectory (see https://github.com/zombiezen/gg/issues/10).
-	// To work around, we always run commit from the top directory.
-	top, err := cc.git.WorkTree(ctx)
+	if *msg == "" {
+		// Open message in editor.
+		cfg, err := cc.git.ReadConfig(ctx)
+		if err != nil {
+			return err
+		}
+		commentChar, err := cfg.CommentChar()
+		if err != nil {
+			return err
+		}
+		initial, err := commitMessageTemplate(ctx, cc.git, *amend, commentChar)
+		if err != nil {
+			return err
+		}
+		editorOut, err := cc.editor.open(ctx, "COMMIT_MSG", initial)
+		if err != nil {
+			return err
+		}
+		*msg = cleanupMessage(string(editorOut), commentChar)
+	} else {
+		*msg = cleanupMessage(*msg, "")
+	}
+	if f.NArg() > 0 {
+		// Commit or amend specific files.
+		var pathspecs []git.Pathspec
+		for _, arg := range f.Args() {
+			pathspecs = append(pathspecs, git.LiteralPath(arg))
+		}
+		if *amend {
+			return cc.git.AmendFiles(ctx, pathspecs, git.AmendOptions{Message: *msg})
+		}
+		return cc.git.CommitFiles(ctx, *msg, pathspecs, git.CommitOptions{})
+	}
+	// Commit or amend all tracked files.
+	hasChanges, err := verifyNoMissingOrUnmerged(ctx, cc.git)
 	if err != nil {
 		return err
 	}
-	var commitArgs []string
-	commitArgs = append(commitArgs, "commit", "--quiet")
 	if *amend {
-		commitArgs = append(commitArgs, "--amend")
+		return cc.git.AmendAll(ctx, git.AmendOptions{Message: *msg})
 	}
-	if *msg != "" {
-		commitArgs = append(commitArgs, "--message="+*msg)
+	if !hasChanges {
+		return errors.New("nothing changed")
 	}
-	if f.NArg() > 0 {
-		// Commit specific files.
-		files, err := argsToFiles(ctx, cc.git, f.Args())
-		if err != nil {
-			return err
-		}
-		if len(files) == 0 {
-			return errors.New("arguments did not match any modified files")
-		}
-		commitArgs = append(commitArgs, "--")
-		for _, f := range files {
-			commitArgs = append(commitArgs, f.Pathspec().String())
-		}
-	} else if merging, err := cc.git.IsMerging(ctx); err == nil && merging {
-		// Merging: must not provide selective files.
-		commitArgs = append(commitArgs, "-a")
-	} else {
-		// Commit all tracked files without modifying index.
-		commitFiles, err := inferCommitFiles(ctx, cc.git)
-		if err != nil {
-			return err
-		}
-		if len(commitFiles) == 0 && !*amend {
-			return errors.New("nothing changed")
-		}
-		commitArgs = append(commitArgs, "--")
-		for _, f := range commitFiles {
-			commitArgs = append(commitArgs, f.Pathspec().String())
-		}
-	}
-	c := cc.git.WithDir(top).Command(ctx, commitArgs...)
-	c.Stdin = cc.stdin
-	c.Stdout = cc.stdout
-	c.Stderr = cc.stderr
-	return sigterm.Run(ctx, c)
+	return cc.git.CommitAll(ctx, *msg, git.CommitOptions{})
 }
 
-// argsToFiles finds the files named by the arguments.
-func argsToFiles(ctx context.Context, g *git.Git, args []string) ([]git.TopPath, error) {
-	statusArgs := make([]git.Pathspec, len(args))
-	for i := range args {
-		statusArgs[i] = git.LiteralPath(args[i])
+func commitMessageTemplate(ctx context.Context, g *git.Git, amend bool, commentChar string) ([]byte, error) {
+	var initial []byte
+	if amend {
+		// Use previous commit message.
+		info, err := g.CommitInfo(ctx, "HEAD")
+		if err != nil {
+			return nil, fmt.Errorf("gather commit message template: %v", err)
+		}
+		initial = []byte(info.Message)
+	} else if gitDir, err := g.GitDir(ctx); err == nil {
+		// Opportunistically grab the merge message.
+		if mergeMsg, err := ioutil.ReadFile(filepath.Join(gitDir, "MERGE_MSG")); err == nil {
+			initial = mergeMsg
+		}
 	}
-	st, err := g.Status(ctx, git.StatusOptions{
-		Pathspecs: statusArgs,
-	})
-	if err != nil {
-		return nil, err
+	if !bytes.HasSuffix(initial, []byte("\n")) {
+		initial = append(initial, '\n')
 	}
-	var files []git.TopPath
-	for _, ent := range st {
-		files = append(files, ent.Name)
-	}
-	return files, nil
+	initial = append(initial, '\n') // blank line
+	initial = append(initial, commentChar...)
+	initial = append(initial, " Please enter a commit message.\n"...)
+	initial = append(initial, commentChar...)
+	initial = append(initial, " Lines starting with '"...)
+	initial = append(initial, commentChar...)
+	initial = append(initial, "' will be ignored.\n"...)
+	// TODO(soon): Add branch info and files to be committed.
+	return initial, nil
 }
 
-func inferCommitFiles(ctx context.Context, g *git.Git) ([]git.TopPath, error) {
+func cleanupMessage(s string, commentPrefix string) string {
+	lines := strings.SplitAfter(s, "\n")
+
+	// Filter out comment lines and strip trailing whitespace.
+	n := len(lines)
+	lines = lines[:0]
+	for _, line := range lines[:n] {
+		if commentPrefix != "" && strings.HasPrefix(line, commentPrefix) {
+			continue
+		}
+		lines = append(lines, strings.TrimRightFunc(line, unicode.IsSpace))
+	}
+
+	// Remove trailing blank lines.
+	for i := len(lines) - 1; i >= 0; i-- {
+		if lines[i] != "" {
+			break
+		}
+		lines = lines[:i]
+	}
+
+	// Join lines into single string.
+	sb := new(strings.Builder)
+	for _, line := range lines {
+		sb.WriteString(line)
+		sb.WriteByte('\n')
+	}
+	return sb.String()
+}
+
+func verifyNoMissingOrUnmerged(ctx context.Context, g *git.Git) (hasChanges bool, _ error) {
 	missing, missingStaged, unmerged := 0, 0, 0
 	st, err := g.Status(ctx, git.StatusOptions{})
 	if err != nil {
-		return nil, err
+		return false, err
 	}
-	var files []git.TopPath
 	for _, ent := range st {
 		switch {
 		case ent.Code.IsMissing():
@@ -131,41 +169,37 @@ func inferCommitFiles(ctx context.Context, g *git.Git) ([]git.TopPath, error) {
 			if ent.Code[0] != ' ' {
 				missingStaged++
 			}
-		case ent.Code.IsAdded() || ent.Code.IsModified() || ent.Code.IsRemoved() || ent.Code.IsCopied():
-			// Prepend pathspec options to interpret relative to top of
-			// repository and ignore globs. See gitglossary(7) for more details.
-			files = append(files, ent.Name)
-		case ent.Code.IsRenamed():
-			files = append(files, ent.Name, ent.From)
+		case ent.Code.IsAdded() || ent.Code.IsModified() || ent.Code.IsRemoved() || ent.Code.IsCopied() || ent.Code.IsRenamed():
+			hasChanges = true
 		case ent.Code.IsUntracked():
 			// Skip
 		case ent.Code.IsUnmerged():
 			unmerged++
 		default:
-			return nil, fmt.Errorf("unhandled status: %v", ent)
+			return false, fmt.Errorf("unhandled status: %v", ent)
 		}
 	}
 	if unmerged == 1 {
-		return nil, errors.New("1 unmerged file; see 'gg status'")
+		return false, errors.New("1 unmerged file; see 'gg status'")
 	}
 	if unmerged > 1 {
-		return nil, fmt.Errorf("%d unmerged files; see 'gg status'", unmerged)
+		return false, fmt.Errorf("%d unmerged files; see 'gg status'", unmerged)
 	}
-	if len(files) == 0 {
+	if !hasChanges {
 		switch missing {
 		case 0:
-			return nil, nil
+			return false, nil
 		case 1:
-			return nil, errors.New("nothing changed (1 missing file; see 'gg status')")
+			return false, errors.New("nothing changed (1 missing file; see 'gg status')")
 		default:
-			return nil, fmt.Errorf("nothing changed (%d missing files; see 'gg status')", missing)
+			return false, fmt.Errorf("nothing changed (%d missing files; see 'gg status')", missing)
 		}
 	}
 	if missingStaged == 1 {
-		return nil, errors.New("git has staged changes for 1 missing file; see 'gg status'")
+		return true, errors.New("git has staged changes for 1 missing file; see 'gg status'")
 	}
 	if missingStaged > 1 {
-		return nil, fmt.Errorf("git has staged changes for %d missing file; see 'gg status'", missingStaged)
+		return true, fmt.Errorf("git has staged changes for %d missing files; see 'gg status'", missingStaged)
 	}
-	return files, nil
+	return true, nil
 }

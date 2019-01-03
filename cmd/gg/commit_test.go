@@ -705,6 +705,48 @@ func TestCommit_Merge(t *testing.T) {
 	}
 }
 
+func TestCleanupMessage(t *testing.T) {
+	tests := []struct {
+		in          string
+		commentChar string
+		want        string
+	}{
+		{"", "#", ""},
+		{"\n\n", "#", ""},
+		{"\r\n\r\n", "#", ""},
+		{"\n\n# This is a commit message.\n", "#", ""},
+		{"Hello, World!", "#", "Hello, World!\n"},
+		{"Hello, World!\n", "#", "Hello, World!\n"},
+		{"Hello, World!\r\n", "#", "Hello, World!\n"},
+		{"Hello, World! \t \r\n", "#", "Hello, World!\n"},
+		{"Hello, World!\n\n", "#", "Hello, World!\n"},
+		{"Hello, World!\nNext", "#", "Hello, World!\nNext\n"},
+		{"Hello, World!\nNext\n", "#", "Hello, World!\nNext\n"},
+		{"Hello, World!\n\nNext\n", "#", "Hello, World!\n\nNext\n"},
+		{"Hello, World!\n   \nNext\n", "#", "Hello, World!\n\nNext\n"},
+		{"  Indent", "#", "  Indent\n"},
+		{"# This is a comment.", "#", ""},
+		{"# This is a comment.\n", "#", ""},
+		{"# This is a comment.\n\n", "#", ""},
+		{"! This is a comment.", "!", ""},
+		{"! This is a comment.\n", "!", ""},
+		{"! This is a comment.\n\n", "!", ""},
+		{"# This is not a comment.", "!", "# This is not a comment.\n"},
+		{"# This is not a comment.\n", "!", "# This is not a comment.\n"},
+		{"# This is not a comment.\n\n", "!", "# This is not a comment.\n"},
+		{"# This is not a comment.", "", "# This is not a comment.\n"},
+		{"# This is not a comment.\n", "", "# This is not a comment.\n"},
+		{"# This is not a comment.\n\n", "", "# This is not a comment.\n"},
+		{" # Not a comment\n", "#", " # Not a comment\n"},
+		{"Foo\n\n# This is a commit message.\n", "#", "Foo\n"},
+	}
+	for _, test := range tests {
+		if got := cleanupMessage(test.in, test.commentChar); got != test.want {
+			t.Errorf("cleanupMessage(%q, %q) = %q; want %q", test.in, test.commentChar, got, test.want)
+		}
+	}
+}
+
 func catBlob(ctx context.Context, g *git.Git, rev string, path git.TopPath) ([]byte, error) {
 	r, err := g.Cat(ctx, rev, path)
 	if err != nil {

@@ -63,9 +63,8 @@ func (g *Git) prefix(ctx context.Context) (string, error) {
 	return prefix, nil
 }
 
-// GitDir determines the absolute path of the Git directory, possibly
-// shared among different working trees, given the configuration. Any
-// symlinks are resolved.
+// GitDir determines the absolute path of the Git directory for this
+// working tree given the configuration. Any symlinks are resolved.
 func (g *Git) GitDir(ctx context.Context) (string, error) {
 	// TODO(someday): Use --absolute-git-dir when minimum supported
 	// Git version >= 2.13.2.
@@ -358,6 +357,14 @@ func (g *Git) Add(ctx context.Context, pathspecs []Pathspec, opts AddOptions) er
 		return commandError("git add", err, buf.Bytes())
 	}
 	return nil
+}
+
+// StageTracked updates the index to match the tracked files in the
+// working copy.
+func (g *Git) StageTracked(ctx context.Context) error {
+	// TODO(soon): Add tests.
+	_, err := g.run(ctx, "git add -A", []string{g.exe, "add", "--all"})
+	return err
 }
 
 // RemoveOptions specifies the command-line options for `git add`.
