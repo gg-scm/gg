@@ -48,6 +48,21 @@ func (g *Git) WorkTree(ctx context.Context) (string, error) {
 	return evaled, nil
 }
 
+// prefix returns the path of the working directory relative to the root
+// of the working tree.
+func (g *Git) prefix(ctx context.Context) (string, error) {
+	const errPrefix = "prefix"
+	prefix, err := g.run(ctx, errPrefix, []string{g.exe, "rev-parse", "--show-prefix"})
+	if err != nil {
+		return "", err
+	}
+	prefix, err = oneLine(prefix)
+	if err != nil {
+		return "", fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	return prefix, nil
+}
+
 // GitDir determines the absolute path of the Git directory, possibly
 // shared among different working trees, given the configuration. Any
 // symlinks are resolved.
@@ -451,6 +466,33 @@ func (g *Git) CommitAll(ctx context.Context, message string, opts CommitOptions)
 // to the content in the working copy. The message will be used exactly
 // as given.
 func (g *Git) CommitFiles(ctx context.Context, message string, pathspecs []Pathspec, opts CommitOptions) error {
+	const errPrefix = "git commit"
+	if len(pathspecs) > 0 {
+		prefix, err := g.prefix(ctx)
+		if err != nil {
+			return fmt.Errorf("%s: %v", errPrefix, err)
+		}
+		if prefix != "" {
+			// Always run from top of worktree to avoid Git bug detailed in
+			// https://github.com/zombiezen/gg/issues/10
+			workTree, err := g.WorkTree(ctx)
+			if err != nil {
+				return fmt.Errorf("%s: %v", errPrefix, err)
+			}
+			g = g.WithDir(workTree)
+
+			// Rewrite pathspecs as needed.
+			pathspecs = append([]Pathspec(nil), pathspecs...)
+			for i := range pathspecs {
+				magic, pat := pathspecs[i].SplitMagic()
+				if magic.Top || filepath.IsAbs(pat) {
+					// Top-level or absolute paths need no rewrite.
+					continue
+				}
+				pathspecs[i] = JoinPathspecMagic(magic, filepath.Join(prefix, pat))
+			}
+		}
+	}
 	args := []string{g.exe, "commit", "--quiet", "--file=-", "--cleanup=verbatim", "--only", "--allow-empty", "--"}
 	for _, spec := range pathspecs {
 		args = append(args, spec.String())
@@ -462,7 +504,7 @@ func (g *Git) CommitFiles(ctx context.Context, message string, pathspecs []Paths
 	c.Stdout = &limitWriter{w: out, n: 4096}
 	c.Stderr = c.Stdout
 	if err := sigterm.Run(ctx, c); err != nil {
-		return commandError("git commit", err, out.Bytes())
+		return commandError(errPrefix, err, out.Bytes())
 	}
 	return nil
 }
@@ -606,6 +648,32 @@ func (g *Git) AmendFiles(ctx context.Context, pathspecs []Pathspec, opts AmendOp
 			return fmt.Errorf("%s: %v", errPrefix, err)
 		}
 		msg = info.Message
+	}
+	if len(pathspecs) > 0 {
+		prefix, err := g.prefix(ctx)
+		if err != nil {
+			return fmt.Errorf("%s: %v", errPrefix, err)
+		}
+		if prefix != "" {
+			// Always run from top of worktree to avoid Git bug detailed in
+			// https://github.com/zombiezen/gg/issues/10
+			workTree, err := g.WorkTree(ctx)
+			if err != nil {
+				return fmt.Errorf("%s: %v", errPrefix, err)
+			}
+			g = g.WithDir(workTree)
+
+			// Rewrite pathspecs as needed.
+			pathspecs = append([]Pathspec(nil), pathspecs...)
+			for i := range pathspecs {
+				magic, pat := pathspecs[i].SplitMagic()
+				if magic.Top || filepath.IsAbs(pat) {
+					// Top-level or absolute paths need no rewrite.
+					continue
+				}
+				pathspecs[i] = JoinPathspecMagic(magic, filepath.Join(prefix, pat))
+			}
+		}
 	}
 	args := opts.addAuthorToArgs([]string{
 		g.exe,

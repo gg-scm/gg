@@ -38,6 +38,15 @@ func isGlobSafe(s string) bool {
 	return !strings.ContainsAny(s, "*?[")
 }
 
+// JoinPathspecMagic combines a set of magic options and a pattern into
+// a pathspec.
+func JoinPathspecMagic(magic PathspecMagic, pattern string) Pathspec {
+	if magic.IsZero() && !strings.HasPrefix(pattern, ":") {
+		return Pathspec(pattern)
+	}
+	return Pathspec(magic.String() + pattern)
+}
+
 // String returns the pathspec as a string.
 func (p Pathspec) String() string {
 	return string(p)
@@ -120,6 +129,11 @@ type PathspecMagic struct {
 	Glob                  bool
 	AttributeRequirements []string
 	Exclude               bool
+}
+
+// IsZero reports whether all the fields are unset.
+func (magic PathspecMagic) IsZero() bool {
+	return !magic.Top && !magic.Literal && !magic.CaseInsensitive && len(magic.AttributeRequirements) == 0 && !magic.Exclude
 }
 
 // String returns the magic in long form like ":(top,literal)".

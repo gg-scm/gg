@@ -17,6 +17,7 @@ package git
 import (
 	"context"
 	"io"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -391,6 +392,83 @@ func TestCommitFiles(t *testing.T) {
 			t.Error(err)
 		} else if got != newContent {
 			t.Errorf("unstaged.txt @ HEAD = %q; want %q", got, newContent)
+		}
+	})
+	t.Run("FromSubdir", func(t *testing.T) {
+		// Transparently handle the Git bug described in
+		// https://github.com/zombiezen/gg/issues/10
+
+		env, err := newTestEnv(ctx, gitPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+
+		// Create the parent commit.
+		if err := env.g.Init(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+		err = env.root.Apply(
+			filesystem.Write("foo.txt", dummyContent),
+			filesystem.Write("bar/baz.txt", dummyContent),
+			// Add an untouched file to keep directory non-empty.
+			filesystem.Write("bar/anchor.txt", dummyContent),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		addPathspecs := []Pathspec{
+			"foo.txt",
+			Pathspec(filepath.Join("bar", "baz.txt")),
+			Pathspec(filepath.Join("bar", "anchor.txt")),
+		}
+		if err := env.g.Add(ctx, addPathspecs, AddOptions{}); err != nil {
+			t.Fatal(err)
+		}
+		// Use command-line directly, so as not to depend on system-under-test.
+		if _, err := env.g.Run(ctx, "commit", "-m", "initial import"); err != nil {
+			t.Fatal(err)
+		}
+		r1, err := env.g.Head(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Remove foo.txt and bar/baz.txt.
+		rmPathspecs := []Pathspec{
+			"foo.txt",
+			Pathspec(filepath.Join("bar", "baz.txt")),
+		}
+		if err := env.g.Remove(ctx, rmPathspecs, RemoveOptions{}); err != nil {
+			t.Fatal(err)
+		}
+
+		// Call g.CommitFiles from bar.
+		commitPathspecs := []Pathspec{
+			Pathspec(filepath.Join("..", "foo.txt")),
+			"baz.txt",
+		}
+		err = env.g.WithDir("bar").CommitFiles(ctx, "my message", commitPathspecs, CommitOptions{})
+		if err != nil {
+			t.Error("CommitFiles:", err)
+		}
+
+		got, err := env.g.CommitInfo(ctx, "HEAD")
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Verify that HEAD was moved to a new commit.
+		if got.Hash == r1.Commit {
+			t.Error("new HEAD = initial import")
+		}
+		// Verify file contents of commit.
+		wantTree := map[TopPath]struct{}{
+			"bar/anchor.txt": {},
+		}
+		if tree, err := env.g.ListTree(ctx, "HEAD", nil); err != nil {
+			t.Error(err)
+		} else if diff := cmp.Diff(wantTree, tree); diff != "" {
+			t.Errorf("ListTree(ctx, \"HEAD\", nil) diff (-want +got):\n%s", diff)
 		}
 	})
 }
