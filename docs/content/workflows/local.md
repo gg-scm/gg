@@ -22,7 +22,7 @@ cd foo
 
 This will create a new folder `foo` with a `.git` directory inside it.
 
-[`gg init`]: {{< relref "commands/init.md" >}}
+[`gg init`]: {{< relref "/commands/init.md" >}}
 
 ## Adding Files
 
@@ -51,8 +51,8 @@ summary of what you did in that commit. A quick internet search for "good commit
 messages" includes advice on how to write a good commit message and why this is
 important, especially when collaborating with others.
 
-[`gg add`]: {{< relref "commands/add.md" >}}
-[`gg commit`]: {{< relref "commands/commit.md" >}}
+[`gg add`]: {{< relref "/commands/add.md" >}}
+[`gg commit`]: {{< relref "/commands/commit.md" >}}
 [Git commit]: https://git-scm.com/docs/gitglossary#def_commit
 
 ## Modifying Files
@@ -99,8 +99,8 @@ index-less model to reduce the number of steps in common workflows. To commit
 only certain files, just pass them as arguments to `gg commit`. For more
 advanced partial commits, use `git add` and `git commit` directly.
 
-[`gg diff`]: {{< relref "commands/diff.md" >}}
-[`gg status`]: {{< relref "commands/status.md" >}}
+[`gg diff`]: {{< relref "/commands/diff.md" >}}
+[`gg status`]: {{< relref "/commands/status.md" >}}
 
 ## Removing Files
 
@@ -115,7 +115,7 @@ gg commit -m "Kept my thoughts to myself"
 Don't worry, the file is still in your repository history. Let's see how to use
 gg to go back in time.
 
-[`gg rm`]: {{< relref "commands/remove.md" >}}
+[`gg rm`]: {{< relref "/commands/remove.md" >}}
 
 ## Examining History
 
@@ -174,8 +174,8 @@ gg commit -m "Brought back my thoughts"
 ```
 
 [branch]: https://help.github.com/articles/about-branches/
-[`gg log`]: {{< relref "commands/log.md" >}}
-[`gg update`]: {{< relref "commands/update.md" >}}
+[`gg log`]: {{< relref "/commands/log.md" >}}
+[`gg update`]: {{< relref "/commands/update.md" >}}
 [hash]: https://git-scm.com/docs/gitglossary#def_hash
 
 ## Next Steps

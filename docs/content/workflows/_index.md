@@ -13,4 +13,4 @@ the project you are contributing to accepts changes.
 Note: gg is a command-line program, so these guides assume you know how to use
 the command line for your platform.
 
-[Working Locally]: {{< relref "workflows/local.md" >}}
+[Working Locally]: {{< relref "/workflows/local.md" >}}

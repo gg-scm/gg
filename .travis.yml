@@ -26,15 +26,13 @@ jobs:
     - stage: docs
       os: linux
       env: ""
-      install: "curl -fsSL https://github.com/gohugoio/hugo/releases/download/v0.42.1/hugo_0.42.1_Linux-64bit.tar.gz | tar zxf - -C \"$HOME\" hugo"
-      script:
-        - "misc/add-hugo-analytics.bash docs/config.toml UA-2285538-10"
-        - "\"$HOME/hugo\" -s docs -d out"
+      install: "curl -fsSL https://github.com/gohugoio/hugo/releases/download/v0.53/hugo_0.53_Linux-64bit.tar.gz | tar zxf - -C \"$HOME\" hugo"
+      script: "HUGO_GOOGLEANALYTICS=UA-2285538-10 \"$HOME/hugo\" -s docs"
       deploy:
         provider: pages
         fqdn: gg-scm.io
         skip-cleanup: true
-        local-dir: docs/out
+        local-dir: docs/public
         github-token: $GITHUB_TOKEN
         keep-history: true
         on:
@@ -69,6 +67,6 @@ stages:
   - test
   - name: doc
     # Include pull requests, but will not run deploy.
-    if: branch = master
+    if: branch = master AND type = push
   - name: release
     if: tag IS present
