@@ -25,7 +25,17 @@ type Pathspec string
 
 // LiteralPath escapes a string from any special characters.
 func LiteralPath(p string) Pathspec {
-	return ":(literal)" + Pathspec(p)
+	if !isGlobSafe(p) {
+		return ":(literal)" + Pathspec(p)
+	}
+	if strings.HasPrefix(p, ":") {
+		return Pathspec(":()" + p)
+	}
+	return Pathspec(p)
+}
+
+func isGlobSafe(s string) bool {
+	return !strings.ContainsAny(s, "*?[")
 }
 
 // String returns the pathspec as a string.
@@ -139,7 +149,10 @@ type TopPath string
 
 // Pathspec converts a top-level path to a pathspec.
 func (tp TopPath) Pathspec() Pathspec {
-	return ":(top,literal)" + Pathspec(tp)
+	if !isGlobSafe(string(tp)) {
+		return ":(top,literal)" + Pathspec(tp)
+	}
+	return ":(top)" + Pathspec(tp)
 }
 
 // String returns the path as a string.

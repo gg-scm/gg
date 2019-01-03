@@ -21,6 +21,56 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
+func TestLiteralPath(t *testing.T) {
+	tests := []struct {
+		in   string
+		want Pathspec
+	}{
+		{"", ""},
+		{":", ":():"}, // the "no pathspec" pattern
+		{":foo.txt", ":():foo.txt"},
+		{":*.txt", ":(literal):*.txt"},
+		{"foo.txt", "foo.txt"},
+		{"foo/bar.txt", "foo/bar.txt"},
+		{"foo\\bar.txt", "foo\\bar.txt"},
+		{"*.txt", ":(literal)*.txt"},
+		{"foo?.txt", ":(literal)foo?.txt"},
+		{"foo[0-9].txt", ":(literal)foo[0-9].txt"},
+		{"foo*/bar.txt", ":(literal)foo*/bar.txt"},
+	}
+	for _, test := range tests {
+		got := LiteralPath(test.in)
+		if got != test.want {
+			t.Errorf("LiteralPath(%q) = Pathspec(%q); want Pathspec(%q)", test.in, got, test.want)
+		}
+	}
+}
+
+func TestTopPathPathspec(t *testing.T) {
+	tests := []struct {
+		in   TopPath
+		want Pathspec
+	}{
+		{"", ":(top)"},
+		{":", ":(top):"}, // the "no pathspec" pattern
+		{":foo.txt", ":(top):foo.txt"},
+		{":*.txt", ":(top,literal):*.txt"},
+		{"foo.txt", ":(top)foo.txt"},
+		{"foo/bar.txt", ":(top)foo/bar.txt"},
+		{"foo\\bar.txt", ":(top)foo\\bar.txt"},
+		{"*.txt", ":(top,literal)*.txt"},
+		{"foo?.txt", ":(top,literal)foo?.txt"},
+		{"foo[0-9].txt", ":(top,literal)foo[0-9].txt"},
+		{"foo*/bar.txt", ":(top,literal)foo*/bar.txt"},
+	}
+	for _, test := range tests {
+		got := test.in.Pathspec()
+		if got != test.want {
+			t.Errorf("TopPath(%q).Pathspec() = Pathspec(%q); want Pathspec(%q)", test.in, got, test.want)
+		}
+	}
+}
+
 func TestPathspecSplitMagic(t *testing.T) {
 	tests := []struct {
 		p     Pathspec
