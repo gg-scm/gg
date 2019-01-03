@@ -48,6 +48,34 @@ func (g *Git) WorkTree(ctx context.Context) (string, error) {
 	return evaled, nil
 }
 
+// GitDir determines the absolute path of the Git directory, possibly
+// shared among different working trees, given the configuration. Any
+// symlinks are resolved.
+func (g *Git) GitDir(ctx context.Context) (string, error) {
+	// TODO(someday): Use --absolute-git-dir when minimum supported
+	// Git version >= 2.13.2.
+	const errPrefix = "find .git directory"
+	out, err := g.run(ctx, errPrefix, []string{g.exe, "rev-parse", "--git-common-dir"})
+	if err != nil {
+		return "", err
+	}
+	line, err := oneLine(out)
+	if err != nil {
+		return "", fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	var path string
+	if filepath.IsAbs(line) {
+		path = filepath.Clean(line)
+	} else {
+		path = filepath.Join(g.dir, line)
+	}
+	evaled, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	return evaled, nil
+}
+
 // CommonDir determines the absolute path of the Git directory, possibly
 // shared among different working trees, given the configuration. Any
 // symlinks are resolved.
@@ -77,11 +105,11 @@ func (g *Git) CommonDir(ctx context.Context) (string, error) {
 // IsMerging reports whether the index has a pending merge commit.
 func (g *Git) IsMerging(ctx context.Context) (bool, error) {
 	const errPrefix = "check git merge"
-	out, err := g.run(ctx, errPrefix, []string{g.exe, "rev-parse", "--absolute-git-dir"})
+	gitDir, err := g.GitDir(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("%s: %v", errPrefix, err)
 	}
-	_, err = os.Stat(filepath.Join(strings.TrimSuffix(out, "\n"), "MERGE_HEAD"))
+	_, err = os.Stat(filepath.Join(gitDir, "MERGE_HEAD"))
 	if os.IsNotExist(err) {
 		return false, nil
 	}
