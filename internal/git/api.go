@@ -467,6 +467,173 @@ func (g *Git) CommitFiles(ctx context.Context, message string, pathspecs []Paths
 	return nil
 }
 
+// AmendOptions overrides the previous commit's fields.
+type AmendOptions struct {
+	// If Message is not empty, it is the commit message that will be used.
+	// Otherwise, the previous commit's message will be used.
+	Message string
+	// If Author is filled out, then it will be used as the commit author.
+	// If Author is the zero value, then the previous commit's author will
+	// be used. If Author is partially filled out, the Amend methods will
+	// return an error.
+	Author User
+	// If AuthorTime is not zero, then it will be used as the author time.
+	// Otherwise, the previous commit's author time will be used.
+	AuthorTime time.Time
+
+	// Committer fields set to non-zero values will override the default
+	// committer information from Git configuration.
+	Committer User
+	// If CommitTime is not zero, then it will be used as the commit time
+	// instead of now.
+	CommitTime time.Time
+}
+
+func (opts AmendOptions) validate() error {
+	if (opts.Author.Name != "") != (opts.Author.Email != "") {
+		return errors.New("author partially filled")
+	}
+	return nil
+}
+
+func (opts AmendOptions) addAuthorToArgs(args []string) []string {
+	if opts.Author != (User{}) {
+		args = append(args, "--author="+opts.Author.String())
+	}
+	if !opts.AuthorTime.IsZero() {
+		args = append(args, "--date="+opts.AuthorTime.Format(time.RFC3339))
+	}
+	return args
+}
+
+func (opts AmendOptions) addToEnv(env []string) []string {
+	if opts.Committer.Name != "" {
+		env = append(env, "GIT_COMMITTER_NAME="+opts.Committer.Name)
+	}
+	if opts.Committer.Email != "" {
+		env = append(env, "GIT_COMMITTER_EMAIL="+opts.Committer.Email)
+	}
+	if !opts.CommitTime.IsZero() {
+		env = append(env, "GIT_COMMITTER_DATE="+opts.CommitTime.Format(time.RFC3339))
+	}
+	return env
+}
+
+// Amend replaces the tip of the current branch with a new commit with
+// the content of the index.
+func (g *Git) Amend(ctx context.Context, opts AmendOptions) error {
+	const errPrefix = "git commit --amend"
+	if err := opts.validate(); err != nil {
+		return fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	msg := opts.Message
+	if msg == "" {
+		info, err := g.CommitInfo(ctx, "HEAD")
+		if err != nil {
+			return fmt.Errorf("%s: %v", errPrefix, err)
+		}
+		msg = info.Message
+	}
+	c := g.command(ctx, opts.addAuthorToArgs([]string{
+		g.exe,
+		"commit",
+		"--amend",
+		"--quiet",
+		"--file=-",
+		"--cleanup=verbatim",
+	}))
+	c.Env = opts.addToEnv(c.Env) // c.Env == g.env; len(g.env) == cap(g.env)
+	c.Stdin = strings.NewReader(msg)
+	out := new(bytes.Buffer)
+	c.Stdout = &limitWriter{w: out, n: 4096}
+	c.Stderr = c.Stdout
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError(errPrefix, err, out.Bytes())
+	}
+	return nil
+}
+
+// AmendAll replaces the tip of the current branch with a new commit
+// with the content of the working copy for all tracked files.
+func (g *Git) AmendAll(ctx context.Context, opts AmendOptions) error {
+	const errPrefix = "git commit --amend --all"
+	if err := opts.validate(); err != nil {
+		return fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	msg := opts.Message
+	if msg == "" {
+		info, err := g.CommitInfo(ctx, "HEAD")
+		if err != nil {
+			return fmt.Errorf("%s: %v", errPrefix, err)
+		}
+		msg = info.Message
+	}
+	c := g.command(ctx, opts.addAuthorToArgs([]string{
+		g.exe,
+		"commit",
+		"--amend",
+		"--all",
+		"--quiet",
+		"--file=-",
+		"--cleanup=verbatim",
+	}))
+	c.Env = opts.addToEnv(c.Env) // c.Env == g.env; len(g.env) == cap(g.env)
+	c.Stdin = strings.NewReader(msg)
+	out := new(bytes.Buffer)
+	c.Stdout = &limitWriter{w: out, n: 4096}
+	c.Stderr = c.Stdout
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError(errPrefix, err, out.Bytes())
+	}
+	return nil
+}
+
+// AmendFiles replaces the tip of the current branch with a new commit
+// with the content of the named files from the working copy. Files not
+// named will get their content from the previous commit.
+//
+// Notably, AmendFiles with no paths will not change the file content of
+// the commit, just the options specified.
+func (g *Git) AmendFiles(ctx context.Context, pathspecs []Pathspec, opts AmendOptions) error {
+	const errPrefix = "git commit --amend --only"
+	if err := opts.validate(); err != nil {
+		return fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	msg := opts.Message
+	if msg == "" {
+		info, err := g.CommitInfo(ctx, "HEAD")
+		if err != nil {
+			return fmt.Errorf("%s: %v", errPrefix, err)
+		}
+		msg = info.Message
+	}
+	args := opts.addAuthorToArgs([]string{
+		g.exe,
+		"commit",
+		"--amend",
+		"--only",
+		"--quiet",
+		"--file=-",
+		"--cleanup=verbatim",
+	})
+	if len(pathspecs) > 0 {
+		args = append(args, "--")
+		for _, p := range pathspecs {
+			args = append(args, p.String())
+		}
+	}
+	c := g.command(ctx, args)
+	c.Env = opts.addToEnv(c.Env) // c.Env == g.env; len(g.env) == cap(g.env)
+	c.Stdin = strings.NewReader(msg)
+	out := new(bytes.Buffer)
+	c.Stdout = &limitWriter{w: out, n: 4096}
+	c.Stderr = c.Stdout
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError(errPrefix, err, out.Bytes())
+	}
+	return nil
+}
+
 // Merge merges changes from the named revisions into the index and the
 // working copy. It updates MERGE_HEAD but does not create a commit.
 // Merge will never perform a fast-forward merge.
