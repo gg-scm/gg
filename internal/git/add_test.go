@@ -283,3 +283,87 @@ func TestAdd(t *testing.T) {
 		})
 	}
 }
+
+func TestStageTracked(t *testing.T) {
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, gitPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.g.Init(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the parent commit.
+	const (
+		addContent  = "And now...\n"
+		modifiedOld = "The Larch\n"
+		modifiedNew = "The Chestnut\n"
+		// deletedContent must be different from addContent to avoid rename
+		// detection.
+		deletedContent = "Something completely different\n"
+	)
+	err = env.root.Apply(
+		filesystem.Write("modified.txt", modifiedOld),
+		filesystem.Write("deleted.txt", dummyContent),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Add(ctx, []Pathspec{"modified.txt", "deleted.txt"}, AddOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Commit(ctx, "initial import", CommitOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Arrange working copy changes.
+	err = env.root.Apply(
+		filesystem.Write("modified.txt", modifiedNew),
+		filesystem.Write("added.txt", addContent),
+		filesystem.Remove("deleted.txt"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.g.Add(ctx, []Pathspec{"added.txt"}, AddOptions{IntentToAdd: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call g.StageTracked.
+	if err := env.g.StageTracked(ctx); err != nil {
+		t.Error("StageTracked:", err)
+	}
+
+	got, err := env.g.Status(ctx, StatusOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []StatusEntry{
+		{
+			Code: StatusCode{'A', ' '},
+			Name: "added.txt",
+		},
+		{
+			Code: StatusCode{'M', ' '},
+			Name: "modified.txt",
+		},
+		{
+			Code: StatusCode{'D', ' '},
+			Name: "deleted.txt",
+		},
+	}
+	diff := cmp.Diff(want, got,
+		cmp.Transformer("String", StatusCode.String),
+		cmpopts.SortSlices(func(a, b StatusEntry) bool {
+			return a.Name < b.Name
+		}))
+	if diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
+	}
+}

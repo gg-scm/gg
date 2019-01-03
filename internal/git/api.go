@@ -360,7 +360,6 @@ func (g *Git) Add(ctx context.Context, pathspecs []Pathspec, opts AddOptions) er
 // StageTracked updates the index to match the tracked files in the
 // working copy.
 func (g *Git) StageTracked(ctx context.Context) error {
-	// TODO(soon): Add tests.
 	_, err := g.run(ctx, "git add -A", []string{g.exe, "add", "--all"})
 	return err
 }
