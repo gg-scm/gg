@@ -7,7 +7,7 @@ install:
   - "go get github.com/mattn/goveralls"
   - "go mod download"
 script:
-  - "PATH=\"$HOME/git/bin-wrappers:$PATH\" go test -v -covermode=count -coverprofile=coverage.out ./..."
+  - "PATH=\"$HOME/git/bin-wrappers:$PATH\" go test -v -covermode=count -coverprofile=coverage.out -coverpkg=./... ./..."
   - "goveralls -coverprofile=coverage.out -service=travis-ci"
 jobs:
   include:
