@@ -23,6 +23,7 @@ import (
 
 	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/git"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestCommit_NoArgs(t *testing.T) {
@@ -702,6 +703,49 @@ func TestCommit_Merge(t *testing.T) {
 		t.Errorf("after merge commit, HEAD^2 = %s; want %s",
 			prettyCommit(parent2.Commit, names),
 			prettyCommit(r2, names))
+	}
+}
+
+// Regression test for https://github.com/zombiezen/gg/issues/74
+func TestCommit_DirectoryWithUntracked(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+
+	// Add bar.txt and baz.txt in foo directory. Only track bar.txt.
+	err = env.root.Apply(
+		filesystem.Write("foo/bar.txt", dummyContent),
+		filesystem.Write("foo/baz.txt", dummyContent),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo/bar.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to make a commit.
+	if _, err := env.gg(ctx, env.root.String(), "commit", "-m", "first", "foo"); err != nil {
+		t.Error(err)
+	}
+
+	// Verify that a new commit contains just foo/bar.txt.
+	got, err := env.git.ListTree(ctx, "HEAD", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[git.TopPath]struct{}{
+		"foo/bar.txt": {},
+	}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("HEAD tree (-want +got)\n%s", diff)
 	}
 }
 
