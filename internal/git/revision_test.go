@@ -380,6 +380,7 @@ func TestListRefs(t *testing.T) {
 
 	// Verify that refs match what we expect.
 	want := map[Ref]Hash{
+		"HEAD":              revDEF2.Commit,
 		"refs/heads/master": revMaster.Commit,
 		"refs/heads/abc":    revABC.Commit,
 		"refs/heads/def":    revDEF2.Commit,
