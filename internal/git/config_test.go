@@ -185,6 +185,7 @@ func TestListRemotes(t *testing.T) {
 		{"[remote \"origin\"]\n"},
 		{"[remote]\npushDefault = myfork\n"},
 		{"[remote \"origin\"]\nurl = https://example.com/foo.git\n"},
+		{"[remote \"origin\"]\nurl = https://example.com/foo.git\nurl =\n"},
 		{"[remote \"origin\"]\nurl = https://example.com/foo.git\n" +
 			"[remote \"myfork\"]\nurl = https://example.com/foo-fork.git\n"},
 	}
@@ -219,7 +220,7 @@ func TestListRemotes(t *testing.T) {
 		got := cfg.ListRemotes()
 		out, err := env.g.Run(ctx, "remote")
 		if err != nil {
-			t.Error(err)
+			t.Errorf("For %q: %v", test.config, err)
 			continue
 		}
 		want := make(map[string]struct{})
