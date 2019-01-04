@@ -89,6 +89,77 @@ func TestUpdate_NoArgsFastForward(t *testing.T) {
 	}
 }
 
+// Regression test for https://github.com/zombiezen/gg/issues/80.
+func TestUpdate_NoArgsFastForwardMerge(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	// Create a repository with two commits, with master behind the "upstream" branch.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Apple\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	h1, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.NewBranch(ctx, "upstream", git.BranchOptions{Checkout: true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Apple\nBanana\n")); err != nil {
+		t.Fatal(err)
+	}
+	h2, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Coconut\nApple\n")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.git.Run(ctx, "branch", "--quiet", "--set-upstream-to=upstream"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to update and merge local changes.
+	_, err = env.gg(ctx, env.root.String(), "update", "-merge")
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Verify that HEAD moved to the second commit.
+	if r, err := env.git.Head(ctx); err != nil {
+		t.Fatal(err)
+	} else if r.Commit != h2 {
+		names := map[git.Hash]string{
+			h1: "first commit",
+			h2: "second commit",
+		}
+		t.Errorf("after update, HEAD = %s; want %s",
+			prettyCommit(r.Commit, names),
+			prettyCommit(h2, names))
+	}
+
+	// Verify that foo.txt has the merged content.
+	if got, err := env.root.ReadFile("foo.txt"); err != nil {
+		t.Error(err)
+	} else if want := "Coconut\nApple\nBanana\n"; got != want {
+		t.Errorf("foo.txt = %q; want %q", got, want)
+	}
+}
+
 func TestUpdate_SwitchBranch(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

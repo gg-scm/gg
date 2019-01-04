@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"errors"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
@@ -38,9 +39,35 @@ func update(ctx context.Context, cc *cmdContext, args []string) error {
 	var r *git.Rev
 	switch {
 	case f.NArg() == 0 && *rev == "":
-		// TODO(someday): how to apply --merge?
-		_, err := cc.git.Run(ctx, "merge", "--quiet", "--ff-only")
-		return err
+		if !*merge {
+			// Simple case: fast-forward merge.
+			_, err := cc.git.Run(ctx, "merge", "--quiet", "--ff-only")
+			return err
+		}
+		// Hard case: fast-forward merge with local changes.
+		head, err := cc.git.Head(ctx)
+		if err != nil {
+			return err
+		}
+		if !head.Ref.IsBranch() {
+			return errors.New("can't update to upstream with no branch checked out; run 'gg update BRANCH'")
+		}
+		if isAncestor, err := cc.git.IsAncestor(ctx, head.Commit.String(), "@{upstream}"); err != nil {
+			return err
+		} else if !isAncestor {
+			return errors.New("upstream has diverged; run 'gg merge' or 'gg rebase'")
+		}
+		// Here's the trickiness: move the working copy to the given revision
+		// while merging the local changes, then move the branch ref to match the
+		// current revision. This is only really "safe" because of the ancestor
+		// check before.
+		if err := cc.git.CheckoutRev(ctx, "@{upstream}", git.CheckoutOptions{Merge: true}); err != nil {
+			return err
+		}
+		if err := cc.git.NewBranch(ctx, head.Ref.Branch(), git.BranchOptions{Overwrite: true, Checkout: true}); err != nil {
+			return err
+		}
+		return nil
 	case f.NArg() == 0 && *rev != "":
 		var err error
 		r, err = cc.git.ParseRev(ctx, *rev)
