@@ -156,13 +156,13 @@ func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 }
 
 // ListRefs lists all of the refs in the repository.
-func (g *Git) ListRefs(ctx context.Context) (map[Ref]*Rev, error) {
+func (g *Git) ListRefs(ctx context.Context) (map[Ref]Hash, error) {
 	const errPrefix = "git show-ref"
 	out, err := g.run(ctx, errPrefix, []string{g.exe, "show-ref", "--dereference"})
 	if err != nil {
 		return nil, err
 	}
-	refs := make(map[Ref]*Rev)
+	refs := make(map[Ref]Hash)
 	tags := make(map[Ref]bool)
 	for len(out) > 0 {
 		eol := strings.IndexByte(out, '\n')
@@ -188,13 +188,10 @@ func (g *Git) ListRefs(ctx context.Context) (map[Ref]*Rev, error) {
 				return refs, fmt.Errorf("%s: multiple hashes found for tag %v", errPrefix, ref)
 			}
 			tags[ref] = true
-		} else if refs[ref] != nil {
+		} else if _, exists := refs[ref]; exists {
 			return refs, fmt.Errorf("%s: multiple hashes found for %v", errPrefix, ref)
 		}
-		refs[ref] = &Rev{
-			Commit: h,
-			Ref:    ref,
-		}
+		refs[ref] = h
 	}
 	return refs, nil
 }

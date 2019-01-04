@@ -379,23 +379,11 @@ func TestListRefs(t *testing.T) {
 	}
 
 	// Verify that refs match what we expect.
-	want := map[Ref]*Rev{
-		"refs/heads/master": &Rev{
-			Ref:    "refs/heads/master",
-			Commit: revMaster.Commit,
-		},
-		"refs/heads/abc": &Rev{
-			Ref:    "refs/heads/abc",
-			Commit: revABC.Commit,
-		},
-		"refs/heads/def": &Rev{
-			Ref:    "refs/heads/def",
-			Commit: revDEF2.Commit,
-		},
-		"refs/tags/ghi": &Rev{
-			Ref:    "refs/tags/ghi",
-			Commit: revDEF1.Commit,
-		},
+	want := map[Ref]Hash{
+		"refs/heads/master": revMaster.Commit,
+		"refs/heads/abc":    revABC.Commit,
+		"refs/heads/def":    revDEF2.Commit,
+		"refs/tags/ghi":     revDEF1.Commit,
 	}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("refs (-want +got):\n%s", diff)
