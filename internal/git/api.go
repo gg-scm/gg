@@ -782,6 +782,27 @@ func (g *Git) CheckoutBranch(ctx context.Context, branch string, opts CheckoutOp
 	return nil
 }
 
+// CheckoutRev switches HEAD to a specific commit and updates the
+// working copy to match. It will always put the worktree in "detached
+// HEAD" state.
+func (g *Git) CheckoutRev(ctx context.Context, rev string, opts CheckoutOptions) error {
+	errPrefix := fmt.Sprintf("git checkout --detach %q", rev)
+	if err := validateRev(rev); err != nil {
+		return fmt.Errorf("%s: %v", errPrefix, err)
+	}
+
+	// Run checkout with the revision.
+	args := []string{g.exe, "checkout", "--quiet", "--detach"}
+	if opts.Merge {
+		args = append(args, "--merge")
+	}
+	args = append(args, rev, "--")
+	if _, err := g.run(ctx, errPrefix, args); err != nil {
+		return err
+	}
+	return nil
+}
+
 // BranchOptions specifies options for a new branch.
 type BranchOptions struct {
 	// StartPoint is a revision to start from. If empty, then HEAD is used.

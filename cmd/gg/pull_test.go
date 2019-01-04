@@ -145,7 +145,7 @@ func TestPullWithArgument(t *testing.T) {
 
 	// Move HEAD to a different commit in repository A.
 	// We want to check that the corresponding branch is pulled independently of HEAD.
-	if _, err := gitA.Run(ctx, "checkout", "--quiet", "--detach", "HEAD^"); err != nil {
+	if err := gitA.CheckoutRev(ctx, "HEAD^", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -61,11 +61,7 @@ func update(ctx context.Context, cc *cmdContext, args []string) error {
 			Merge: *merge,
 		})
 	}
-	coArgs := []string{"checkout", "--quiet"}
-	if *merge {
-		coArgs = append(coArgs, "--merge")
-	}
-	coArgs = append(coArgs, "--detach", r.Commit.String(), "--")
-	_, err := cc.git.Run(ctx, coArgs...)
-	return err
+	return cc.git.CheckoutRev(ctx, r.Commit.String(), git.CheckoutOptions{
+		Merge: *merge,
+	})
 }
