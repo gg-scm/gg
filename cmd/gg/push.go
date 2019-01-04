@@ -294,8 +294,8 @@ func escapeGerritMessage(sb *strings.Builder, msg string) {
 }
 
 // verifyPushRemoteRef returns nil if the given ref exists in the
-// remote. remote may either be a URL or the name of a remote, in
-// which case the remote's push URL will be queried.
+// remote repository. remote may either be a URL or the name of a
+// remote, in which case the remote's push URL will be queried.
 func verifyPushRemoteRef(ctx context.Context, g *git.Git, remote string, ref git.Ref) error {
 	// TODO(soon): This re-reads config, but I'm going to rip out the whole
 	// thing in https://github.com/zombiezen/gg/issues/75.
@@ -312,21 +312,14 @@ func verifyPushRemoteRef(ctx context.Context, g *git.Git, remote string, ref git
 		}
 		remote = strings.TrimSuffix(remote, "\n")
 	}
-	// TODO(soon): Turn ls-remote into an API.
-	out, err := g.Run(ctx, "ls-remote", "--quiet", remote, ref.String())
+	refs, err := g.ListRemoteRefs(ctx, remote)
 	if err != nil {
 		return fmt.Errorf("verify remote ref %s: %v", ref, err)
 	}
-	for _, line := range strings.Split(strings.TrimSuffix(out, "\n"), "\n") {
-		const tabLoc = 40
-		if tabLoc >= len(line) || line[tabLoc] != '\t' || !isHex(line[:tabLoc]) {
-			return errors.New("parse git ls-remote: line must start with SHA1")
-		}
-		if remoteRef := git.Ref(line[tabLoc+1:]); remoteRef == ref {
-			return nil
-		}
+	if _, present := refs[ref]; !present {
+		return fmt.Errorf("remote %s does not have ref %s", remote, ref)
 	}
-	return fmt.Errorf("remote %s does not have ref %s", remote, ref)
+	return nil
 }
 
 func inferPushRepo(ctx context.Context, git *git.Git, cfg *git.Config, branch string) (string, error) {

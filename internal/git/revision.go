@@ -17,6 +17,7 @@ package git
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -162,34 +163,43 @@ func (g *Git) ListRefs(ctx context.Context) (map[Ref]Hash, error) {
 	if err != nil {
 		return nil, err
 	}
+	refs, err := parseRefs(out)
+	if err != nil {
+		return refs, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	return refs, nil
+}
+
+func parseRefs(out string) (map[Ref]Hash, error) {
 	refs := make(map[Ref]Hash)
 	tags := make(map[Ref]bool)
+	isSpace := func(c rune) bool { return c == ' ' || c == '\t' }
 	for len(out) > 0 {
 		eol := strings.IndexByte(out, '\n')
 		if eol == -1 {
-			return refs, fmt.Errorf("%s: unexpected EOF", errPrefix)
+			return refs, errors.New("parse refs: unexpected EOF")
 		}
 		line := out[:eol]
 		out = out[eol+1:]
 
-		sp := strings.IndexByte(line, ' ')
+		sp := strings.IndexFunc(line, isSpace)
 		if sp == -1 {
-			return refs, fmt.Errorf("%s: could not parse line %q", errPrefix, line)
+			return refs, fmt.Errorf("parse refs: could not parse line %q", line)
 		}
 		h, err := ParseHash(line[:sp])
 		if err != nil {
-			return refs, fmt.Errorf("%s: parse hash of ref %q: %v", errPrefix, line[sp+1:], err)
+			return refs, fmt.Errorf("parse refs: hash of ref %q: %v", line[sp+1:], err)
 		}
-		ref := Ref(line[sp+1:])
+		ref := Ref(strings.TrimLeftFunc(line[sp+1:], isSpace))
 		if strings.HasSuffix(string(ref), "^{}") {
 			// Dereferenced tag. This takes precedence over the previous hash stored in the map.
 			ref = ref[:len(ref)-3]
 			if tags[ref] {
-				return refs, fmt.Errorf("%s: multiple hashes found for tag %v", errPrefix, ref)
+				return refs, fmt.Errorf("parse refs: multiple hashes found for tag %v", ref)
 			}
 			tags[ref] = true
 		} else if _, exists := refs[ref]; exists {
-			return refs, fmt.Errorf("%s: multiple hashes found for %v", errPrefix, ref)
+			return refs, fmt.Errorf("parse refs: multiple hashes found for %v", ref)
 		}
 		refs[ref] = h
 	}
