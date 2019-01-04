@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestParseConfig(t *testing.T) {
@@ -171,6 +173,64 @@ func TestConfigBool(t *testing.T) {
 		}
 		if got != want {
 			t.Errorf("For %q, cfg.Bool(%q) = %t; want %t", test.config, test.name, got, want)
+		}
+	}
+}
+
+func TestListRemotes(t *testing.T) {
+	tests := []struct {
+		config string
+	}{
+		{""},
+		{"[remote \"origin\"]\n"},
+		{"[remote]\npushDefault = myfork\n"},
+		{"[remote \"origin\"]\nurl = https://example.com/foo.git\n"},
+		{"[remote \"origin\"]\nurl = https://example.com/foo.git\n" +
+			"[remote \"myfork\"]\nurl = https://example.com/foo-fork.git\n"},
+	}
+	if testing.Short() {
+		t.Skip("skipping due to -short")
+	}
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, gitPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	// `git remote` requires to be in a repository.
+	if err := env.g.Init(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range tests {
+		if err := env.top.Apply(filesystem.Write(".gitconfig", test.config)); err != nil {
+			t.Error(err)
+			continue
+		}
+		cfg, err := env.g.ReadConfig(ctx)
+		if err != nil {
+			t.Errorf("For %q: %v", test.config, err)
+			continue
+		}
+		got := cfg.ListRemotes()
+		out, err := env.g.Run(ctx, "remote")
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+		want := make(map[string]struct{})
+		for _, line := range strings.SplitAfter(out, "\n") {
+			if line == "" {
+				continue
+			}
+			want[strings.TrimSuffix(line, "\n")] = struct{}{}
+		}
+		if diff := cmp.Diff(want, got, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("For %q, cfg.ListRemotes() (-want +got):\n%s", test.config, diff)
 		}
 	}
 }

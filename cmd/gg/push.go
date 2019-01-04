@@ -297,7 +297,13 @@ func escapeGerritMessage(sb *strings.Builder, msg string) {
 // remote. remote may either be a URL or the name of a remote, in
 // which case the remote's push URL will be queried.
 func verifyPushRemoteRef(ctx context.Context, g *git.Git, remote string, ref git.Ref) error {
-	remotes, _ := listRemotes(ctx, g)
+	// TODO(soon): This re-reads config, but I'm going to rip out the whole
+	// thing in https://github.com/zombiezen/gg/issues/75.
+	cfg, err := g.ReadConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("verify remote ref %s: %v", ref, err)
+	}
+	remotes := cfg.ListRemotes()
 	if _, isRemote := remotes[remote]; isRemote {
 		var err error
 		remote, err = g.Run(ctx, "remote", "get-url", "--push", "--", remote)
@@ -340,7 +346,7 @@ func inferPushRepo(ctx context.Context, git *git.Git, cfg *git.Config, branch st
 			return r, nil
 		}
 	}
-	remotes, _ := listRemotes(ctx, git)
+	remotes := cfg.ListRemotes()
 	if _, ok := remotes["origin"]; !ok {
 		return "", errors.New("no destination given and no remote named \"origin\" found")
 	}

@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
@@ -63,7 +62,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 			repo = cfg.Value("branch." + branch + ".remote")
 		}
 		if repo == "" {
-			remotes, _ := listRemotes(ctx, cc.git)
+			remotes := cfg.ListRemotes()
 			if _, ok := remotes["origin"]; !ok {
 				return errors.New("no source given and no remote named \"origin\" found")
 			}
@@ -116,19 +115,4 @@ func inferUpstream(cfg *git.Config, localBranch string) git.Ref {
 		return git.Ref(merge)
 	}
 	return git.BranchRef(localBranch)
-}
-
-func listRemotes(ctx context.Context, g *git.Git) (map[string]struct{}, error) {
-	// TODO(soon): Turn this into an API.
-
-	out, err := g.Run(ctx, "remote")
-	if err != nil {
-		return nil, err
-	}
-	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
-	remotes := make(map[string]struct{})
-	for _, line := range lines {
-		remotes[line] = struct{}{}
-	}
-	return remotes, nil
 }

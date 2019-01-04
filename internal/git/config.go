@@ -125,6 +125,31 @@ func (cfg *Config) Bool(name string) (bool, error) {
 	return b, nil
 }
 
+// ListRemotes returns the names of all remotes specified in the
+// configuration.
+func (cfg *Config) ListRemotes() map[string]struct{} {
+	remotes := make(map[string]struct{})
+	remotePrefix := []byte("remote.")
+	for off := 0; off < len(cfg.data); {
+		k, _, end := splitConfigEntry(cfg.data[off:])
+		if end == -1 {
+			break
+		}
+		off += end
+		// Looking for foo in "branch.foo.setting".
+		if !bytes.HasPrefix(k, remotePrefix) {
+			continue
+		}
+		i := bytes.LastIndexByte(k[len(remotePrefix):], '.')
+		if i == -1 {
+			continue
+		}
+		name := k[len(remotePrefix) : len(remotePrefix)+i]
+		remotes[string(name)] = struct{}{}
+	}
+	return remotes
+}
+
 func (cfg *Config) findLast(name string) (value []byte, found bool) {
 	norm := []byte(name)
 	toLower(norm)

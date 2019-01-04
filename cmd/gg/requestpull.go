@@ -122,7 +122,7 @@ aliases: pr
 	// Find base repository and ref.
 	baseRemote := cfg.Value("branch." + branch + ".remote")
 	if baseRemote == "" {
-		remotes, _ := listRemotes(ctx, cc.git)
+		remotes := cfg.ListRemotes()
 		if _, ok := remotes["origin"]; !ok {
 			return errors.New("branch has no remote and no remote named \"origin\" found")
 		}
