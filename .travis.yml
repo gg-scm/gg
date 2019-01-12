@@ -2,7 +2,7 @@ language: go
 go_import_path: gg-scm.io/pkg
 go: "1.11.x"
 install:
-  - "if [[ \"$TRAVIS_OS_NAME\" = \"osx\" ]]; then brew install xz; fi"
+  - "if [[ \"$TRAVIS_OS_NAME\" = \"osx\" ]]; then brew update && brew install xz; fi"
   - "misc/build-git.bash ~/git \"$GIT_VERSION\""
   - "go get github.com/mattn/goveralls"
   - "go mod download"
