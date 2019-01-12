@@ -97,7 +97,7 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	if *gerrit {
-		if err := installGerritHook(ctx, cc, *gerritHookURL); err != nil {
+		if err := installGerritHook(ctx, cc, *gerritHookURL, false); err != nil {
 			return err
 		}
 	}

@@ -16,6 +16,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -37,10 +39,14 @@ func gerrithook(ctx context.Context, cc *cmdContext, args []string) error {
 	inserts a globally unique Change-Id tag in the footer of a commit
 	message.
 
-	gerrithook downloads the hook script from a public Gerrit server.
+	gerrithook downloads the hook script from a public Gerrit server. gg
+	caches the last successfully fetched hook script for each URL in
+	`+"`$XDG_CACHE_DIR/gg/gerrithook/`"+`, so if the server is unavailable,
+	the local file is used. `+"`-cached`"+` can force using the cached file.
 
 	More details at https://gerrit-review.googlesource.com/hooks/commit-msg`)
 	url := f.String("url", commitMsgHookDefaultURL, "URL of hook script to download")
+	cacheOnly := f.Bool("cached", false, "Use local cache instead of downloading")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -52,7 +58,7 @@ func gerrithook(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	switch f.Arg(0) {
 	case "", "on":
-		return installGerritHook(ctx, cc, *url)
+		return installGerritHook(ctx, cc, *url, *cacheOnly)
 	case "off":
 		return uninstallGerritHook(ctx, cc)
 	default:
@@ -60,7 +66,9 @@ func gerrithook(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 }
 
-func installGerritHook(ctx context.Context, cc *cmdContext, url string) error {
+func installGerritHook(ctx context.Context, cc *cmdContext, url string, cacheOnly bool) error {
+	// Determine destination path first.
+	// This is relatively cheap, so if it fails, we want to fail early.
 	cfg, err := cc.git.ReadConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("install gerrit hook: %v", err)
@@ -69,29 +77,85 @@ func installGerritHook(ctx context.Context, cc *cmdContext, url string) error {
 	if err != nil {
 		return fmt.Errorf("install gerrit hook: %v", err)
 	}
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return fmt.Errorf("install gerrit hook: %v", err)
-	}
-	req.Header.Set("User-Agent", userAgentString())
-	resp, err := cc.httpClient.Do(req.WithContext(ctx))
-	if err != nil {
-		return fmt.Errorf("install gerrit hook: %s returned %v", url, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("install gerrit hook: %s returned HTTP %s", url, resp.Status)
-	}
 
+	// Open script source.
+	var scriptSource io.ReadCloser
+	writeCache := false
+	if !cacheOnly {
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			fmt.Fprintf(cc.stderr, "gg: install gerrit hook: %v\n", err)
+			goto readCached
+		}
+		req.Header.Set("User-Agent", userAgentString())
+		resp, err := cc.httpClient.Do(req.WithContext(ctx))
+		if err != nil {
+			fmt.Fprintf(cc.stderr, "gg: install gerrit hook: %s returned %v\n", url, err)
+			goto readCached
+		}
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			fmt.Fprintf(cc.stderr, "gg: install gerrit hook: %s returned HTTP %s\n", url, resp.Status)
+			goto readCached
+		}
+		scriptSource = &limitedReader{resp.Body, 1 << 20} // 1MiB limit
+		writeCache = true
+	}
+readCached:
+	urlSum := sha256.Sum256([]byte(url))
+	cacheName := "gerrithook/" + hex.EncodeToString(urlSum[:])
+	if scriptSource == nil {
+		// Either cache-only was requested or we were unable to read from the URL.
+		cacheFile, err := cc.xdgDirs.openCache(cacheName)
+		if err != nil {
+			return fmt.Errorf("install gerrit hook: %v", err)
+		}
+		scriptSource = cacheFile
+	}
+	defer scriptSource.Close()
+
+	// Back up old hook.
 	dst := filepath.Join(filepath.Dir(path), "commit-msg.old")
 	if err := os.Rename(path, dst); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("install gerrit hook: %v", err)
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0777)
+	// Write to hook location in repository, caching if we succeed.
+	flags := os.O_CREATE | os.O_EXCL
+	if writeCache {
+		flags |= os.O_RDWR
+	} else {
+		flags |= os.O_WRONLY
+	}
+	f, err := os.OpenFile(path, flags, 0777)
 	if err != nil {
 		return fmt.Errorf("install gerrit hook: %v", err)
 	}
-	_, cpErr := io.Copy(f, &limitedReader{resp.Body, 1 << 20}) // 1MiB limit
+	_, cpErr := io.Copy(f, scriptSource)
+	if cpErr == nil && writeCache {
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			fmt.Fprintf(cc.stderr, "gg: could not cache gerrit hook: %v\n", err)
+			goto closeHook
+		}
+		cacheFile, err := cc.xdgDirs.createCache(cacheName)
+		if err != nil {
+			fmt.Fprintf(cc.stderr, "gg: could not cache gerrit hook: %v\n", err)
+			goto closeHook
+		}
+		cacheFilePath := cacheFile.Name()
+		_, cacheCpErr := io.Copy(cacheFile, f)
+		closeCacheErr := cacheFile.Close()
+		if cacheCpErr != nil {
+			fmt.Fprintf(cc.stderr, "gg: could not cache gerrit hook: %v\n", cacheCpErr)
+			os.Remove(cacheFilePath)
+			goto closeHook
+		}
+		if closeCacheErr != nil {
+			fmt.Fprintf(cc.stderr, "gg: could not cache gerrit hook: %v\n", closeCacheErr)
+			os.Remove(cacheFilePath)
+			goto closeHook
+		}
+	}
+closeHook:
 	closeErr := f.Close()
 	if cpErr != nil {
 		return fmt.Errorf("install gerrit hook: %v", cpErr)
@@ -129,6 +193,8 @@ type gitDirs interface {
 }
 
 func commitMsgHookPath(ctx context.Context, cfg valuer, g gitDirs) (string, error) {
+	// TODO(someday): Move hook directory path logic into internal/git.
+
 	path := cfg.Value("core.hooksPath")
 	if path == "" {
 		commonDir, err := g.CommonDir(ctx)
@@ -157,8 +223,8 @@ func commitMsgHookPath(ctx context.Context, cfg valuer, g gitDirs) (string, erro
 }
 
 type limitedReader struct {
-	R io.Reader // underlying reader
-	N int64     // max bytes remaining
+	R io.ReadCloser // underlying reader
+	N int64         // max bytes remaining
 }
 
 func (l *limitedReader) Read(p []byte) (n int, err error) {
@@ -171,4 +237,18 @@ func (l *limitedReader) Read(p []byte) (n int, err error) {
 	n, err = l.R.Read(p)
 	l.N -= int64(n)
 	return
+}
+
+func (l *limitedReader) Close() error {
+	return l.R.Close()
+}
+
+type nopWriteCloser struct{}
+
+func (nopWriteCloser) Write(p []byte) (int, error) {
+	return len(p), nil
+}
+
+func (nopWriteCloser) Close() error {
+	return nil
 }

@@ -392,6 +392,7 @@ func getenv(environ []string, name string) string {
 type xdgDirs struct {
 	configHome string
 	configDirs []string
+	cacheHome  string
 }
 
 // newXDGDirs reads directory locations from the given environment variables.
@@ -399,6 +400,7 @@ func newXDGDirs(environ []string) *xdgDirs {
 	x := &xdgDirs{
 		configHome: getenv(environ, "XDG_CONFIG_HOME"),
 		configDirs: filepath.SplitList(getenv(environ, "XDG_CONFIG_DIRS")),
+		cacheHome:  getenv(environ, "XDG_CACHE_HOME"),
 	}
 	if x.configHome == "" {
 		if home := getenv(environ, "HOME"); home != "" {
@@ -407,6 +409,11 @@ func newXDGDirs(environ []string) *xdgDirs {
 	}
 	if len(x.configDirs) == 0 {
 		x.configDirs = []string{"/etc/xdg"}
+	}
+	if x.cacheHome == "" {
+		if home := getenv(environ, "HOME"); home != "" {
+			x.cacheHome = filepath.Join(home, ".cache")
+		}
 	}
 	return x
 }
@@ -439,6 +446,39 @@ func (x *xdgDirs) configPaths() []string {
 		return x.configDirs
 	}
 	return append([]string{x.configHome}, x.configDirs...)
+}
+
+// openCache opens the file at the given slash-separated path relative
+// to the gg cache directory for reading. It is the caller's
+// responsibility to close the file.
+func (x *xdgDirs) openCache(name string) (*os.File, error) {
+	if x.cacheHome == "" {
+		return nil, fmt.Errorf("open cache %s: no $XDG_CACHE_HOME variable set", name)
+	}
+	f, err := os.Open(filepath.Join(x.cacheHome, "gg", filepath.FromSlash(name)))
+	if err != nil {
+		return nil, fmt.Errorf("open cache %s: %v", name, err)
+	}
+	return f, nil
+}
+
+// createCache opens the file at the given slash-separated path relative
+// to the gg cache directory for writing. Any non-existent parent
+// directories will be created. It is the caller's responsibility to
+// close the file.
+func (x *xdgDirs) createCache(name string) (*os.File, error) {
+	if x.cacheHome == "" {
+		return nil, fmt.Errorf("create cache %s: no $XDG_CACHE_HOME variable set", name)
+	}
+	relpath := filepath.Join(x.cacheHome, "gg", filepath.FromSlash(name))
+	if err := os.MkdirAll(filepath.Dir(relpath), 0777); err != nil {
+		return nil, fmt.Errorf("create cache %s: %v", name, err)
+	}
+	f, err := os.Create(relpath)
+	if err != nil {
+		return nil, fmt.Errorf("create cache %s: %v", name, err)
+	}
+	return f, nil
 }
 
 type usageError string

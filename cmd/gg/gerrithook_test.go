@@ -82,6 +82,53 @@ func TestGerritHook(t *testing.T) {
 			t.Errorf(".git/hooks/commit-msg content = %q; want %q", got, wantContent)
 		}
 	})
+	t.Run("Cached", func(t *testing.T) {
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := env.git.Init(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+		const wantContent = "#!/bin/bash\necho Hello World\n"
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if want := "/foo/commit-msg"; r.URL.Path != want {
+				t.Errorf("HTTP path = %q; want %q", r.URL.Path, want)
+			}
+			w.Header().Set("Content-Length", strconv.Itoa(len(wantContent)))
+			io.WriteString(w, wantContent)
+		}))
+		defer srv.Close()
+
+		// First time to cache it.
+		env.roundTripper = srv.Client().Transport
+		scriptURL := srv.URL + "/foo/commit-msg"
+		if _, err := env.gg(ctx, env.root.String(), "gerrithook", "--url="+scriptURL, "on"); err != nil {
+			t.Error(err)
+		}
+		if got, err := env.root.ReadFile(".git/hooks/commit-msg"); err != nil {
+			t.Error("After first gerrithook on:", err)
+		} else if got != wantContent {
+			t.Errorf(".git/hooks/commit-msg content after first gerrithook = %q; want %q", got, wantContent)
+		}
+
+		// Remove the hook between runs.
+		if err := env.root.Apply(filesystem.Remove(".git/hooks/commit-msg")); err != nil {
+			t.Fatal(err)
+		}
+
+		// Run gerrithook again with roundTripper stubbed (simulating a network drop).
+		env.roundTripper = stubRoundTripper{}
+		if _, err := env.gg(ctx, env.root.String(), "gerrithook", "--url="+scriptURL, "on"); err != nil {
+			t.Error(err)
+		}
+		if got, err := env.root.ReadFile(".git/hooks/commit-msg"); err != nil {
+			t.Error(err)
+		} else if got != wantContent {
+			t.Errorf(".git/hooks/commit-msg content after second gerrithook = %q; want %q", got, wantContent)
+		}
+	})
 }
 
 func TestCommitMsgHookPath(t *testing.T) {

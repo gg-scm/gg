@@ -54,6 +54,7 @@ func TestNewXDGDirs(t *testing.T) {
 			want: xdgDirs{
 				configHome: filepath.Join("/home/foo", ".config"),
 				configDirs: []string{"/etc/xdg"},
+				cacheHome:  filepath.Join("/home/foo", ".cache"),
 			},
 		},
 		{
@@ -81,6 +82,14 @@ func TestNewXDGDirs(t *testing.T) {
 			},
 			want: xdgDirs{
 				configDirs: []string{"/on/the/range", "/discouraging/words"},
+			},
+		},
+		{
+			name:    "CacheHome",
+			environ: []string{"XDG_CACHE_HOME=/on/the/range"},
+			want: xdgDirs{
+				cacheHome:  "/on/the/range",
+				configDirs: []string{"/etc/xdg"},
 			},
 		},
 	}
@@ -151,12 +160,14 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	}
 	root := topFS.FromSlash("scratch")
 	xdgConfigDir := topFS.FromSlash("xdgconfig")
+	xdgCacheDir := topFS.FromSlash("xdgcache")
 	git, err := git.New(gitPath, root, git.Options{
 		Env: append(os.Environ(),
 			"GIT_CONFIG_NOSYSTEM=1",
 			"HOME="+topDir,
 			"XDG_CONFIG_HOME="+xdgConfigDir,
 			"XDG_CONFIG_DIRS="+xdgConfigDir,
+			"XDG_CACHE_HOME="+xdgCacheDir,
 		),
 	})
 	if err != nil {
