@@ -621,9 +621,9 @@ func TestPush_DistinctPushURL(t *testing.T) {
 }
 
 func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
-	// Ensure that -create=0 succeeds if the branch is missing from the
-	// fetch URL but is present in the push URL. See
-	// https://github.com/zombiezen/gg/issues/28 for background.
+	// Ensure that -create=0 does not proceed if the branch is missing
+	// from the fetch URL but is present in the push URL. See
+	// https://github.com/zombiezen/gg/issues/75 for background.
 
 	t.Parallel()
 	ctx := context.Background()
@@ -687,6 +687,100 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	}
 
 	// Call gg to push from repo A to repo C.
+	if _, err := env.gg(ctx, repoAPath, "push"); err == nil {
+		t.Error("push of new ref did not return error")
+	} else if isUsage(err) {
+		t.Errorf("push of new ref returned usage error: %v", err)
+	}
+
+	// Verify that repo C's branch "newbranch" was not moved.
+	commitNames := map[git.Hash]string{
+		rev1.Commit: "shared commit",
+		commit2:     "local commit",
+	}
+	if r, err := gitC.ParseRev(ctx, "newbranch"); err != nil {
+		t.Error("In push repo:", err)
+	} else if r.Commit != rev1.Commit {
+		t.Errorf("newbranch in push repo = %s; want %s",
+			prettyCommit(r.Commit, commitNames),
+			prettyCommit(rev1.Commit, commitNames))
+	}
+
+	// Verify that repo B's branch "newbranch" was not created.
+	gitB := env.git.WithDir(repoBPath)
+	if r, err := gitB.ParseRev(ctx, "newbranch"); err == nil {
+		t.Errorf("newbranch in fetch repo = %s; want to not exist", prettyCommit(r.Commit, commitNames))
+	}
+}
+
+func TestPush_NoCreatePushURLMissingBranch(t *testing.T) {
+	// Ensure that -create=0 succeeds if the branch is missing from the
+	// push URL but is present in the fetch URL. See
+	// https://github.com/zombiezen/gg/issues/75 for background.
+
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	// Create repository with some junk history.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		t.Fatal(err)
+	}
+	repoAPath := env.root.FromSlash("repoA")
+	gitA := env.git.WithDir(repoAPath)
+	rev1, err := gitA.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Push from repo A to repo B.
+	if err := env.git.InitBare(ctx, "repoB"); err != nil {
+		t.Fatal(err)
+	}
+	repoBPath := env.root.FromSlash("repoB")
+	if _, err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a new commit in repo A.
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	commit2, err := env.newCommit(ctx, "repoA")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a new branch in repo A called "newbranch".
+	if err := gitA.NewBranch(ctx, "newbranch", git.BranchOptions{Checkout: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Set repo A's origin push URL to a new repo C with branch "newbranch" not present.
+	// Create "newbranch" on repo B.
+	if _, err := env.git.Run(ctx, "clone", "--bare", "repoB", "repoC"); err != nil {
+		t.Fatal(err)
+	}
+	gitB := env.git.WithDir(repoBPath)
+	if err := gitB.NewBranch(ctx, "newbranch", git.BranchOptions{StartPoint: "master"}); err != nil {
+		t.Fatal(err)
+	}
+	repoCPath := env.root.FromSlash("repoC")
+	if _, err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoCPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to push from repo A to repo C.
 	if _, err := env.gg(ctx, repoAPath, "push"); err != nil {
 		t.Error(err)
 	}
@@ -696,6 +790,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 		rev1.Commit: "shared commit",
 		commit2:     "local commit",
 	}
+	gitC := env.git.WithDir(repoCPath)
 	if r, err := gitC.ParseRev(ctx, "newbranch"); err != nil {
 		t.Error("In push repo:", err)
 	} else if r.Commit != commit2 {
@@ -704,10 +799,13 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 			prettyCommit(commit2, commitNames))
 	}
 
-	// Verify that repo B's branch "newbranch" was not created.
-	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.ParseRev(ctx, "newbranch"); err == nil {
-		t.Errorf("newbranch in fetch repo = %s; want to not exist", prettyCommit(r.Commit, commitNames))
+	// Verify that repo B's branch "newbranch" was not moved.
+	if r, err := gitB.ParseRev(ctx, "newbranch"); err != nil {
+		t.Error("In fetch repo:", err)
+	} else if r.Commit != rev1.Commit {
+		t.Errorf("newbranch in fetch repo = %s; want %s",
+			prettyCommit(r.Commit, commitNames),
+			prettyCommit(rev1.Commit, commitNames))
 	}
 }
 
