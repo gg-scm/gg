@@ -17,11 +17,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
-	"gg-scm.io/pkg/internal/sigterm"
+	"gg-scm.io/pkg/internal/terminal"
 )
 
 const branchSynopsis = "list or manage branches"
@@ -75,11 +76,68 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		if *rev != "" {
 			return usagef("can't pass -r without branch names")
 		}
-		c := cc.git.Command(ctx, "--no-pager", "branch")
-		c.Stdin = cc.stdin
-		c.Stdout = cc.stdout
-		c.Stderr = cc.stderr
-		return sigterm.Run(ctx, c)
+
+		// Get color settings. Most errors can be ignored without impacting
+		// the command output.
+		var (
+			currentColor []byte
+			localColor   []byte
+		)
+		cfg, err := cc.git.ReadConfig(ctx)
+		if err != nil {
+			return err
+		}
+		colorize, err := cfg.ColorBool("color.branch", terminal.IsTerminal(cc.stdout))
+		if err != nil {
+			fmt.Fprintln(cc.stderr, "gg:", err)
+		} else if colorize {
+			currentColor, err = cfg.Color("color.branch.current", "green")
+			if err != nil {
+				fmt.Fprintln(cc.stderr, "gg:", err)
+			}
+			localColor, err = cfg.Color("color.branch.local", "")
+			if err != nil {
+				fmt.Fprintln(cc.stderr, "gg:", err)
+			}
+		}
+
+		// List branches.
+		head, err := cc.git.Head(ctx)
+		if err != nil {
+			return err
+		}
+		refs, err := cc.git.ListRefs(ctx)
+		if err != nil {
+			return err
+		}
+		branches := make([]string, 0, len(refs))
+		for ref := range refs {
+			if b := ref.Branch(); b != "" {
+				branches = append(branches, b)
+			}
+		}
+		sort.Strings(branches)
+
+		if colorize {
+			if err := terminal.ResetTextStyle(cc.stdout); err != nil {
+				return err
+			}
+		}
+		for _, b := range branches {
+			color, marker := localColor, ' '
+			if head.Ref == git.BranchRef(b) {
+				color, marker = currentColor, '*'
+			}
+			if _, err := fmt.Fprintf(cc.stdout, "%s%c %s\n", color, marker, b); err != nil {
+				return err
+			}
+			if colorize {
+				if err := terminal.ResetTextStyle(cc.stdout); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
 	default:
 		// Create or update
 		for _, b := range f.Args() {
