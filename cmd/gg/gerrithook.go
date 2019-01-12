@@ -61,7 +61,11 @@ func gerrithook(ctx context.Context, cc *cmdContext, args []string) error {
 }
 
 func installGerritHook(ctx context.Context, cc *cmdContext, url string) error {
-	path, err := commitMsgHookPath(ctx, cc)
+	cfg, err := cc.git.ReadConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("install gerrit hook: %v", err)
+	}
+	path, err := commitMsgHookPath(ctx, cfg, cc.git)
 	if err != nil {
 		return fmt.Errorf("install gerrit hook: %v", err)
 	}
@@ -99,7 +103,11 @@ func installGerritHook(ctx context.Context, cc *cmdContext, url string) error {
 }
 
 func uninstallGerritHook(ctx context.Context, cc *cmdContext) error {
-	path, err := commitMsgHookPath(ctx, cc)
+	cfg, err := cc.git.ReadConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("install gerrit hook: %v", err)
+	}
+	path, err := commitMsgHookPath(ctx, cfg, cc.git)
 	if err != nil {
 		return fmt.Errorf("uninstall gerrit hook: %v", err)
 	}
@@ -110,12 +118,42 @@ func uninstallGerritHook(ctx context.Context, cc *cmdContext) error {
 	return nil
 }
 
-func commitMsgHookPath(ctx context.Context, cc *cmdContext) (string, error) {
-	common, err := cc.git.CommonDir(ctx)
+type valuer interface {
+	Value(string) string
+	Bool(string) (bool, error)
+}
+
+type gitDirs interface {
+	CommonDir(ctx context.Context) (string, error)
+	WorkTree(ctx context.Context) (string, error)
+}
+
+func commitMsgHookPath(ctx context.Context, cfg valuer, g gitDirs) (string, error) {
+	path := cfg.Value("core.hooksPath")
+	if path == "" {
+		commonDir, err := g.CommonDir(ctx)
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(commonDir, "hooks", "commit-msg"), nil
+	}
+	if filepath.IsAbs(path) {
+		return path, nil
+	}
+	if bare, err := cfg.Bool("core.bare"); err != nil {
+		return "", err
+	} else if bare {
+		commonDir, err := g.CommonDir(ctx)
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(commonDir, path, "commit-msg"), nil
+	}
+	topDir, err := g.WorkTree(ctx)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(common, "hooks", "commit-msg"), nil
+	return filepath.Join(topDir, path, "commit-msg"), nil
 }
 
 type limitedReader struct {
