@@ -258,10 +258,14 @@ func TestListRemotes(t *testing.T) {
 	if err := env.g.Init(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
+	baseCfg, err := env.root.ReadFile(".git/config")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if err := env.top.Apply(filesystem.Write(".gitconfig", test.config)); err != nil {
+			if err := env.root.Apply(filesystem.Write(".git/config", baseCfg+test.config)); err != nil {
 				t.Fatal(err)
 			}
 			cfg, err := env.g.ReadConfig(ctx)
