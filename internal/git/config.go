@@ -125,13 +125,39 @@ func (cfg *Config) Bool(name string) (bool, error) {
 	return b, nil
 }
 
+// Remote stores the configuration for a remote repository.
+type Remote struct {
+	Name     string
+	FetchURL string
+	Fetch    []FetchRefspec
+	PushURL  string
+}
+
+// String returns the remote's name.
+func (r *Remote) String() string {
+	return r.Name
+}
+
+// MapFetch maps a remote fetch ref into a local ref. If there is no mapping,
+// then MapFetch returns an empty Ref.
+func (r *Remote) MapFetch(remote Ref) Ref {
+	for _, spec := range r.Fetch {
+		if local := spec.Map(remote); local != "" {
+			return local
+		}
+	}
+	return ""
+}
+
 // ListRemotes returns the names of all remotes specified in the
 // configuration.
-func (cfg *Config) ListRemotes() map[string]struct{} {
-	remotes := make(map[string]struct{})
+func (cfg *Config) ListRemotes() map[string]*Remote {
+	remotes := make(map[string]*Remote)
+	fetchURLsSet := make(map[string]bool)
+	pushURLsSet := make(map[string]bool)
 	remotePrefix := []byte("remote.")
 	for off := 0; off < len(cfg.data); {
-		k, _, end := splitConfigEntry(cfg.data[off:])
+		k, v, end := splitConfigEntry(cfg.data[off:])
 		if end == -1 {
 			break
 		}
@@ -144,8 +170,38 @@ func (cfg *Config) ListRemotes() map[string]struct{} {
 		if i == -1 {
 			continue
 		}
-		name := k[len(remotePrefix) : len(remotePrefix)+i]
-		remotes[string(name)] = struct{}{}
+		i += len(remotePrefix)
+
+		// Get or create remote.
+		name := string(k[len(remotePrefix):i])
+		remote := remotes[name]
+		if remote == nil {
+			remote = &Remote{Name: name}
+			remotes[name] = remote
+		}
+
+		// Update appropriate setting.
+		// Oddly, Git seems to use the first found setting instead of
+		// the last. This is verified by the test.
+		switch string(k[i+1:]) {
+		case "url":
+			if !fetchURLsSet[name] {
+				remote.FetchURL = string(v)
+				fetchURLsSet[name] = true
+			}
+		case "pushurl":
+			if !pushURLsSet[name] {
+				remote.PushURL = string(v)
+				pushURLsSet[name] = true
+			}
+		case "fetch":
+			remote.Fetch = append(remote.Fetch, FetchRefspec(v))
+		}
+	}
+	for _, remote := range remotes {
+		if !pushURLsSet[remote.Name] {
+			remote.PushURL = remote.FetchURL
+		}
 	}
 	return remotes
 }

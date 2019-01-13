@@ -179,15 +179,67 @@ func TestConfigBool(t *testing.T) {
 
 func TestListRemotes(t *testing.T) {
 	tests := []struct {
+		name   string
 		config string
 	}{
-		{""},
-		{"[remote \"origin\"]\n"},
-		{"[remote]\npushDefault = myfork\n"},
-		{"[remote \"origin\"]\nurl = https://example.com/foo.git\n"},
-		{"[remote \"origin\"]\nurl = https://example.com/foo.git\nurl =\n"},
-		{"[remote \"origin\"]\nurl = https://example.com/foo.git\n" +
-			"[remote \"myfork\"]\nurl = https://example.com/foo-fork.git\n"},
+		{name: "Empty", config: ""},
+		{
+			name:   "OnlyHeader",
+			config: "[remote \"origin\"]\n",
+		},
+		{
+			name:   "PushDefault",
+			config: "[remote]\npushDefault = myfork\n",
+		},
+		{
+			name: "JustURL",
+			config: "[remote \"origin\"]\n" +
+				"url = https://example.com/foo.git\n",
+		},
+		{
+			name: "URLAndFetch",
+			config: "[remote \"origin\"]\n" +
+				"url = https://example.com/foo.git\n" +
+				"fetch = +refs/heads/*:refs/remotes/origin/*\n",
+		},
+		{
+			name: "MultipleFetch",
+			config: "[remote \"origin\"]\n" +
+				"url = https://example.com/foo.git\n" +
+				"fetch = +refs/heads/*:refs/remotes/origin/*\n" +
+				"fetch = +refs/tags/*:refs/remotes/origin/tags/*\n",
+		},
+		{
+			name: "FetchThenPushURL",
+			config: "[remote \"origin\"]\n" +
+				"url = https://example.com/foo.git\n" +
+				"pushurl = https://example.com/bar.git\n",
+		},
+		{
+			name: "PushThenFetchURL",
+			config: "[remote \"origin\"]\n" +
+				"pushurl = https://example.com/bar.git\n" +
+				"url = https://example.com/foo.git\n",
+		},
+		{
+			name: "ClearURL",
+			config: "[remote \"origin\"]\n" +
+				"url = https://example.com/foo.git\n" +
+				"url =\n",
+		},
+		{
+			name: "UnclearURL",
+			config: "[remote \"origin\"]\n" +
+				"url =\n" +
+				"url = https://example.com/foo.git\n",
+		},
+		{
+			name: "MultipleRemotes",
+			config: "[remote \"origin\"]\n" +
+				"url = https://example.com/foo.git\n" +
+				"[remote \"myfork\"]\n" +
+				"url = https://example.com/foo-fork.git\n",
+		},
 	}
 	if testing.Short() {
 		t.Skip("skipping due to -short")
@@ -208,31 +260,50 @@ func TestListRemotes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if err := env.top.Apply(filesystem.Write(".gitconfig", test.config)); err != nil {
-			t.Error(err)
-			continue
-		}
-		cfg, err := env.g.ReadConfig(ctx)
-		if err != nil {
-			t.Errorf("For %q: %v", test.config, err)
-			continue
-		}
-		got := cfg.ListRemotes()
-		out, err := env.g.Run(ctx, "remote")
-		if err != nil {
-			t.Errorf("For %q: %v", test.config, err)
-			continue
-		}
-		want := make(map[string]struct{})
-		for _, line := range strings.SplitAfter(out, "\n") {
-			if line == "" {
-				continue
+		t.Run(test.name, func(t *testing.T) {
+			if err := env.top.Apply(filesystem.Write(".gitconfig", test.config)); err != nil {
+				t.Fatal(err)
 			}
-			want[strings.TrimSuffix(line, "\n")] = struct{}{}
-		}
-		if diff := cmp.Diff(want, got, cmpopts.EquateEmpty()); diff != "" {
-			t.Errorf("For %q, cfg.ListRemotes() (-want +got):\n%s", test.config, diff)
-		}
+			cfg, err := env.g.ReadConfig(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := cfg.ListRemotes()
+			out, err := env.g.Run(ctx, "remote")
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := make(map[string]*Remote)
+			for _, line := range strings.SplitAfter(out, "\n") {
+				if line == "" {
+					continue
+				}
+				name := strings.TrimSuffix(line, "\n")
+				remote := &Remote{
+					Name: name,
+				}
+				if url, err := env.g.Run(ctx, "remote", "get-url", name); err != nil {
+					t.Fatal(err)
+				} else {
+					remote.FetchURL = strings.TrimSuffix(url, "\n")
+				}
+				if url, err := env.g.Run(ctx, "remote", "get-url", "--push", name); err != nil {
+					t.Fatal(err)
+				} else {
+					remote.PushURL = strings.TrimSuffix(url, "\n")
+				}
+				if fetchOut, err := env.g.Run(ctx, "config", "--get-all", "remote."+name+".fetch"); err == nil {
+					fetchSpecs := strings.Split(strings.TrimSuffix(fetchOut, "\n"), "\n")
+					for _, spec := range fetchSpecs {
+						remote.Fetch = append(remote.Fetch, FetchRefspec(spec))
+					}
+				}
+				want[name] = remote
+			}
+			if diff := cmp.Diff(want, got, cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf("For config:\n\n%s\n*** cfg.ListRemotes() (-want +got):\n%s", test.config, diff)
+			}
+		})
 	}
 }
 
