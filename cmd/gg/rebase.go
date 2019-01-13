@@ -209,7 +209,11 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 // continueRebase adds any modified files to the index and then runs
 // `git rebase --continue`.
 func continueRebase(ctx context.Context, cc *cmdContext) error {
-	hasChanges, err := verifyNoMissingOrUnmerged(ctx, cc.git)
+	status, err := cc.git.Status(ctx, git.StatusOptions{})
+	if err != nil {
+		return err
+	}
+	hasChanges, err := verifyNoMissingOrUnmerged(status)
 	if err != nil {
 		return err
 	}

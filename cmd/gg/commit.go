@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -50,7 +51,49 @@ aliases: ci
 	} else if err != nil {
 		return usagef("%v", err)
 	}
+
+	// Get status on files. First level of assurance is to stop empty commits.
+	// This status info may get used for interactive commit message template.
+	var pathspecs []git.Pathspec
+	for _, arg := range f.Args() {
+		pathspecs = append(pathspecs, git.LiteralPath(arg))
+	}
+	status, err := cc.git.Status(ctx, git.StatusOptions{
+		Pathspecs: pathspecs,
+	})
+	if err != nil {
+		return err
+	}
+	hasChanges, err := verifyNoMissingOrUnmerged(status)
+	if err != nil {
+		return err
+	}
+	if !hasChanges && !*amend {
+		return errors.New("nothing changed")
+	}
+	var diffStatus []git.DiffStatusEntry
+	if *amend {
+		var err error
+		diffStatus, err = amendedDiffStatus(ctx, cc.git, pathspecs)
+		if err != nil {
+			return err
+		}
+		if len(diffStatus) == 0 {
+			return errors.New("amend would create an empty commit")
+		}
+	} else {
+		// For commits, we can reuse the information from the status call.
+		for _, ent := range status {
+			diffStatus = append(diffStatus, statusIntoHeadDiffStatus(ent))
+		}
+	}
+
+	// Get message from user.
 	if *msg == "" {
+		sort.Slice(diffStatus, func(i, j int) bool {
+			return diffStatus[i].Name < diffStatus[j].Name
+		})
+
 		// Open message in editor.
 		cfg, err := cc.git.ReadConfig(ctx)
 		if err != nil {
@@ -60,7 +103,7 @@ aliases: ci
 		if err != nil {
 			return err
 		}
-		initial, err := commitMessageTemplate(ctx, cc.git, *amend, commentChar)
+		initial, err := commitMessageTemplate(ctx, cc.git, diffStatus, *amend, commentChar)
 		if err != nil {
 			return err
 		}
@@ -72,58 +115,140 @@ aliases: ci
 	} else {
 		*msg = cleanupMessage(*msg, "")
 	}
-	if f.NArg() > 0 {
-		// Commit or amend specific files.
-		var pathspecs []git.Pathspec
-		for _, arg := range f.Args() {
-			pathspecs = append(pathspecs, git.LiteralPath(arg))
-		}
+
+	// Commit or amend as appropriate.
+	if len(pathspecs) > 0 {
 		if *amend {
 			return cc.git.AmendFiles(ctx, pathspecs, git.AmendOptions{Message: *msg})
 		}
 		return cc.git.CommitFiles(ctx, *msg, pathspecs, git.CommitOptions{})
 	}
-	// Commit or amend all tracked files.
-	hasChanges, err := verifyNoMissingOrUnmerged(ctx, cc.git)
-	if err != nil {
-		return err
-	}
 	if *amend {
 		return cc.git.AmendAll(ctx, git.AmendOptions{Message: *msg})
-	}
-	if !hasChanges {
-		return errors.New("nothing changed")
 	}
 	return cc.git.CommitAll(ctx, *msg, git.CommitOptions{})
 }
 
-func commitMessageTemplate(ctx context.Context, g *git.Git, amend bool, commentChar string) ([]byte, error) {
-	var initial []byte
+func amendedDiffStatus(ctx context.Context, g *git.Git, pathspecs []git.Pathspec) ([]git.DiffStatusEntry, error) {
+	if len(pathspecs) == 0 {
+		// Simple case: just run diff status.
+		return g.DiffStatus(ctx, git.DiffStatusOptions{Commit1: "HEAD~"})
+	}
+	// More complex case: have to merge changed file status into base status.
+	base, err := g.DiffStatus(ctx, git.DiffStatusOptions{Commit1: "HEAD~", Commit2: "HEAD"})
+	if err != nil {
+		return nil, err
+	}
+	// TODO(someday): If we evaluated pathspecs in-process, this DiffStatus would be unnecessary.
+	filterBase, err := g.DiffStatus(ctx, git.DiffStatusOptions{Commit1: "HEAD~", Commit2: "HEAD", Pathspecs: pathspecs})
+	if err != nil {
+		return nil, err
+	}
+	local, err := g.DiffStatus(ctx, git.DiffStatusOptions{Commit1: "HEAD~", Pathspecs: pathspecs})
+	if err != nil {
+		return nil, err
+	}
+
+	// Remove any no-longer-modified files from base.
+	unmodifiedFiles := make(map[git.TopPath]struct{})
+	for _, ent := range filterBase {
+		unmodifiedFiles[ent.Name] = struct{}{}
+	}
+	for _, ent := range local {
+		delete(unmodifiedFiles, ent.Name)
+	}
+	status := base[:0]
+	for _, ent := range base {
+		if _, unmodified := unmodifiedFiles[ent.Name]; !unmodified {
+			status = append(status, ent)
+		}
+	}
+
+	// Use local as canonical entry.
+	localMap := make(map[git.TopPath]*git.DiffStatusEntry, len(local))
+	for i := range local {
+		localMap[local[i].Name] = &local[i]
+	}
+	for i := range status {
+		name := status[i].Name
+		if ent := localMap[name]; ent != nil {
+			status[i] = *ent
+			delete(localMap, name)
+		}
+	}
+	for _, ent := range localMap {
+		status = append(status, *ent)
+	}
+	return status, nil
+}
+
+func commitMessageTemplate(ctx context.Context, g *git.Git, status []git.DiffStatusEntry, amend bool, commentChar string) ([]byte, error) {
+	head, err := g.Head(ctx)
+	if err != nil {
+		return nil, err
+	}
+	buf := new(bytes.Buffer)
 	if amend {
 		// Use previous commit message.
 		info, err := g.CommitInfo(ctx, "HEAD")
 		if err != nil {
 			return nil, fmt.Errorf("gather commit message template: %v", err)
 		}
-		initial = []byte(info.Message)
+		buf.WriteString(info.Message)
 	} else if gitDir, err := g.GitDir(ctx); err == nil {
 		// Opportunistically grab the merge message.
 		if mergeMsg, err := ioutil.ReadFile(filepath.Join(gitDir, "MERGE_MSG")); err == nil {
-			initial = mergeMsg
+			buf.Write(mergeMsg)
 		}
 	}
-	if !bytes.HasSuffix(initial, []byte("\n")) {
-		initial = append(initial, '\n')
+	if !bytes.HasSuffix(buf.Bytes(), []byte("\n")) {
+		buf.WriteByte('\n')
 	}
-	initial = append(initial, '\n') // blank line
-	initial = append(initial, commentChar...)
-	initial = append(initial, " Please enter a commit message.\n"...)
-	initial = append(initial, commentChar...)
-	initial = append(initial, " Lines starting with '"...)
-	initial = append(initial, commentChar...)
-	initial = append(initial, "' will be ignored.\n"...)
-	// TODO(soon): Add branch info and files to be committed.
-	return initial, nil
+	buf.WriteByte('\n') // blank line
+	buf.WriteString(commentChar)
+	buf.WriteString(" Please enter a commit message.\n")
+	buf.WriteString(commentChar)
+	buf.WriteString(" Lines starting with '")
+	buf.WriteString(commentChar)
+	buf.WriteString("' will be ignored.\n")
+
+	// Add branch info.
+	buf.WriteString(commentChar)
+	buf.WriteByte('\n')
+	buf.WriteString(commentChar)
+	buf.WriteByte(' ')
+	if head.Ref == git.Head {
+		buf.WriteString("detached HEAD")
+	} else if b := head.Ref.Branch(); b != "" {
+		buf.WriteString("branch ")
+		buf.WriteString(b)
+	} else {
+		buf.WriteString(head.Ref.String())
+	}
+	buf.WriteByte('\n')
+
+	// Add files to be committed.
+	status = append([]git.DiffStatusEntry(nil), status...)
+	sort.Slice(status, func(i, j int) bool {
+		return status[i].Name < status[j].Name
+	})
+	for _, ent := range status {
+		switch ent.Code {
+		case git.DiffStatusAdded:
+			fmt.Fprintf(buf, "%s added %s\n", commentChar, ent.Name)
+		case git.DiffStatusCopied:
+			fmt.Fprintf(buf, "%s copied %s\n", commentChar, ent.Name)
+		case git.DiffStatusDeleted:
+			fmt.Fprintf(buf, "%s removed %s\n", commentChar, ent.Name)
+		case git.DiffStatusModified:
+			fmt.Fprintf(buf, "%s modified %s\n", commentChar, ent.Name)
+		case git.DiffStatusRenamed:
+			fmt.Fprintf(buf, "%s renamed %s\n", commentChar, ent.Name)
+		case git.DiffStatusChangedMode:
+			fmt.Fprintf(buf, "%s chmod %s\n", commentChar, ent.Name)
+		}
+	}
+	return buf.Bytes(), nil
 }
 
 func cleanupMessage(s string, commentPrefix string) string {
@@ -156,13 +281,33 @@ func cleanupMessage(s string, commentPrefix string) string {
 	return sb.String()
 }
 
-func verifyNoMissingOrUnmerged(ctx context.Context, g *git.Git) (hasChanges bool, _ error) {
-	missing, missingStaged, unmerged := 0, 0, 0
-	st, err := g.Status(ctx, git.StatusOptions{})
-	if err != nil {
-		return false, err
+// statusIntoHeadDiffStatus converts a status entry to a diff status
+// entry as if Commit1 was "HEAD".
+func statusIntoHeadDiffStatus(ent git.StatusEntry) git.DiffStatusEntry {
+	diffEnt := git.DiffStatusEntry{
+		Name: ent.Name,
+		Code: git.DiffStatusUnknown,
 	}
-	for _, ent := range st {
+	switch {
+	case ent.Code.IsAdded():
+		diffEnt.Code = git.DiffStatusAdded
+	case ent.Code.IsRemoved():
+		diffEnt.Code = git.DiffStatusDeleted
+	case ent.Code.IsModified():
+		diffEnt.Code = git.DiffStatusModified
+	case ent.Code.IsRenamed():
+		diffEnt.Code = git.DiffStatusRenamed
+	case ent.Code.IsCopied():
+		diffEnt.Code = git.DiffStatusCopied
+	case ent.Code.IsUnmerged():
+		diffEnt.Code = git.DiffStatusUnmerged
+	}
+	return diffEnt
+}
+
+func verifyNoMissingOrUnmerged(status []git.StatusEntry) (hasChanges bool, _ error) {
+	missing, missingStaged, unmerged := 0, 0, 0
+	for _, ent := range status {
 		switch {
 		case ent.Code.IsMissing():
 			missing++

@@ -749,6 +749,168 @@ func TestCommit_DirectoryWithUntracked(t *testing.T) {
 	}
 }
 
+func TestCommitMessageTemplate(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	tests := []struct {
+		name string
+
+		status        []git.DiffStatusEntry
+		amend         bool
+		commentChar   string
+		branchName    string
+		headCommitMsg string
+		mergeMsg      string
+
+		want string
+	}{
+		{
+			name: "ModifiedFile",
+			status: []git.DiffStatusEntry{
+				{Name: "foo/bar.txt", Code: git.DiffStatusModified},
+			},
+			commentChar: "#",
+			branchName:  "master",
+			want: "\n" + `
+# Please enter a commit message.
+# Lines starting with '#' will be ignored.
+#
+# branch master
+# modified foo/bar.txt` + "\n",
+		},
+		{
+			name: "MultipleFiles",
+			status: []git.DiffStatusEntry{
+				{Name: "foo/bar.txt", Code: git.DiffStatusModified},
+				{Name: "uvw/xyz.txt", Code: git.DiffStatusDeleted},
+				{Name: "abc/def.txt", Code: git.DiffStatusAdded},
+			},
+			commentChar: "#",
+			branchName:  "master",
+			want: "\n" + `
+# Please enter a commit message.
+# Lines starting with '#' will be ignored.
+#
+# branch master
+# added abc/def.txt
+# modified foo/bar.txt
+# removed uvw/xyz.txt` + "\n",
+		},
+		{
+			name: "DetachedHEAD",
+			status: []git.DiffStatusEntry{
+				{Name: "foo/bar.txt", Code: git.DiffStatusModified},
+			},
+			commentChar: "#",
+			branchName:  "",
+			want: "\n" + `
+# Please enter a commit message.
+# Lines starting with '#' will be ignored.
+#
+# detached HEAD
+# modified foo/bar.txt` + "\n",
+		},
+		{
+			name: "Amend",
+			status: []git.DiffStatusEntry{
+				{Name: "foo/bar.txt", Code: git.DiffStatusModified},
+			},
+			amend:         true,
+			commentChar:   "#",
+			branchName:    "master",
+			headCommitMsg: "Original content\n",
+			want: "Original content\n" + `
+# Please enter a commit message.
+# Lines starting with '#' will be ignored.
+#
+# branch master
+# modified foo/bar.txt` + "\n",
+		},
+		{
+			name: "Merge",
+			status: []git.DiffStatusEntry{
+				{Name: "foo/bar.txt", Code: git.DiffStatusModified},
+			},
+			commentChar: "#",
+			branchName:  "master",
+			mergeMsg:    "Merged remote-tracking branch 'refs/remotes/origin/master' into 'master'\n",
+			want: "Merged remote-tracking branch 'refs/remotes/origin/master' into 'master'\n" + `
+# Please enter a commit message.
+# Lines starting with '#' will be ignored.
+#
+# branch master
+# modified foo/bar.txt` + "\n",
+		},
+	}
+
+	if err := env.initRepoWithHistory(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			headCommitMsg := test.headCommitMsg
+			if headCommitMsg == "" {
+				headCommitMsg = "fixed commit message for reproducibility\n"
+			}
+			err := env.git.AmendFiles(ctx, nil, git.AmendOptions{
+				Message: headCommitMsg,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if test.branchName == "" {
+				// Detached HEAD.
+				if err := env.git.CheckoutRev(ctx, "HEAD", git.CheckoutOptions{}); err != nil {
+					t.Error(err)
+				}
+				defer func() {
+					if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+						t.Error(err)
+					}
+				}()
+			} else if test.branchName != "master" {
+				err := env.git.NewBranch(ctx, test.branchName, git.BranchOptions{
+					Checkout:  true,
+					Overwrite: true,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer func() {
+					if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+						t.Error(err)
+					}
+				}()
+			}
+			if test.mergeMsg != "" {
+				err := env.root.Apply(filesystem.Write(".git/MERGE_MSG", test.mergeMsg))
+				defer func() {
+					if err := env.root.Apply(filesystem.Remove(".git/MERGE_MSG")); err != nil {
+						t.Error(err)
+					}
+				}()
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			got, err := commitMessageTemplate(ctx, env.git, test.status, test.amend, test.commentChar)
+			if err != nil {
+				t.Fatal("commitMessageTemplate:", err)
+			}
+			if string(got) != test.want {
+				t.Errorf("commitMessageTemplate(...) =\n%s*** want: ***\n%s", got, test.want)
+			}
+		})
+	}
+}
+
 func TestCleanupMessage(t *testing.T) {
 	tests := []struct {
 		in          string
