@@ -25,8 +25,17 @@ import (
 const updateSynopsis = "update working directory (or switch revisions)"
 
 func update(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg update [-m] [[-r] REV]", updateSynopsis+"\n\n"+
-		"aliases: up, checkout, co")
+	f := flag.NewFlagSet(true, "gg update [-m] [[-r] REV]", updateSynopsis+`
+
+aliases: up, checkout, co
+
+	Update the working directory to the specified revision. If no
+	revision is specified, update to the tip of the upstream branch if
+	it has the same name as the current branch or the tip of the push
+	branch otherwise.
+
+	If the commit is not a descendant or ancestor of the HEAD commit,
+	the update is aborted.`)
 	merge := f.Bool("m", false, "merge uncommitted changes")
 	f.Alias("m", "merge")
 	rev := f.String("r", "", "`rev`ision")
@@ -39,35 +48,11 @@ func update(ctx context.Context, cc *cmdContext, args []string) error {
 	var r *git.Rev
 	switch {
 	case f.NArg() == 0 && *rev == "":
-		if !*merge {
-			// Simple case: fast-forward merge.
-			_, err := cc.git.Run(ctx, "merge", "--quiet", "--ff-only")
-			return err
-		}
-		// Hard case: fast-forward merge with local changes.
-		head, err := cc.git.Head(ctx)
+		cfg, err := cc.git.ReadConfig(ctx)
 		if err != nil {
 			return err
 		}
-		if !head.Ref.IsBranch() {
-			return errors.New("can't update to upstream with no branch checked out; run 'gg update BRANCH'")
-		}
-		if isAncestor, err := cc.git.IsAncestor(ctx, head.Commit.String(), "@{upstream}"); err != nil {
-			return err
-		} else if !isAncestor {
-			return errors.New("upstream has diverged; run 'gg merge' or 'gg rebase'")
-		}
-		// Here's the trickiness: move the working copy to the given revision
-		// while merging the local changes, then move the branch ref to match the
-		// current revision. This is only really "safe" because of the ancestor
-		// check before.
-		if err := cc.git.CheckoutRev(ctx, "@{upstream}", git.CheckoutOptions{Merge: true}); err != nil {
-			return err
-		}
-		if err := cc.git.NewBranch(ctx, head.Ref.Branch(), git.BranchOptions{Overwrite: true, Checkout: true}); err != nil {
-			return err
-		}
-		return nil
+		return updateCurrentBranch(ctx, cc.git, cfg, *merge)
 	case f.NArg() == 0 && *rev != "":
 		var err error
 		r, err = cc.git.ParseRev(ctx, *rev)
@@ -91,4 +76,77 @@ func update(ctx context.Context, cc *cmdContext, args []string) error {
 	return cc.git.CheckoutRev(ctx, r.Commit.String(), git.CheckoutOptions{
 		Merge: *merge,
 	})
+}
+
+// updateCurrentBranch fast-forwards the current branch.
+func updateCurrentBranch(ctx context.Context, g *git.Git, cfg *git.Config, merge bool) error {
+	head, err := g.Head(ctx)
+	if err != nil {
+		return err
+	}
+	branch := head.Ref.Branch()
+	if branch == "" {
+		return errors.New("can't update with no branch checked out; run 'gg update BRANCH'")
+	}
+	target := targetForUpdate(cfg, branch)
+	if target == "" {
+		// No-op: nothing to update.
+		return nil
+	}
+	if !merge {
+		// Simple case: fast-forward merge.
+		_, err := g.Run(ctx, "merge", "--quiet", "--ff-only", target, "--")
+		return err
+	}
+	// Hard case: fast-forward merge with local changes.
+	if isAncestor, err := g.IsAncestor(ctx, head.Commit.String(), target); err != nil {
+		return err
+	} else if !isAncestor {
+		return errors.New("upstream has diverged; run 'gg merge' or 'gg rebase'")
+	}
+	// Here's the trickiness: move the working copy to the given revision
+	// while merging the local changes, then move the branch ref to match the
+	// current revision. This is only really "safe" because of the ancestor
+	// check before.
+	if err := g.CheckoutRev(ctx, target, git.CheckoutOptions{Merge: true}); err != nil {
+		return err
+	}
+	if err := g.NewBranch(ctx, branch, git.BranchOptions{Overwrite: true, Checkout: true}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// targetForUpdate returns the revision to use for
+// fast-forwarding a branch. If targetForUpdate returns an empty
+// string, it means that no target could be found.
+func targetForUpdate(cfg *git.Config, branch string) string {
+	if branch == "" {
+		return ""
+	}
+	remotes := cfg.ListRemotes()
+	branchRef := git.BranchRef(branch)
+	var remoteName string
+	var remoteRef git.Ref
+	if merge := git.Ref(cfg.Value("branch." + branch + ".merge")); merge == branchRef {
+		// Upstream branch matches; use upstream remote-tracking branch.
+		remoteName = cfg.Value("branch." + branch + ".remote")
+		remoteRef = merge
+	} else {
+		// Default: use push remote-tracking branch.
+		var err error
+		remoteName, err = inferPushRepo(cfg, branch)
+		if err != nil {
+			return ""
+		}
+		remoteRef = branchRef
+	}
+	if remoteName == "" {
+		return ""
+	}
+	remote := remotes[remoteName]
+	if remote == nil {
+		return ""
+	}
+	return remote.MapFetch(remoteRef).String()
 }

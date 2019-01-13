@@ -79,12 +79,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 
-	var gitArgs []string
-	if *update {
-		gitArgs = append(gitArgs, "pull", "--ff-only")
-	} else {
-		gitArgs = append(gitArgs, "fetch")
-	}
+	gitArgs := []string{"fetch"}
 	if *tags {
 		gitArgs = append(gitArgs, "--tags")
 	}
@@ -93,7 +88,15 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	c.Stdin = cc.stdin
 	c.Stdout = cc.stdout
 	c.Stderr = cc.stderr
-	return sigterm.Run(ctx, c)
+	if err := sigterm.Run(ctx, c); err != nil {
+		return err
+	}
+	if *update {
+		if err := updateCurrentBranch(ctx, cc.git, cfg, false); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func currentBranch(ctx context.Context, cc *cmdContext) string {

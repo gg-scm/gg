@@ -136,7 +136,7 @@ aliases: pr
 	baseBranch := inferUpstream(cfg, branch).Branch()
 
 	// Find head repository and ref.
-	headRemote, err := inferPushRepo(ctx, cc.git, cfg, branch)
+	headRemote, err := inferPushRepo(cfg, branch)
 	if err != nil {
 		return err
 	}

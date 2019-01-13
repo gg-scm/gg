@@ -85,7 +85,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 		if err != nil {
 			return err
 		}
-		dstRepo, err = inferPushRepo(ctx, cc.git, cfg, srcRef.Branch())
+		dstRepo, err = inferPushRepo(cfg, srcRef.Branch())
 		if err != nil {
 			return err
 		}
@@ -191,7 +191,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	if dstRepo == "" {
 		var err error
-		dstRepo, err = inferPushRepo(ctx, cc.git, cfg, srcBranch)
+		dstRepo, err = inferPushRepo(cfg, srcBranch)
 		if err != nil {
 			return err
 		}
@@ -307,7 +307,7 @@ func verifyPushRemoteRef(ctx context.Context, g *git.Git, remote string, ref git
 	return nil
 }
 
-func inferPushRepo(ctx context.Context, git *git.Git, cfg *git.Config, branch string) (string, error) {
+func inferPushRepo(cfg *git.Config, branch string) (string, error) {
 	if branch != "" {
 		r := cfg.Value("branch." + branch + ".pushRemote")
 		if r != "" {

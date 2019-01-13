@@ -22,142 +22,309 @@ import (
 	"gg-scm.io/pkg/internal/git"
 )
 
-func TestUpdate_NoArgsFastForward(t *testing.T) {
+func TestUpdate_NoArgs(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	env, err := newTestEnv(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer env.cleanup()
 
-	// Create a repository with two commits, with master behind the "upstream" branch.
-	if err := env.initEmptyRepo(ctx, "."); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.root.Apply(filesystem.Write("foo.txt", "Apple\n")); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.addFiles(ctx, "foo.txt"); err != nil {
-		t.Fatal(err)
-	}
-	h1, err := env.newCommit(ctx, ".")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.NewBranch(ctx, "upstream", git.BranchOptions{Checkout: true}); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.root.Apply(filesystem.Write("foo.txt", "Banana\n")); err != nil {
-		t.Fatal(err)
-	}
-	h2, err := env.newCommit(ctx, ".")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := env.git.Run(ctx, "branch", "--quiet", "--set-upstream-to=upstream"); err != nil {
-		t.Fatal(err)
-	}
-
-	// Call gg to update.
-	_, err = env.gg(ctx, env.root.String(), "update")
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Verify that HEAD moved to the second commit.
-	if r, err := env.git.Head(ctx); err != nil {
-		t.Fatal(err)
-	} else if r.Commit != h2 {
-		names := map[git.Hash]string{
-			h1: "first commit",
-			h2: "second commit",
+	t.Run("UpstreamSameName", func(t *testing.T) {
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
 		}
-		t.Errorf("after update, HEAD = %s; want %s",
-			prettyCommit(r.Commit, names),
-			prettyCommit(h2, names))
-	}
+		defer env.cleanup()
 
-	// Verify that foo.txt has the second commit's content.
-	if got, err := env.root.ReadFile("foo.txt"); err != nil {
-		t.Error(err)
-	} else if want := "Banana\n"; got != want {
-		t.Errorf("foo.txt = %q; want %q", got, want)
-	}
-}
-
-// Regression test for https://github.com/zombiezen/gg/issues/80.
-func TestUpdate_NoArgsFastForwardMerge(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	env, err := newTestEnv(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer env.cleanup()
-
-	// Create a repository with two commits, with master behind the "upstream" branch.
-	if err := env.initEmptyRepo(ctx, "."); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.root.Apply(filesystem.Write("foo.txt", "Apple\n")); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.addFiles(ctx, "foo.txt"); err != nil {
-		t.Fatal(err)
-	}
-	h1, err := env.newCommit(ctx, ".")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.NewBranch(ctx, "upstream", git.BranchOptions{Checkout: true}); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.root.Apply(filesystem.Write("foo.txt", "Apple\nBanana\n")); err != nil {
-		t.Fatal(err)
-	}
-	h2, err := env.newCommit(ctx, ".")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.root.Apply(filesystem.Write("foo.txt", "Coconut\nApple\n")); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := env.git.Run(ctx, "branch", "--quiet", "--set-upstream-to=upstream"); err != nil {
-		t.Fatal(err)
-	}
-
-	// Call gg to update and merge local changes.
-	_, err = env.gg(ctx, env.root.String(), "update", "-merge")
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Verify that HEAD moved to the second commit.
-	if r, err := env.git.Head(ctx); err != nil {
-		t.Fatal(err)
-	} else if r.Commit != h2 {
-		names := map[git.Hash]string{
-			h1: "first commit",
-			h2: "second commit",
+		// Create a repository A and clone it to repository B.
+		if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+			t.Fatal(err)
 		}
-		t.Errorf("after update, HEAD = %s; want %s",
-			prettyCommit(r.Commit, names),
-			prettyCommit(h2, names))
-	}
+		rev1, err := env.git.WithDir("repoA").Head(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+			t.Fatal(err)
+		}
 
-	// Verify that foo.txt has the merged content.
-	if got, err := env.root.ReadFile("foo.txt"); err != nil {
-		t.Error(err)
-	} else if want := "Coconut\nApple\nBanana\n"; got != want {
-		t.Errorf("foo.txt = %q; want %q", got, want)
-	}
+		// Create a new commit in repository A.
+		if err := env.root.Apply(filesystem.Write("repoA/foo.txt", "Apple\n")); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+			t.Fatal(err)
+		}
+		h2, err := env.newCommit(ctx, "repoA")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Run `git fetch origin` in repository B to update remote
+		// tracking branches.
+		repoBPath := env.root.FromSlash("repoB")
+		gitB := env.git.WithDir(repoBPath)
+		if _, err := gitB.Run(ctx, "fetch", "origin"); err != nil {
+			t.Fatal(err)
+		}
+
+		// Call gg to update master in repository B.
+		_, err = env.gg(ctx, repoBPath, "update")
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Verify that HEAD moved to the second commit.
+		if r, err := gitB.Head(ctx); err != nil {
+			t.Fatal(err)
+		} else if r.Commit != h2 {
+			names := map[git.Hash]string{
+				rev1.Commit: "first commit",
+				h2:          "second commit",
+			}
+			t.Errorf("after update, HEAD = %s; want %s",
+				prettyCommit(r.Commit, names),
+				prettyCommit(h2, names))
+		}
+
+		// Verify that foo.txt has the second commit's content.
+		if got, err := env.root.ReadFile("repoB/foo.txt"); err != nil {
+			t.Error(err)
+		} else if want := "Apple\n"; got != want {
+			t.Errorf("foo.txt = %q; want %q", got, want)
+		}
+	})
+	t.Run("UpstreamAndPushDiverge", func(t *testing.T) {
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+
+		// Create a repository A and clone it to repository B.
+		if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+			t.Fatal(err)
+		}
+		base, err := env.git.WithDir("repoA").Head(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+			t.Fatal(err)
+		}
+
+		// Create a new commit in repository A on master.
+		if err := env.root.Apply(filesystem.Write("repoA/foo.txt", "Apple\n")); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+			t.Fatal(err)
+		}
+		master2, err := env.newCommit(ctx, "repoA")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Create a new commit in repository A on a new branch called "feature".
+		if err := env.git.WithDir("repoA").NewBranch(ctx, "feature", git.BranchOptions{Checkout: true, StartPoint: "HEAD~"}); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("repoA/foo.txt", "Banana\n")); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+			t.Fatal(err)
+		}
+		feature2, err := env.newCommit(ctx, "repoA")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Create a new branch in repository B called "feature"
+		// that tracks "refs/remotes/origin/master".
+		repoBPath := env.root.FromSlash("repoB")
+		gitB := env.git.WithDir(repoBPath)
+		err = gitB.NewBranch(ctx, "feature", git.BranchOptions{
+			StartPoint: "refs/remotes/origin/master",
+			Checkout:   true,
+			Track:      true,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Run `git fetch origin` in repository B to update remote
+		// tracking branches.
+		if _, err := gitB.Run(ctx, "fetch", "origin"); err != nil {
+			t.Fatal(err)
+		}
+
+		// Call gg to update "feature" in repository B.
+		_, err = env.gg(ctx, repoBPath, "update")
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Verify that HEAD moved to the second commit.
+		if r, err := gitB.Head(ctx); err != nil {
+			t.Fatal(err)
+		} else if r.Commit != feature2 {
+			names := map[git.Hash]string{
+				base.Commit: "first commit",
+				master2:     "upstream commit",
+				feature2:    "push branch commit",
+			}
+			t.Errorf("after update, HEAD = %s; want %s",
+				prettyCommit(r.Commit, names),
+				prettyCommit(feature2, names))
+		}
+
+		// Verify that foo.txt has the second commit's content.
+		if got, err := env.root.ReadFile("repoB/foo.txt"); err != nil {
+			t.Error(err)
+		} else if want := "Banana\n"; got != want {
+			t.Errorf("foo.txt = %q; want %q", got, want)
+		}
+	})
+	t.Run("UpstreamNoPush", func(t *testing.T) {
+		// Until gg 0.7, this was the default test.
+		// Behavior changed as part of https://github.com/zombiezen/gg/issues/80.
+
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+
+		// Create a repository with two commits, with master behind the "upstream" branch.
+		if err := env.initEmptyRepo(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("foo.txt", "Apple\n")); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "foo.txt"); err != nil {
+			t.Fatal(err)
+		}
+		h1, err := env.newCommit(ctx, ".")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := env.git.NewBranch(ctx, "upstream", git.BranchOptions{Checkout: true}); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("foo.txt", "Banana\n")); err != nil {
+			t.Fatal(err)
+		}
+		h2, err := env.newCommit(ctx, ".")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := env.git.Run(ctx, "branch", "--quiet", "--set-upstream-to=upstream"); err != nil {
+			t.Fatal(err)
+		}
+
+		// Call gg to update.
+		_, err = env.gg(ctx, env.root.String(), "update")
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Verify that HEAD did not move.
+		if r, err := env.git.Head(ctx); err != nil {
+			t.Fatal(err)
+		} else if r.Commit != h1 {
+			names := map[git.Hash]string{
+				h1: "first commit",
+				h2: "second commit",
+			}
+			t.Errorf("after update, HEAD = %s; want %s",
+				prettyCommit(r.Commit, names),
+				prettyCommit(h1, names))
+		}
+
+		// Verify that foo.txt has the first commit's content.
+		if got, err := env.root.ReadFile("foo.txt"); err != nil {
+			t.Error(err)
+		} else if want := "Apple\n"; got != want {
+			t.Errorf("foo.txt = %q; want %q", got, want)
+		}
+	})
+	t.Run("Merge", func(t *testing.T) {
+		// Regression test for https://github.com/zombiezen/gg/issues/76.
+
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+
+		// Create a repository A with a commit and clone it to repository B.
+		if err := env.initEmptyRepo(ctx, "repoA"); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("repoA/foo.txt", "Apple\n")); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+			t.Fatal(err)
+		}
+		h1, err := env.newCommit(ctx, "repoA")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+			t.Fatal(err)
+		}
+
+		// Create a second commit on master in repository A.
+		if err := env.root.Apply(filesystem.Write("repoA/foo.txt", "Apple\nBanana\n")); err != nil {
+			t.Fatal(err)
+		}
+		h2, err := env.newCommit(ctx, "repoA")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Make local changes to foo.txt in repository B.
+		if err := env.root.Apply(filesystem.Write("repoB/foo.txt", "Coconut\nApple\n")); err != nil {
+			t.Fatal(err)
+		}
+
+		// Run `git fetch origin` in repository B to update remote
+		// tracking branches.
+		repoBPath := env.root.FromSlash("repoB")
+		gitB := env.git.WithDir(repoBPath)
+		if _, err := gitB.Run(ctx, "fetch", "origin"); err != nil {
+			t.Fatal(err)
+		}
+
+		// Call gg to update in repository B and merge local changes.
+		_, err = env.gg(ctx, repoBPath, "update", "-merge")
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Verify that HEAD moved to the second commit.
+		if r, err := gitB.Head(ctx); err != nil {
+			t.Fatal(err)
+		} else if r.Commit != h2 {
+			names := map[git.Hash]string{
+				h1: "first commit",
+				h2: "second commit",
+			}
+			t.Errorf("after update, HEAD = %s; want %s",
+				prettyCommit(r.Commit, names),
+				prettyCommit(h2, names))
+		}
+
+		// Verify that foo.txt has the merged content.
+		if got, err := env.root.ReadFile("repoB/foo.txt"); err != nil {
+			t.Error(err)
+		} else if want := "Coconut\nApple\nBanana\n"; got != want {
+			t.Errorf("foo.txt = %q; want %q", got, want)
+		}
+	})
 }
 
 func TestUpdate_SwitchBranch(t *testing.T) {
