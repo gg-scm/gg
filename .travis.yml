@@ -10,6 +10,10 @@ script:
   - "PATH=\"$HOME/git/bin-wrappers:$PATH\" go test -v -covermode=count -coverprofile=coverage.out -coverpkg=./... ./..."
   - "goveralls -coverprofile=coverage.out -service=travis-ci"
 jobs:
+  allow_failures:
+    - stage: docs
+      os: linux
+      env: ""
   include:
     # Default
     - os: linux
@@ -64,9 +68,9 @@ jobs:
         on:
           tags: true
 stages:
-  - test
   - name: doc
     # Include pull requests, but will not run deploy.
     if: branch = master AND type = push
+  - test
   - name: release
     if: tag IS present
