@@ -68,7 +68,7 @@ jobs:
         on:
           tags: true
 stages:
-  - name: doc
+  - name: docs
     # Include pull requests, but will not run deploy.
     if: branch = master AND type = push
   - test
