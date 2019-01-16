@@ -38,7 +38,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	If no remote reference is given and the source repository is a named
 	remote (like "origin"), then the remote's configured refspecs will be
 	fetched. (This usually means that all the remote-tracking branches
-	will be updated.)
+	will be updated.) Any refs deleted on the remote will be pruned.
 
 	Otherwise, the source repository is assumed to be a URL. Only a single
 	ref will be fetched in this case and written to `+"`FETCH_HEAD`"+`, a
@@ -91,6 +91,10 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	gitArgs := []string{"fetch"}
 	if *tags {
 		gitArgs = append(gitArgs, "--tags")
+	}
+	if _, isNamedRemote := remotes[repo]; remoteRef == "" && isNamedRemote {
+		// TODO(soon): Add tests for pruning.
+		gitArgs = append(gitArgs, "--prune")
 	}
 	gitArgs = append(gitArgs, "--", repo)
 	if remoteRef != "" {
