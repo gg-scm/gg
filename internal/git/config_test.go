@@ -67,9 +67,6 @@ func TestConfigValue(t *testing.T) {
 		{"[foo]\n\tbar\n", "foo.bar"},
 		{"[foo]\n\tbar =\n", "foo.bar"},
 	}
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
 	gitPath, err := findGit()
 	if err != nil {
 		t.Skip("git not found:", err)
@@ -124,9 +121,6 @@ func TestConfigBool(t *testing.T) {
 		{"[foo]\n\tbar = no\n", "foo.bar"},
 		{"[foo]\n\tbar = off\n", "foo.bar"},
 		{"[foo]\n\tbar = 0\n", "foo.bar"},
-	}
-	if testing.Short() {
-		t.Skip("skipping due to -short")
 	}
 	gitPath, err := findGit()
 	if err != nil {
@@ -241,9 +235,6 @@ func TestListRemotes(t *testing.T) {
 				"url = https://example.com/foo-fork.git\n",
 		},
 	}
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
 	gitPath, err := findGit()
 	if err != nil {
 		t.Skip("git not found:", err)
@@ -312,9 +303,6 @@ func TestListRemotes(t *testing.T) {
 }
 
 func BenchmarkReadConfig(b *testing.B) {
-	if testing.Short() {
-		b.Skip("skipping due to -short")
-	}
 	gitPath, err := findGit()
 	if err != nil {
 		b.Skip("git not found:", err)
@@ -349,9 +337,6 @@ func BenchmarkReadConfig(b *testing.B) {
 }
 
 func BenchmarkOneConfigLine(b *testing.B) {
-	if testing.Short() {
-		b.Skip("skipping due to -short")
-	}
 	gitPath, err := findGit()
 	if err != nil {
 		b.Skip("git not found:", err)

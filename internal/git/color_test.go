@@ -187,9 +187,6 @@ func TestConfigColorBool(t *testing.T) {
 		{"[diff]\ncolor = always\n", "color.diff"},
 		{"[diff]\ncolor = never\n", "color.diff"},
 	}
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
 	gitPath, err := findGit()
 	if err != nil {
 		t.Skip("git not found:", err)

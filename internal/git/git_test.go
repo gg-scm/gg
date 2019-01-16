@@ -28,9 +28,6 @@ import (
 )
 
 func TestCommand(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
 	gitPath, err := findGit()
 	if err != nil {
 		t.Skip("git not found:", err)
@@ -110,9 +107,6 @@ func TestCommand(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
 	gitPath, err := findGit()
 	if err != nil {
 		t.Skip("git not found:", err)
@@ -138,9 +132,6 @@ func TestRun(t *testing.T) {
 }
 
 func TestOutput(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
 	gitPath, err := findGit()
 	if err != nil {
 		t.Skip("git not found:", err)

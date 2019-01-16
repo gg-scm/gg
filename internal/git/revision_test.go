@@ -158,9 +158,6 @@ func TestRef(t *testing.T) {
 }
 
 func TestParseRev(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping due to -short")
-	}
 	gitPath, err := findGit()
 	if err != nil {
 		t.Skip("git not found:", err)

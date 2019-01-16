@@ -136,9 +136,6 @@ var (
 )
 
 func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
-	if testing.Short() {
-		tb.Skipf("skipping integration test due to -short")
-	}
 	gitPathOnce.Do(func() {
 		gitPath, gitPathError = exec.LookPath("git")
 	})
