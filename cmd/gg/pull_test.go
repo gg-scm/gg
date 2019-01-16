@@ -45,7 +45,10 @@ func TestPull(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Make changes in repository A: add a tag and a new commit.
+	// Make changes in repository A: add a tag, a branch, and a new commit.
+	if err := gitA.NewBranch(ctx, "foo", git.BranchOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := gitA.Run(ctx, "tag", "first"); err != nil {
 		t.Fatal(err)
 	}
@@ -85,13 +88,22 @@ func TestPull(t *testing.T) {
 		}
 	}
 
-	// Verify that the remote tracking branch has moved to the new commit.
-	if r, err := gitB.ParseRev(ctx, "origin/master"); err != nil {
+	// Verify that the remote tracking branch for master has moved to the new commit.
+	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/master"); err != nil {
 		t.Error(err)
 	} else if r.Commit != commit2 {
-		t.Errorf("origin/master = %s; want %s",
+		t.Errorf("refs/remotes/origin/master = %s; want %s",
 			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
+	}
+
+	// Verify that a remote tracking branch was created for foo.
+	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/foo"); err != nil {
+		t.Error(err)
+	} else if r.Commit != commit1 {
+		t.Errorf("refs/remotes/origin/foo = %s; want %s",
+			prettyCommit(r.Commit, commitNames),
+			prettyCommit(commit1, commitNames))
 	}
 
 	// Verify that the tag was mirrored in repository B.
@@ -128,7 +140,10 @@ func TestPullWithArgument(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Make changes in repository A: add a tag and a new commit.
+	// Make changes in repository A: add a tag, a branch, and a new commit.
+	if err := gitA.NewBranch(ctx, "foo", git.BranchOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := gitA.Run(ctx, "tag", "first"); err != nil {
 		t.Fatal(err)
 	}

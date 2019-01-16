@@ -35,10 +35,17 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	branch is currently checked out, then that remote is used. Otherwise,
 	the remote called "origin" is used.
 
-	If no remote reference is given and a branch is currently checked out,
-	then the branch's remote tracking branch is used or the branch with
-	the same name if the branch has no remote tracking branch. Otherwise,
-	"HEAD" is used.`)
+	If no remote reference is given and the source repository is a named
+	remote (like "origin"), then the remote's configured refspecs will be
+	fetched. (This usually means that all the remote-tracking branches
+	will be updated.)
+
+	Otherwise, the source repository is assumed to be a URL. Only a single
+	ref will be fetched in this case and written to `+"`FETCH_HEAD`"+`, a
+	special ref name. If no remote reference is given and a branch is
+	currently checked out, then the branch's remote tracking branch is
+	used or the branch with the same name if the branch has no remote
+	tracking branch. Otherwise `+"`HEAD`"+` is used.`)
 	remoteRefArg := f.String("r", "", "remote `ref`erence intended to be pulled")
 	tags := f.Bool("tags", true, "pull all tags from remote")
 	update := f.Bool("u", false, "update to new head if new descendants were pulled")
@@ -55,6 +62,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	if err != nil {
 		return err
 	}
+	remotes := cfg.ListRemotes()
 	branch := currentBranch(ctx, cc)
 	repo := f.Arg(0)
 	if repo == "" {
@@ -62,7 +70,6 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 			repo = cfg.Value("branch." + branch + ".remote")
 		}
 		if repo == "" {
-			remotes := cfg.ListRemotes()
 			if _, ok := remotes["origin"]; !ok {
 				return errors.New("no source given and no remote named \"origin\" found")
 			}
@@ -71,7 +78,9 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	var remoteRef git.Ref
 	if *remoteRefArg == "" {
-		remoteRef = inferUpstream(cfg, branch)
+		if _, isNamedRemote := remotes[repo]; !isNamedRemote {
+			remoteRef = inferUpstream(cfg, branch)
+		}
 	} else {
 		remoteRef = git.Ref(*remoteRefArg)
 		if !remoteRef.IsValid() {
@@ -83,7 +92,10 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	if *tags {
 		gitArgs = append(gitArgs, "--tags")
 	}
-	gitArgs = append(gitArgs, "--", repo, remoteRef.String()+":")
+	gitArgs = append(gitArgs, "--", repo)
+	if remoteRef != "" {
+		gitArgs = append(gitArgs, remoteRef.String()+":")
+	}
 	c := cc.git.Command(ctx, gitArgs...)
 	c.Stdin = cc.stdin
 	c.Stdout = cc.stdout
