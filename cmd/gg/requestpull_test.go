@@ -128,6 +128,18 @@ func TestRequestPull(t *testing.T) {
 			body:      "Commit description",
 			reviewers: []string{"octocat", "zombiezen"},
 		},
+		{
+			name:        "CommaSeparatedReviewers",
+			branch:      "shared",
+			upstreamURL: "https://github.com/example/foo.git",
+			args:        []string{"--reviewer", "zombiezen,octocat"},
+
+			headOwner: "example",
+			headRef:   "shared",
+			title:     "Commit title",
+			body:      "Commit description",
+			reviewers: []string{"octocat", "zombiezen"},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

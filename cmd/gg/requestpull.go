@@ -212,12 +212,16 @@ aliases: pr
 		return err
 	}
 	if len(*reviewers) > 0 {
+		var fullReviewers []string
+		for _, r := range *reviewers {
+			fullReviewers = append(fullReviewers, strings.Split(r, ",")...)
+		}
 		err := addPullRequestReviewers(ctx, cc.httpClient, pullRequestReviewParams{
 			authToken: string(token),
 			owner:     baseOwner,
 			repo:      baseRepo,
 			prNum:     prNum,
-			users:     *reviewers,
+			users:     fullReviewers,
 		})
 		if err != nil {
 			return err
