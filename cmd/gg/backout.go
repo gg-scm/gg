@@ -19,6 +19,7 @@ import (
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 const backoutSynopsis = "reverse effect of an earlier commit"
@@ -57,16 +58,18 @@ func backout(ctx context.Context, cc *cmdContext, args []string) error {
 	default:
 		return usagef("must pass a single revision")
 	}
-	var revertArgs []string
-	revertArgs = append(revertArgs, "revert")
-	if *edit {
-		revertArgs = append(revertArgs, "--edit")
-	} else {
-		revertArgs = append(revertArgs, "--no-edit")
+	switch {
+	case *noCommit:
+		return cc.git.Run(ctx, "revert", "--no-commit", r.Commit.String())
+	case *edit:
+		// TODO(someday): Use our editor by running --no-commit and then
+		// immediately running commit.
+		c := cc.git.Command(ctx, "revert", "--edit", r.Commit.String())
+		c.Stdin = cc.stdin
+		c.Stdout = cc.stdout
+		c.Stderr = cc.stderr
+		return sigterm.Run(ctx, c)
+	default:
+		return cc.git.Run(ctx, "revert", "--no-edit", r.Commit.String())
 	}
-	if *noCommit {
-		revertArgs = append(revertArgs, "--no-commit")
-	}
-	revertArgs = append(revertArgs, r.Commit.String())
-	return cc.git.Run(ctx, revertArgs...)
 }
