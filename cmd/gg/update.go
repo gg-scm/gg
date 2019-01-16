@@ -25,7 +25,7 @@ import (
 const updateSynopsis = "update working directory (or switch revisions)"
 
 func update(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg update [-m] [[-r] REV]", updateSynopsis+`
+	f := flag.NewFlagSet(true, "gg update [[-r] REV]", updateSynopsis+`
 
 aliases: up, checkout, co
 
@@ -36,8 +36,6 @@ aliases: up, checkout, co
 
 	If the commit is not a descendant or ancestor of the HEAD commit,
 	the update is aborted.`)
-	merge := f.Bool("m", false, "merge uncommitted changes")
-	f.Alias("m", "merge")
 	rev := f.String("r", "", "`rev`ision")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
@@ -52,7 +50,7 @@ aliases: up, checkout, co
 		if err != nil {
 			return err
 		}
-		return updateCurrentBranch(ctx, cc.git, cfg, *merge)
+		return updateCurrentBranch(ctx, cc.git, cfg)
 	case f.NArg() == 0 && *rev != "":
 		var err error
 		r, err = cc.git.ParseRev(ctx, *rev)
@@ -70,16 +68,20 @@ aliases: up, checkout, co
 	}
 	if b := r.Ref.Branch(); b != "" {
 		return cc.git.CheckoutBranch(ctx, b, git.CheckoutOptions{
-			Merge: *merge,
+			Merge: true,
 		})
 	}
 	return cc.git.CheckoutRev(ctx, r.Commit.String(), git.CheckoutOptions{
-		Merge: *merge,
+		Merge: true,
 	})
 }
 
-// updateCurrentBranch fast-forwards the current branch.
-func updateCurrentBranch(ctx context.Context, g *git.Git, cfg *git.Config, merge bool) error {
+// updateCurrentBranch fast-forwards the current branch while preserving local changes.
+func updateCurrentBranch(ctx context.Context, g *git.Git, cfg *git.Config) error {
+	// git merge --ff-only is insufficient, as it does not three-way merge
+	// local modifications. We use some sneaky checkout invocations to get
+	// around this.
+
 	head, err := g.Head(ctx)
 	if err != nil {
 		return err
@@ -93,11 +95,7 @@ func updateCurrentBranch(ctx context.Context, g *git.Git, cfg *git.Config, merge
 		// No-op: nothing to update.
 		return nil
 	}
-	if !merge {
-		// Simple case: fast-forward merge.
-		return g.Run(ctx, "merge", "--quiet", "--ff-only", target, "--")
-	}
-	// Hard case: fast-forward merge with local changes.
+
 	if isAncestor, err := g.IsAncestor(ctx, head.Commit.String(), target); err != nil {
 		return err
 	} else if !isAncestor {

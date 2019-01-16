@@ -300,7 +300,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 		}
 
 		// Call gg to update in repository B and merge local changes.
-		_, err = env.gg(ctx, repoBPath, "update", "-merge")
+		_, err = env.gg(ctx, repoBPath, "update")
 		if err != nil {
 			t.Error(err)
 		}

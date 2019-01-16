@@ -108,7 +108,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		return err
 	}
 	if *update {
-		if err := updateCurrentBranch(ctx, cc.git, cfg, false); err != nil {
+		if err := updateCurrentBranch(ctx, cc.git, cfg); err != nil {
 			return err
 		}
 	}
