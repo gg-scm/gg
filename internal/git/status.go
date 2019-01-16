@@ -15,14 +15,11 @@
 package git
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
-
-	"gg-scm.io/pkg/internal/sigterm"
 )
 
 // StatusOptions specifies the command-line arguments for `git status`.
@@ -55,19 +52,12 @@ func (g *Git) Status(ctx context.Context, opts StatusOptions) ([]StatusEntry, er
 			args = append(args, string(spec))
 		}
 	}
-	c := g.command(ctx, args)
-	stdout := new(strings.Builder)
-	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
-	stderr := new(bytes.Buffer)
-	c.Stderr = &limitWriter{w: stderr, n: 4096}
-	if err := sigterm.Run(ctx, c); err != nil {
-		if stderr.Len() == 0 {
-			return nil, fmt.Errorf("git status: %v", err)
-		}
-		return nil, fmt.Errorf("git status: %v\n%s", err, stderr)
+	stdout, err := g.output(ctx, "git status", args)
+	if err != nil {
+		return nil, err
 	}
 	var entries []StatusEntry
-	for stdout := stdout.String(); len(stdout) > 0; {
+	for len(stdout) > 0 {
 		var ent StatusEntry
 		var err error
 		ent, stdout, err = readStatusEntry(stdout, renameBug)
@@ -310,7 +300,7 @@ func (g *Git) DiffStatus(ctx context.Context, opts DiffStatusOptions) ([]DiffSta
 			args = append(args, string(p))
 		}
 	}
-	stdout, err := g.run(ctx, "diff status", args)
+	stdout, err := g.output(ctx, "diff status", args)
 	if err != nil {
 		return nil, err
 	}

@@ -81,7 +81,7 @@ func TestMergeBase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "checkout", "--orphan", "orphan"); err != nil {
+	if err := env.g.Run(ctx, "checkout", "--orphan", "orphan"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.g.CommitAll(ctx, "disconnected commit", CommitOptions{}); err != nil {

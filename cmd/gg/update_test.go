@@ -41,7 +41,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+		if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -61,7 +61,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 		// tracking branches.
 		repoBPath := env.root.FromSlash("repoB")
 		gitB := env.git.WithDir(repoBPath)
-		if _, err := gitB.Run(ctx, "fetch", "origin"); err != nil {
+		if err := gitB.Run(ctx, "fetch", "origin"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -106,7 +106,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+		if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -152,7 +152,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 
 		// Run `git fetch origin` in repository B to update remote
 		// tracking branches.
-		if _, err := gitB.Run(ctx, "fetch", "origin"); err != nil {
+		if err := gitB.Run(ctx, "fetch", "origin"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -220,7 +220,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 		if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := env.git.Run(ctx, "branch", "--quiet", "--set-upstream-to=upstream"); err != nil {
+		if err := env.git.Run(ctx, "branch", "--quiet", "--set-upstream-to=upstream"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -273,7 +273,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+		if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -295,7 +295,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 		// tracking branches.
 		repoBPath := env.root.FromSlash("repoB")
 		gitB := env.git.WithDir(repoBPath)
-		if _, err := gitB.Run(ctx, "fetch", "origin"); err != nil {
+		if err := gitB.Run(ctx, "fetch", "origin"); err != nil {
 			t.Fatal(err)
 		}
 

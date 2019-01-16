@@ -29,7 +29,7 @@ func (g *Git) ListRemoteRefs(ctx context.Context, remote string) (map[Ref]Hash, 
 	// TODO(now): Add tests.
 
 	errPrefix := fmt.Sprintf("git ls-remote %q", remote)
-	out, err := g.run(ctx, errPrefix, []string{g.exe, "ls-remote", "--quiet", "--", remote})
+	out, err := g.output(ctx, errPrefix, []string{g.exe, "ls-remote", "--quiet", "--", remote})
 	if err != nil {
 		return nil, err
 	}

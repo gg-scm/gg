@@ -261,7 +261,7 @@ func findDescendants(ctx context.Context, git *git.Git, object string) ([]git.Re
 // contain the given commit object. The order is undefined.
 func branchesContaining(ctx context.Context, g *git.Git, object string) ([]git.Ref, error) {
 	// TODO(soon): Turn this into an API.
-	out, err := g.Run(ctx, "for-each-ref", "--contains="+object, "--format=%(refname)", "--", "refs/heads/*")
+	out, err := g.Output(ctx, "for-each-ref", "--contains="+object, "--format=%(refname)", "--", "refs/heads/*")
 	if err != nil {
 		return nil, fmt.Errorf("list branches: %v", err)
 	}

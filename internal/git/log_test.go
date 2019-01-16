@@ -66,7 +66,7 @@ func TestCommitInfo(t *testing.T) {
 		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
+		if err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
 			t.Fatal(err)
 		}
 		// Message does not have trailing newline to verify verbatim processing.
@@ -137,7 +137,7 @@ func TestCommitInfo(t *testing.T) {
 		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
+		if err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
 			t.Fatal(err)
 		}
 		{
@@ -224,7 +224,7 @@ func TestCommitInfo(t *testing.T) {
 		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
+		if err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
 			t.Fatal(err)
 		}
 		{
@@ -245,7 +245,7 @@ func TestCommitInfo(t *testing.T) {
 		if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := env.g.Run(ctx, "add", "bar.txt"); err != nil {
+		if err := env.g.Run(ctx, "add", "bar.txt"); err != nil {
 			t.Fatal(err)
 		}
 		{
@@ -263,13 +263,13 @@ func TestCommitInfo(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		if _, err := env.g.Run(ctx, "checkout", "--quiet", "-b", "diverge", "HEAD~"); err != nil {
+		if err := env.g.Run(ctx, "checkout", "--quiet", "-b", "diverge", "HEAD~"); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("baz.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := env.g.Run(ctx, "add", "baz.txt"); err != nil {
+		if err := env.g.Run(ctx, "add", "baz.txt"); err != nil {
 			t.Fatal(err)
 		}
 		{
@@ -287,7 +287,7 @@ func TestCommitInfo(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		if _, err := env.g.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+		if err := env.g.Run(ctx, "checkout", "--quiet", "master"); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.g.Merge(ctx, []string{"diverge"}); err != nil {

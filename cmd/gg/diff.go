@@ -96,7 +96,7 @@ func diff(ctx context.Context, cc *cmdContext, args []string) error {
 			// Compare to the null tree.
 
 			// Run connects stdin to /dev/null.
-			zeroHash, err := cc.git.Run(ctx, "hash-object", "-t", "tree", "--stdin")
+			zeroHash, err := cc.git.Output(ctx, "hash-object", "-t", "tree", "--stdin")
 			if err != nil {
 				return err
 			}

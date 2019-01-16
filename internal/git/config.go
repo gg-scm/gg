@@ -33,9 +33,9 @@ type Config struct {
 func (g *Git) ReadConfig(ctx context.Context) (*Config, error) {
 	c := g.command(ctx, []string{g.exe, "config", "-z", "--list"})
 	stdout := new(bytes.Buffer)
-	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
+	c.Stdout = &limitWriter{w: stdout, n: dataOutputLimit}
 	stderr := new(bytes.Buffer)
-	c.Stderr = &limitWriter{w: stdout, n: 1 << 20 /* 1 MiB */}
+	c.Stderr = &limitWriter{w: stdout, n: errorOutputLimit}
 	if err := sigterm.Run(ctx, c); err != nil {
 		return nil, commandError("read git config", err, stderr.Bytes())
 	}

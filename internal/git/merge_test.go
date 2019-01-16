@@ -83,7 +83,7 @@ func TestIsMerging(t *testing.T) {
 
 		// Merge feature into master.
 		// Use raw commands, as IsMerging is used as part of TestMerge.
-		if _, err := env.g.Run(ctx, "merge", "--quiet", "--no-commit", "--no-ff", "feature"); err != nil {
+		if err := env.g.Run(ctx, "merge", "--quiet", "--no-commit", "--no-ff", "feature"); err != nil {
 			t.Fatal(err)
 		}
 

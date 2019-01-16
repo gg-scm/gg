@@ -68,7 +68,7 @@ func (g *Git) CommitInfo(ctx context.Context, rev string) (*CommitInfo, error) {
 		return nil, fmt.Errorf("%s: revision cannot use parent shorthand", errPrefix)
 	}
 
-	out, err := g.run(ctx, errPrefix, []string{
+	out, err := g.output(ctx, errPrefix, []string{
 		g.exe,
 		"log",
 		"--max-count=1",

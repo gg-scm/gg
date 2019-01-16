@@ -95,8 +95,7 @@ func updateCurrentBranch(ctx context.Context, g *git.Git, cfg *git.Config, merge
 	}
 	if !merge {
 		// Simple case: fast-forward merge.
-		_, err := g.Run(ctx, "merge", "--quiet", "--ff-only", target, "--")
-		return err
+		return g.Run(ctx, "merge", "--quiet", "--ff-only", target, "--")
 	}
 	// Hard case: fast-forward merge with local changes.
 	if isAncestor, err := g.IsAncestor(ctx, head.Commit.String(), target); err != nil {

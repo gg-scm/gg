@@ -510,7 +510,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 		}
 		// Move master branch back to the base commit.
 		// Importantly, this will be recorded in the reflog.
-		if _, err := env.git.Run(ctx, "reset", "--hard", baseRev.Commit.String()); err != nil {
+		if err := env.git.Run(ctx, "reset", "--hard", baseRev.Commit.String()); err != nil {
 			t.Fatal(err)
 		}
 		// Create a new commit on master.

@@ -41,7 +41,7 @@ func TestPull(t *testing.T) {
 		t.Fatal(err)
 	}
 	commit1 := rev1.Commit
-	if _, err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -49,7 +49,7 @@ func TestPull(t *testing.T) {
 	if err := gitA.NewBranch(ctx, "foo", git.BranchOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "tag", "first"); err != nil {
+	if err := gitA.Run(ctx, "tag", "first"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
@@ -136,7 +136,7 @@ func TestPullWithArgument(t *testing.T) {
 		t.Fatal(err)
 	}
 	commit1 := rev1.Commit
-	if _, err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -144,7 +144,7 @@ func TestPullWithArgument(t *testing.T) {
 	if err := gitA.NewBranch(ctx, "foo", git.BranchOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "tag", "first"); err != nil {
+	if err := gitA.Run(ctx, "tag", "first"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
@@ -234,7 +234,7 @@ func TestPullUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	commit1 := rev1.Commit
-	if _, err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -309,7 +309,7 @@ func TestInferUpstream(t *testing.T) {
 	}
 	for _, test := range tests {
 		if test.merge != "" {
-			if _, err := env.git.Run(ctx, "config", "--local", "branch."+test.localBranch+".merge", test.merge.String()); err != nil {
+			if err := env.git.Run(ctx, "config", "--local", "branch."+test.localBranch+".merge", test.merge.String()); err != nil {
 				t.Errorf("for localBranch = %q, merge = %q: %v", test.localBranch, test.merge, err)
 				continue
 			}
@@ -317,7 +317,7 @@ func TestInferUpstream(t *testing.T) {
 		cfg, err := env.git.ReadConfig(ctx)
 		if test.merge != "" {
 			// Cleanup
-			if _, err := env.git.Run(ctx, "config", "--local", "--unset", "branch."+test.localBranch+".merge"); err != nil {
+			if err := env.git.Run(ctx, "config", "--local", "--unset", "branch."+test.localBranch+".merge"); err != nil {
 				t.Errorf("cleaning up localBranch = %q, merge = %q: %v", test.localBranch, test.merge, err)
 			}
 		}

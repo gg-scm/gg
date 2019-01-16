@@ -49,10 +49,10 @@ func TestPush(t *testing.T) {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
-	if _, err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -113,10 +113,10 @@ func TestPush_Arg(t *testing.T) {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
-	if _, err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -134,7 +134,7 @@ func TestPush_Arg(t *testing.T) {
 
 	// Clone from repo B to repo C. We want to make sure that the origin remote is
 	// not used at all.
-	if _, err := env.git.Run(ctx, "clone", "--bare", "repoB", "repoC"); err != nil {
+	if err := env.git.Run(ctx, "clone", "--bare", "repoB", "repoC"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -195,10 +195,10 @@ func TestPush_FailUnknownRef(t *testing.T) {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
-	if _, err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -271,10 +271,10 @@ func TestPush_CreateRef(t *testing.T) {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
-	if _, err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -345,10 +345,10 @@ func TestPush_RewindFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
-	if _, err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -365,7 +365,7 @@ func TestPush_RewindFails(t *testing.T) {
 	}
 
 	// Push second commit to repo B.
-	if _, err := gitA.Run(ctx, "push", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -418,10 +418,10 @@ func TestPush_RewindForce(t *testing.T) {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
-	if _, err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -438,7 +438,7 @@ func TestPush_RewindForce(t *testing.T) {
 	}
 
 	// Push second commit to repo B.
-	if _, err := gitA.Run(ctx, "push", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -489,10 +489,10 @@ func TestPush_AncestorInferDst(t *testing.T) {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
-	if _, err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -561,10 +561,10 @@ func TestPush_DistinctPushURL(t *testing.T) {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
-	if _, err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -581,11 +581,11 @@ func TestPush_DistinctPushURL(t *testing.T) {
 	}
 
 	// Set push URL of origin to a new repo C.
-	if _, err := env.git.Run(ctx, "clone", "--bare", "repoB", "repoC"); err != nil {
+	if err := env.git.Run(ctx, "clone", "--bare", "repoB", "repoC"); err != nil {
 		t.Fatal(err)
 	}
 	repoCPath := env.root.FromSlash("repoC")
-	if _, err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoCPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoCPath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -649,10 +649,10 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
-	if _, err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -674,7 +674,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	}
 
 	// Set repo A's origin push URL to a new repo C with branch "newbranch" present.
-	if _, err := env.git.Run(ctx, "clone", "--bare", "repoB", "repoC"); err != nil {
+	if err := env.git.Run(ctx, "clone", "--bare", "repoB", "repoC"); err != nil {
 		t.Fatal(err)
 	}
 	repoCPath := env.root.FromSlash("repoC")
@@ -682,7 +682,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	if err := gitC.NewBranch(ctx, "newbranch", git.BranchOptions{StartPoint: "master"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoCPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoCPath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -742,10 +742,10 @@ func TestPush_NoCreatePushURLMissingBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	repoBPath := env.root.FromSlash("repoB")
-	if _, err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -768,7 +768,7 @@ func TestPush_NoCreatePushURLMissingBranch(t *testing.T) {
 
 	// Set repo A's origin push URL to a new repo C with branch "newbranch" not present.
 	// Create "newbranch" on repo B.
-	if _, err := env.git.Run(ctx, "clone", "--bare", "repoB", "repoC"); err != nil {
+	if err := env.git.Run(ctx, "clone", "--bare", "repoB", "repoC"); err != nil {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(repoBPath)
@@ -776,7 +776,7 @@ func TestPush_NoCreatePushURLMissingBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	repoCPath := env.root.FromSlash("repoC")
-	if _, err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoCPath); err != nil {
+	if err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoCPath); err != nil {
 		t.Fatal(err)
 	}
 

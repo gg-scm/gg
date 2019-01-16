@@ -139,7 +139,7 @@ func (g *Git) getVersion(ctx context.Context) (string, error) {
 	g.versionMu.Unlock()
 
 	// Run git --version.
-	v, err := g.run(ctx, "git --version", []string{g.exe, "--version"})
+	v, err := g.output(ctx, "git --version", []string{g.exe, "--version"})
 	g.versionMu.Lock()
 	close(g.versionCond)
 	g.versionCond = nil
@@ -171,20 +171,46 @@ func (g *Git) WithDir(dir string) *Git {
 	return g2
 }
 
-// Run runs Git with the given arguments and returns its stdout.
-func (g *Git) Run(ctx context.Context, args ...string) (string, error) {
+const (
+	dataOutputLimit  = 10 << 20 // 10 MiB
+	errorOutputLimit = 1 << 20  // 1 MiB
+)
+
+// Run runs Git with the given arguments. If an error occurs, the
+// combined stdout and stderr will be returned in the error.
+func (g *Git) Run(ctx context.Context, args ...string) error {
 	return g.run(ctx, errorSubject(args), append([]string{g.exe}, args...))
 }
 
-// run runs the specified Git subcommand, returning its stdout.
+// run runs the specified Git subcommand.  If an error occurs, the
+// combined stdout and stderr will be returned in the error. argv is
+// interpreted the same as in command(). run will use the given error
+// prefix instead of one derived from the arguments.
+func (g *Git) run(ctx context.Context, errPrefix string, argv []string) error {
+	c := g.command(ctx, argv)
+	output := new(bytes.Buffer)
+	c.Stderr = &limitWriter{w: output, n: errorOutputLimit}
+	c.Stdout = c.Stderr
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError(errPrefix, err, output.Bytes())
+	}
+	return nil
+}
+
+// Output runs Git with the given arguments and returns its stdout.
+func (g *Git) Output(ctx context.Context, args ...string) (string, error) {
+	return g.output(ctx, errorSubject(args), append([]string{g.exe}, args...))
+}
+
+// output runs the specified Git subcommand, returning its stdout.
 // argv is interpreted the same as in command().
-// It will use the given error prefix instead of one derived from the arguments.
-func (g *Git) run(ctx context.Context, errPrefix string, argv []string) (string, error) {
+// output will use the given error prefix instead of one derived from the arguments.
+func (g *Git) output(ctx context.Context, errPrefix string, argv []string) (string, error) {
 	c := g.command(ctx, argv)
 	stdout := new(strings.Builder)
-	c.Stdout = &limitWriter{w: stdout, n: 10 << 20 /* 10 MiB */}
+	c.Stdout = &limitWriter{w: stdout, n: dataOutputLimit}
 	stderr := new(bytes.Buffer)
-	c.Stderr = &limitWriter{w: stderr, n: 1 << 20 /* 1 MiB */}
+	c.Stderr = &limitWriter{w: stderr, n: errorOutputLimit}
 	if err := sigterm.Run(ctx, c); err != nil {
 		return stdout.String(), commandError(errPrefix, err, stderr.Bytes())
 	}

@@ -65,7 +65,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		branchArgs = append(branchArgs, "--")
 		branchArgs = append(branchArgs, f.Args()...)
-		if _, err := cc.git.Run(ctx, branchArgs...); err != nil {
+		if err := cc.git.Run(ctx, branchArgs...); err != nil {
 			return err
 		}
 	case f.NArg() == 0:
@@ -187,7 +187,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 			}
 			if len(upstreamArgs) > 0 && !exists {
 				upstreamArgs[len(upstreamArgs)-1] = b
-				if _, err := cc.git.Run(ctx, upstreamArgs...); err != nil {
+				if err := cc.git.Run(ctx, upstreamArgs...); err != nil {
 					return fmt.Errorf("branch %q: %v", b, err)
 				}
 			}

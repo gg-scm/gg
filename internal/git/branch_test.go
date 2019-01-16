@@ -225,10 +225,10 @@ func TestNewBranch(t *testing.T) {
 				t.Fatal(err)
 			}
 			// Use raw commands to avoid relying on system-under-test.
-			if _, err := env.g.Run(ctx, "checkout", "--quiet", "-b", "existing"); err != nil {
+			if err := env.g.Run(ctx, "checkout", "--quiet", "-b", "existing"); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := env.g.Run(ctx, "branch", "--set-upstream-to=master"); err != nil {
+			if err := env.g.Run(ctx, "branch", "--set-upstream-to=master"); err != nil {
 				t.Fatal(err)
 			}
 			if err := env.root.Apply(filesystem.Write("file.txt", content3)); err != nil {

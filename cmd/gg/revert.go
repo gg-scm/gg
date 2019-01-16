@@ -56,8 +56,7 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 			for _, f := range f.Args() {
 				rmArgs = append(rmArgs, git.LiteralPath(f).String())
 			}
-			_, err := cc.git.Run(ctx, rmArgs...)
-			return err
+			return cc.git.Run(ctx, rmArgs...)
 		}
 		return err
 	}
@@ -116,7 +115,7 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 		for _, f := range deletes {
 			coArgs = append(coArgs, f.String())
 		}
-		if _, err := cc.git.Run(ctx, coArgs...); err != nil {
+		if err := cc.git.Run(ctx, coArgs...); err != nil {
 			return err
 		}
 	}

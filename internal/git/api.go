@@ -33,7 +33,7 @@ import (
 // working tree given the configuration. Any symlinks are resolved.
 func (g *Git) WorkTree(ctx context.Context) (string, error) {
 	const errPrefix = "find git work tree root"
-	out, err := g.run(ctx, errPrefix, []string{g.exe, "rev-parse", "--show-toplevel"})
+	out, err := g.output(ctx, errPrefix, []string{g.exe, "rev-parse", "--show-toplevel"})
 	if err != nil {
 		return "", err
 	}
@@ -52,7 +52,7 @@ func (g *Git) WorkTree(ctx context.Context) (string, error) {
 // of the working tree.
 func (g *Git) prefix(ctx context.Context) (string, error) {
 	const errPrefix = "prefix"
-	prefix, err := g.run(ctx, errPrefix, []string{g.exe, "rev-parse", "--show-prefix"})
+	prefix, err := g.output(ctx, errPrefix, []string{g.exe, "rev-parse", "--show-prefix"})
 	if err != nil {
 		return "", err
 	}
@@ -69,7 +69,7 @@ func (g *Git) GitDir(ctx context.Context) (string, error) {
 	// TODO(someday): Use --absolute-git-dir when minimum supported
 	// Git version >= 2.13.2.
 	const errPrefix = "find .git directory"
-	out, err := g.run(ctx, errPrefix, []string{g.exe, "rev-parse", "--git-common-dir"})
+	out, err := g.output(ctx, errPrefix, []string{g.exe, "rev-parse", "--git-common-dir"})
 	if err != nil {
 		return "", err
 	}
@@ -95,7 +95,7 @@ func (g *Git) GitDir(ctx context.Context) (string, error) {
 // symlinks are resolved.
 func (g *Git) CommonDir(ctx context.Context) (string, error) {
 	const errPrefix = "find .git directory"
-	out, err := g.run(ctx, errPrefix, []string{g.exe, "rev-parse", "--git-common-dir"})
+	out, err := g.output(ctx, errPrefix, []string{g.exe, "rev-parse", "--git-common-dir"})
 	if err != nil {
 		return "", err
 	}
@@ -143,7 +143,7 @@ func (g *Git) MergeBase(ctx context.Context, rev1, rev2 string) (Hash, error) {
 	if err := validateRev(rev2); err != nil {
 		return Hash{}, fmt.Errorf("%s: %v", errPrefix, err)
 	}
-	out, err := g.run(ctx, errPrefix, []string{g.exe, "merge-base", rev1, rev2})
+	out, err := g.output(ctx, errPrefix, []string{g.exe, "merge-base", rev1, rev2})
 	if err != nil {
 		return Hash{}, err
 	}
@@ -194,7 +194,7 @@ func (g *Git) ListTree(ctx context.Context, rev string, pathspecs []Pathspec) (m
 			args = append(args, p.String())
 		}
 	}
-	out, err := g.run(ctx, errPrefix, args)
+	out, err := g.output(ctx, errPrefix, args)
 	if err != nil {
 		return nil, err
 	}
@@ -360,8 +360,7 @@ func (g *Git) Add(ctx context.Context, pathspecs []Pathspec, opts AddOptions) er
 // StageTracked updates the index to match the tracked files in the
 // working copy.
 func (g *Git) StageTracked(ctx context.Context) error {
-	_, err := g.run(ctx, "git add -A", []string{g.exe, "add", "--all"})
-	return err
+	return g.run(ctx, "git add -A", []string{g.exe, "add", "--all"})
 }
 
 // RemoveOptions specifies the command-line options for `git add`.
@@ -729,22 +728,13 @@ func (g *Git) Merge(ctx context.Context, revs []string) error {
 	}
 	args := []string{g.exe, "merge", "--quiet", "--no-commit", "--no-ff"}
 	args = append(args, revs...)
-	c := g.command(ctx, args)
-	// Merge conflict output goes to stdout and is useful to include in errors.
-	out := new(bytes.Buffer)
-	c.Stdout = &limitWriter{w: out, n: 1 << 20 /* 1 MiB */}
-	c.Stderr = c.Stdout
-	if err := sigterm.Run(ctx, c); err != nil {
-		return commandError(errPrefix, err, out.Bytes())
-	}
-	return nil
+	return g.run(ctx, errPrefix, args)
 }
 
 // AbortMerge aborts the current conflict resolution process and tries
 // to reconstruct pre-merge state.
 func (g *Git) AbortMerge(ctx context.Context) error {
-	_, err := g.run(ctx, "git abort merge", []string{g.exe, "merge", "--abort"})
-	return err
+	return g.run(ctx, "git abort merge", []string{g.exe, "merge", "--abort"})
 }
 
 // CheckoutOptions specifies the command-line options for `git checkout`.
@@ -766,7 +756,7 @@ func (g *Git) CheckoutBranch(ctx context.Context, branch string, opts CheckoutOp
 	// Verify that the branch exists. `git checkout` will attempt to
 	// create branches if they don't exist if there's a remote tracking
 	// branch of the same name.
-	if _, err := g.run(ctx, errPrefix, []string{g.exe, "rev-parse", "-q", "--verify", "--revs-only", BranchRef(branch).String()}); err != nil {
+	if err := g.run(ctx, errPrefix, []string{g.exe, "rev-parse", "-q", "--verify", "--revs-only", BranchRef(branch).String()}); err != nil {
 		return err
 	}
 
@@ -776,7 +766,7 @@ func (g *Git) CheckoutBranch(ctx context.Context, branch string, opts CheckoutOp
 		args = append(args, "--merge")
 	}
 	args = append(args, branch, "--")
-	if _, err := g.run(ctx, errPrefix, args); err != nil {
+	if err := g.run(ctx, errPrefix, args); err != nil {
 		return err
 	}
 	return nil
@@ -797,7 +787,7 @@ func (g *Git) CheckoutRev(ctx context.Context, rev string, opts CheckoutOptions)
 		args = append(args, "--merge")
 	}
 	args = append(args, rev, "--")
-	if _, err := g.run(ctx, errPrefix, args); err != nil {
+	if err := g.run(ctx, errPrefix, args); err != nil {
 		return err
 	}
 	return nil
@@ -862,10 +852,7 @@ func (g *Git) NewBranch(ctx context.Context, name string, opts BranchOptions) er
 			args = append(args, opts.StartPoint)
 		}
 	}
-	if _, err := g.run(ctx, errPrefix, args); err != nil {
-		return err
-	}
-	return nil
+	return g.run(ctx, errPrefix, args)
 }
 
 // commandError returns a new error with the information from an

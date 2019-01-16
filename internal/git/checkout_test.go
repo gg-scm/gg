@@ -68,7 +68,7 @@ func TestCheckoutBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Use raw command to avoid depending on system-under-test.
-	if _, err := templateGit.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+	if err := templateGit.Run(ctx, "checkout", "--quiet", "master"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -141,7 +141,7 @@ func TestCheckoutBranch(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// Clone from template to local working copy.
-			if _, err := env.g.Run(ctx, "clone", "template", "wc"); err != nil {
+			if err := env.g.Run(ctx, "clone", "template", "wc"); err != nil {
 				t.Fatal(err)
 			}
 			defer func() {
@@ -299,7 +299,7 @@ func TestCheckoutRev(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// Clone from template to local working copy.
-			if _, err := env.g.Run(ctx, "clone", "template", "wc"); err != nil {
+			if err := env.g.Run(ctx, "clone", "template", "wc"); err != nil {
 				t.Fatal(err)
 			}
 			defer func() {

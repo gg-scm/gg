@@ -91,7 +91,7 @@ func TestConfigValue(t *testing.T) {
 			t.Errorf("For %q: %v", test.config, err)
 			continue
 		}
-		want, err := env.g.Run(ctx, "config", "-z", test.name)
+		want, err := env.g.Output(ctx, "config", "-z", test.name)
 		if err == nil && strings.HasSuffix(want, "\x00") {
 			want = want[:len(want)-1]
 		} else {
@@ -150,7 +150,7 @@ func TestConfigBool(t *testing.T) {
 			continue
 		}
 		got, gotErr := cfg.Bool(test.name)
-		out, wantErr := env.g.Run(ctx, "config", "-z", "--bool", test.name)
+		out, wantErr := env.g.Output(ctx, "config", "-z", "--bool", test.name)
 		if wantErr != nil {
 			if gotErr == nil {
 				t.Errorf("For %q, cfg.Bool(%q) = _, <nil>; want error", test.config, test.name)
@@ -273,7 +273,7 @@ func TestListRemotes(t *testing.T) {
 				t.Fatal(err)
 			}
 			got := cfg.ListRemotes()
-			out, err := env.g.Run(ctx, "remote")
+			out, err := env.g.Output(ctx, "remote")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -286,17 +286,17 @@ func TestListRemotes(t *testing.T) {
 				remote := &Remote{
 					Name: name,
 				}
-				if url, err := env.g.Run(ctx, "remote", "get-url", name); err != nil {
+				if url, err := env.g.Output(ctx, "remote", "get-url", name); err != nil {
 					t.Fatal(err)
 				} else {
 					remote.FetchURL = strings.TrimSuffix(url, "\n")
 				}
-				if url, err := env.g.Run(ctx, "remote", "get-url", "--push", name); err != nil {
+				if url, err := env.g.Output(ctx, "remote", "get-url", "--push", name); err != nil {
 					t.Fatal(err)
 				} else {
 					remote.PushURL = strings.TrimSuffix(url, "\n")
 				}
-				if fetchOut, err := env.g.Run(ctx, "config", "--get-all", "remote."+name+".fetch"); err == nil {
+				if fetchOut, err := env.g.Output(ctx, "config", "--get-all", "remote."+name+".fetch"); err == nil {
 					fetchSpecs := strings.Split(strings.TrimSuffix(fetchOut, "\n"), "\n")
 					for _, spec := range fetchSpecs {
 						remote.Fetch = append(remote.Fetch, FetchRefspec(spec))

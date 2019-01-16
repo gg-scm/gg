@@ -183,13 +183,13 @@ func TestParseRev(t *testing.T) {
 	if err := env.root.Apply(filesystem.Write("repo/foo.txt", "Hello, World!\n")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := g.Run(ctx, "add", fileName); err != nil {
+	if err := g.Run(ctx, "add", fileName); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := g.Run(ctx, "commit", "-m", "first commit"); err != nil {
+	if err := g.Run(ctx, "commit", "-m", "first commit"); err != nil {
 		t.Fatal(err)
 	}
-	commit1Hex, err := g.Run(ctx, "rev-parse", "HEAD")
+	commit1Hex, err := g.Output(ctx, "rev-parse", "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +197,7 @@ func TestParseRev(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := g.Run(ctx, "tag", "initial"); err != nil {
+	if err := g.Run(ctx, "tag", "initial"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -205,10 +205,10 @@ func TestParseRev(t *testing.T) {
 	if err := env.root.Apply(filesystem.Write("repo/foo.txt", "Some more thoughts...\n")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := g.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {
+	if err := g.Run(ctx, "commit", "-a", "-m", "second commit"); err != nil {
 		t.Fatal(err)
 	}
-	commit2Hex, err := g.Run(ctx, "rev-parse", "HEAD")
+	commit2Hex, err := g.Output(ctx, "rev-parse", "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +218,7 @@ func TestParseRev(t *testing.T) {
 	}
 
 	// Run fetch (to write FETCH_HEAD)
-	if _, err := g.Run(ctx, "fetch", repoPath, "HEAD"); err != nil {
+	if err := g.Run(ctx, "fetch", repoPath, "HEAD"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -313,10 +313,10 @@ func TestListRefs(t *testing.T) {
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
+	if err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "commit", "-m", "first commit"); err != nil {
+	if err := env.g.Run(ctx, "commit", "-m", "first commit"); err != nil {
 		t.Fatal(err)
 	}
 	revMaster, err := env.g.Head(ctx)
@@ -324,16 +324,16 @@ func TestListRefs(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Create a new commit on branch abc.
-	if _, err := env.g.Run(ctx, "checkout", "--quiet", "-b", "abc"); err != nil {
+	if err := env.g.Run(ctx, "checkout", "--quiet", "-b", "abc"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "add", "bar.txt"); err != nil {
+	if err := env.g.Run(ctx, "add", "bar.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "commit", "-m", "abc commit"); err != nil {
+	if err := env.g.Run(ctx, "commit", "-m", "abc commit"); err != nil {
 		t.Fatal(err)
 	}
 	revABC, err := env.g.Head(ctx)
@@ -341,16 +341,16 @@ func TestListRefs(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Create a two new commits on branch def.
-	if _, err := env.g.Run(ctx, "checkout", "--quiet", "-b", "def", "master"); err != nil {
+	if err := env.g.Run(ctx, "checkout", "--quiet", "-b", "def", "master"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("baz.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "add", "baz.txt"); err != nil {
+	if err := env.g.Run(ctx, "add", "baz.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "commit", "-m", "def commit 1"); err != nil {
+	if err := env.g.Run(ctx, "commit", "-m", "def commit 1"); err != nil {
 		t.Fatal(err)
 	}
 	revDEF1, err := env.g.Head(ctx)
@@ -360,7 +360,7 @@ func TestListRefs(t *testing.T) {
 	if err := env.root.Apply(filesystem.Write("baz.txt", dummyContent+"abc\n")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "commit", "-a", "-m", "def commit 2"); err != nil {
+	if err := env.g.Run(ctx, "commit", "-a", "-m", "def commit 2"); err != nil {
 		t.Fatal(err)
 	}
 	revDEF2, err := env.g.Head(ctx)
@@ -368,7 +368,7 @@ func TestListRefs(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Tag the def branch as "ghi".
-	if _, err := env.g.Run(ctx, "tag", "-a", "-m", "tests gonna tag", "ghi", "HEAD~"); err != nil {
+	if err := env.g.Run(ctx, "tag", "-a", "-m", "tests gonna tag", "ghi", "HEAD~"); err != nil {
 		t.Fatal(err)
 	}
 

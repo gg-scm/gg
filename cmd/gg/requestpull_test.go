@@ -160,7 +160,7 @@ func TestRequestPull(t *testing.T) {
 			if err := env.initRepoWithHistory(ctx, "origin"); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := env.git.Run(ctx, "clone", "--quiet", "origin", "local"); err != nil {
+			if err := env.git.Run(ctx, "clone", "--quiet", "origin", "local"); err != nil {
 				t.Fatal(err)
 			}
 			localDir := env.root.FromSlash("local")
@@ -171,18 +171,18 @@ func TestRequestPull(t *testing.T) {
 			if err := localGit.NewBranch(ctx, "myfork", git.BranchOptions{StartPoint: "origin/master", Track: true}); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := localGit.Run(ctx, "remote", "add", "forkremote", test.forkURL); err != nil {
+			if err := localGit.Run(ctx, "remote", "add", "forkremote", test.forkURL); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := localGit.Run(ctx, "remote", "set-url", "origin", test.upstreamURL); err != nil {
+			if err := localGit.Run(ctx, "remote", "set-url", "origin", test.upstreamURL); err != nil {
 				t.Fatal(err)
 			}
 			if test.forkURL != "" {
-				if _, err := localGit.Run(ctx, "config", "branch.myfork.pushRemote", "forkremote"); err != nil {
+				if err := localGit.Run(ctx, "config", "branch.myfork.pushRemote", "forkremote"); err != nil {
 					t.Fatal(err)
 				}
 				defer func() {
-					if _, err := localGit.Run(ctx, "config", "--unset", "branch.myfork.pushRemote"); err != nil {
+					if err := localGit.Run(ctx, "config", "--unset", "branch.myfork.pushRemote"); err != nil {
 						t.Error(err)
 					}
 				}()
@@ -265,12 +265,12 @@ func TestRequestPull_BodyWithoutTitleUsageError(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "origin"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "clone", "--quiet", "origin", "local"); err != nil {
+	if err := env.git.Run(ctx, "clone", "--quiet", "origin", "local"); err != nil {
 		t.Fatal(err)
 	}
 	localDir := env.root.FromSlash("local")
 	localGit := env.git.WithDir(localDir)
-	if _, err := localGit.Run(ctx, "remote", "set-url", "origin", "https://github.com/example/foo.git"); err != nil {
+	if err := localGit.Run(ctx, "remote", "set-url", "origin", "https://github.com/example/foo.git"); err != nil {
 		t.Fatal(err)
 	}
 	err = localGit.NewBranch(ctx, "feature", git.BranchOptions{
@@ -336,12 +336,12 @@ func TestRequestPull_Editor(t *testing.T) {
 	if err := env.initRepoWithHistory(ctx, "origin"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.git.Run(ctx, "clone", "--quiet", "origin", "local"); err != nil {
+	if err := env.git.Run(ctx, "clone", "--quiet", "origin", "local"); err != nil {
 		t.Fatal(err)
 	}
 	localDir := env.root.FromSlash("local")
 	localGit := env.git.WithDir(localDir)
-	if _, err := localGit.Run(ctx, "remote", "set-url", "origin", "https://github.com/example/foo.git"); err != nil {
+	if err := localGit.Run(ctx, "remote", "set-url", "origin", "https://github.com/example/foo.git"); err != nil {
 		t.Fatal(err)
 	}
 	if err := localGit.NewBranch(ctx, "feature", git.BranchOptions{StartPoint: "origin/master", Track: true}); err != nil {

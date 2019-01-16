@@ -44,19 +44,19 @@ func TestListTree(t *testing.T) {
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
+	if err := env.g.Run(ctx, "add", "foo.txt"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "commit", "-m", "commit 1"); err != nil {
+	if err := env.g.Run(ctx, "commit", "-m", "commit 1"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("bar/baz.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "add", filepath.Join("bar", "baz.txt")); err != nil {
+	if err := env.g.Run(ctx, "add", filepath.Join("bar", "baz.txt")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.g.Run(ctx, "commit", "-m", "commit 2"); err != nil {
+	if err := env.g.Run(ctx, "commit", "-m", "commit 2"); err != nil {
 		t.Fatal(err)
 	}
 	tests := []struct {

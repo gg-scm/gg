@@ -126,7 +126,7 @@ func TestStatus_RenamedLocally(t *testing.T) {
 	}
 	// Check for buggy Git (see https://github.com/zombiezen/gg/issues/60).
 	// Useful for debugging.
-	statusOut, err := env.git.Run(ctx, "status", "--porcelain", "-z", "-unormal")
+	statusOut, err := env.git.Output(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {
 		t.Fatal(err)
 	}

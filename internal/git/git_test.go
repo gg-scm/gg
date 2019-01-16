@@ -124,8 +124,8 @@ func TestRun(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	if _, err := env.g.Run(ctx, "init", "repo"); err != nil {
-		t.Fatal(err)
+	if err := env.g.Run(ctx, "init", "repo"); err != nil {
+		t.Error("Run:", err)
 	}
 	gitDir := env.root.FromSlash("repo/.git")
 	info, err := os.Stat(gitDir)
@@ -134,6 +134,30 @@ func TestRun(t *testing.T) {
 	}
 	if !info.IsDir() {
 		t.Errorf("%s is not a git directory", gitDir)
+	}
+}
+
+func TestOutput(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping due to -short")
+	}
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, gitPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	if err := env.g.Run(ctx, "init"); err != nil {
+		t.Fatal(err)
+	}
+	out, err := env.g.Output(ctx, "config", "core.bare")
+	if out != "false\n" || err != nil {
+		t.Errorf("Output(ctx, \"config\", \"core.bare\") = %q, %v; want \"false\\n\", <nil>", out, err)
 	}
 }
 
