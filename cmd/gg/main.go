@@ -75,6 +75,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  clone         " + cloneSynopsis + "\n" +
 		"  commit        " + commitSynopsis + "\n" +
 		"  diff          " + diffSynopsis + "\n" +
+		"  identify      " + identifySynopsis + "\n" +
 		"  init          " + initSynopsis + "\n" +
 		"  log           " + logSynopsis + "\n" +
 		"  merge         " + mergeSynopsis + "\n" +
@@ -229,6 +230,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return gerrithook(ctx, cc, args)
 	case "histedit":
 		return histedit(ctx, cc, args)
+	case "identify", "id":
+		return identify(ctx, cc, args)
 	case "init":
 		return init_(ctx, cc, args)
 	case "log", "history":

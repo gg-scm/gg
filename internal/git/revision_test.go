@@ -197,6 +197,9 @@ func TestParseRev(t *testing.T) {
 	if err := g.Run(ctx, "tag", "initial"); err != nil {
 		t.Fatal(err)
 	}
+	if err := g.Run(ctx, "tag", "-a", "-m", "some notes", "initial_annotated"); err != nil {
+		t.Fatal(err)
+	}
 
 	// Second commit
 	if err := env.root.Apply(filesystem.Write("repo/foo.txt", "Some more thoughts...\n")); err != nil {
@@ -265,6 +268,11 @@ func TestParseRev(t *testing.T) {
 			refspec: "initial",
 			commit:  commit1,
 			ref:     "refs/tags/initial",
+		},
+		{
+			refspec: "initial_annotated",
+			commit:  commit1,
+			ref:     "refs/tags/initial_annotated",
 		},
 	}
 	for _, test := range tests {

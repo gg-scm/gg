@@ -125,7 +125,7 @@ func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 		return nil, fmt.Errorf("%s: %v", errPrefix, err)
 	}
 
-	out, err := g.output(ctx, errPrefix, []string{g.exe, "rev-parse", "-q", "--verify", "--revs-only", refspec})
+	out, err := g.output(ctx, errPrefix, []string{g.exe, "rev-parse", "-q", "--verify", "--revs-only", refspec + "^0"})
 	if err != nil {
 		return nil, err
 	}
