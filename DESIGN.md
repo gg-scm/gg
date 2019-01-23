@@ -29,9 +29,6 @@
     changeset. Since this significantly improves the developer experience, I
     have opted to define descendants of commit X in Git as *any commit reachable
     by one or more references under `refs/heads/` that contains X*.
--   Push and pull only operate on one ref at a time.  The Git CLI does not
-    provide enough control over multi-ref pulls and pushes without additional
-    configuration variables.
 
 ## Testing
 
