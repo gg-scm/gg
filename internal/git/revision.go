@@ -15,11 +15,15 @@
 package git
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
+
+	"gg-scm.io/pkg/internal/sigterm"
 )
 
 // hashSize is the number of bytes in a hash.
@@ -113,9 +117,35 @@ const (
 	tagPrefix    = "refs/tags/"
 )
 
-// Head returns the working copy's branch revision.
+// Head returns the working copy's branch revision. If the branch does
+// not point to a valid commit (such as when the repository is first
+// created), then Head returns an error.
 func (g *Git) Head(ctx context.Context) (*Rev, error) {
 	return g.ParseRev(ctx, Head.String())
+}
+
+// HeadRef returns the working copy's branch. If the working copy is in
+// detached HEAD state, then HeadRef returns an empty string and no
+// error. The ref may not point to a valid commit.
+func (g *Git) HeadRef(ctx context.Context) (Ref, error) {
+	const errPrefix = "head ref"
+	c := g.command(ctx, []string{g.exe, "symbolic-ref", "--quiet", "HEAD"})
+	stdout := new(strings.Builder)
+	c.Stdout = &limitWriter{w: stdout, n: dataOutputLimit}
+	stderr := new(bytes.Buffer)
+	c.Stderr = &limitWriter{w: stderr, n: errorOutputLimit}
+	if err := sigterm.Run(ctx, c); err != nil {
+		if err, ok := err.(*exec.ExitError); ok && exitStatus(err.ProcessState) == 1 {
+			// Not a symbolic ref: detached HEAD.
+			return "", nil
+		}
+		return "", commandError(errPrefix, err, stderr.Bytes())
+	}
+	name, err := oneLine(stdout.String())
+	if err != nil {
+		return "", fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	return Ref(name), nil
 }
 
 // ParseRev parses a revision.

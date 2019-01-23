@@ -183,7 +183,7 @@ func amendedDiffStatus(ctx context.Context, g *git.Git, pathspecs []git.Pathspec
 }
 
 func commitMessageTemplate(ctx context.Context, g *git.Git, status []git.DiffStatusEntry, amend bool, commentChar string) ([]byte, error) {
-	head, err := g.Head(ctx)
+	headRef, err := g.HeadRef(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -217,13 +217,13 @@ func commitMessageTemplate(ctx context.Context, g *git.Git, status []git.DiffSta
 	buf.WriteByte('\n')
 	buf.WriteString(commentChar)
 	buf.WriteByte(' ')
-	if head.Ref == git.Head {
+	if headRef == "" {
 		buf.WriteString("detached HEAD")
-	} else if b := head.Ref.Branch(); b != "" {
+	} else if b := headRef.Branch(); b != "" {
 		buf.WriteString("branch ")
 		buf.WriteString(b)
 	} else {
-		buf.WriteString(head.Ref.String())
+		buf.WriteString(headRef.String())
 	}
 	buf.WriteByte('\n')
 

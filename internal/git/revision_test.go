@@ -157,6 +157,80 @@ func TestRef(t *testing.T) {
 	}
 }
 
+func TestHeadRef(t *testing.T) {
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	ctx := context.Background()
+
+	t.Run("EmptyRepo", func(t *testing.T) {
+		env, err := newTestEnv(ctx, gitPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := env.g.Init(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+		const want = Ref("refs/heads/master")
+		got, err := env.g.HeadRef(ctx)
+		if got != want || err != nil {
+			t.Errorf("HeadRef(ctx) = %q, %v; want %q, <nil>", got, err, want)
+		}
+	})
+	t.Run("FirstCommit", func(t *testing.T) {
+		env, err := newTestEnv(ctx, gitPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := env.g.Init(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("file.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.g.Run(ctx, "add", "file.txt"); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.g.Run(ctx, "commit", "-m", "first commit"); err != nil {
+			t.Fatal(err)
+		}
+		const want = Ref("refs/heads/master")
+		got, err := env.g.HeadRef(ctx)
+		if got != want || err != nil {
+			t.Errorf("HeadRef(ctx) = %q, %v; want %q, <nil>", got, err, want)
+		}
+	})
+	t.Run("DetachedHead", func(t *testing.T) {
+		env, err := newTestEnv(ctx, gitPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := env.g.Init(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("file.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.g.Run(ctx, "add", "file.txt"); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.g.Run(ctx, "commit", "-m", "first commit"); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.g.Run(ctx, "checkout", "--quiet", "--detach", "HEAD"); err != nil {
+			t.Fatal(err)
+		}
+		got, err := env.g.HeadRef(ctx)
+		if got != "" || err != nil {
+			t.Errorf("HeadRef(ctx) = %q, %v; want \"\", <nil>", got, err)
+		}
+	})
+}
+
 func TestParseRev(t *testing.T) {
 	gitPath, err := findGit()
 	if err != nil {
