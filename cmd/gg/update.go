@@ -50,7 +50,15 @@ aliases: up, checkout, co
 		if err != nil {
 			return err
 		}
-		return updateCurrentBranch(ctx, cc.git, cfg)
+		ref, err := cc.git.HeadRef(ctx)
+		if err != nil {
+			return err
+		}
+		branch := ref.Branch()
+		if branch == "" {
+			return errors.New("can't update with no branch checked out; run 'gg update BRANCH'")
+		}
+		return updateToBranch(ctx, cc.git, cfg, branch)
 	case f.NArg() == 0 && *rev != "":
 		var err error
 		r, err = cc.git.ParseRev(ctx, *rev)
@@ -66,37 +74,39 @@ aliases: up, checkout, co
 	default:
 		return usagef("can pass only one revision")
 	}
-	if b := r.Ref.Branch(); b != "" {
-		return cc.git.CheckoutBranch(ctx, b, git.CheckoutOptions{
+	b := r.Ref.Branch()
+	if b == "" {
+		return cc.git.CheckoutRev(ctx, r.Commit.String(), git.CheckoutOptions{
 			Merge: true,
 		})
 	}
-	return cc.git.CheckoutRev(ctx, r.Commit.String(), git.CheckoutOptions{
-		Merge: true,
-	})
+	cfg, err := cc.git.ReadConfig(ctx)
+	if err != nil {
+		return err
+	}
+	return updateToBranch(ctx, cc.git, cfg, b)
 }
 
-// updateCurrentBranch fast-forwards the current branch while preserving local changes.
-func updateCurrentBranch(ctx context.Context, g *git.Git, cfg *git.Config) error {
+// updateToBranch switches to another branch (preserving local changes
+// via merge) and fast-forwards it. If branch is the empty string, then
+// updateToBranch does nothing.
+func updateToBranch(ctx context.Context, g *git.Git, cfg *git.Config, branch string) error {
+	if branch == "" {
+		return nil
+	}
+	target := targetForUpdate(cfg, branch)
+	if target == "" {
+		// No fast-forward target, so just a simple checkout.
+		return g.CheckoutBranch(ctx, branch, git.CheckoutOptions{Merge: true})
+	}
+
+	// Check out and fast-forward.
+	//
 	// git merge --ff-only is insufficient, as it does not three-way merge
 	// local modifications. We use some sneaky checkout invocations to get
 	// around this.
 
-	head, err := g.Head(ctx)
-	if err != nil {
-		return err
-	}
-	branch := head.Ref.Branch()
-	if branch == "" {
-		return errors.New("can't update with no branch checked out; run 'gg update BRANCH'")
-	}
-	target := targetForUpdate(cfg, branch)
-	if target == "" {
-		// No-op: nothing to update.
-		return nil
-	}
-
-	if isAncestor, err := g.IsAncestor(ctx, head.Commit.String(), target); err != nil {
+	if isAncestor, err := g.IsAncestor(ctx, git.BranchRef(branch).String(), target); err != nil {
 		return err
 	} else if !isAncestor {
 		return errors.New("upstream has diverged; run 'gg merge' or 'gg rebase'")
