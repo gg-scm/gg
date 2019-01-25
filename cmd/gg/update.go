@@ -96,7 +96,11 @@ func updateToBranch(ctx context.Context, g *git.Git, cfg *git.Config, branch str
 	}
 	target := targetForUpdate(cfg, branch)
 	if target == "" {
-		// No fast-forward target, so just a simple checkout.
+		// No fast-forward target, so just do a simple checkout.
+		return g.CheckoutBranch(ctx, branch, git.CheckoutOptions{Merge: true})
+	}
+	if _, err := g.ParseRev(ctx, target.String()); err != nil {
+		// Remote-tracking branch does not exist, so just do a simple checkout.
 		return g.CheckoutBranch(ctx, branch, git.CheckoutOptions{Merge: true})
 	}
 
@@ -106,7 +110,7 @@ func updateToBranch(ctx context.Context, g *git.Git, cfg *git.Config, branch str
 	// local modifications. We use some sneaky checkout invocations to get
 	// around this.
 
-	if isAncestor, err := g.IsAncestor(ctx, git.BranchRef(branch).String(), target); err != nil {
+	if isAncestor, err := g.IsAncestor(ctx, git.BranchRef(branch).String(), target.String()); err != nil {
 		return err
 	} else if !isAncestor {
 		return errors.New("upstream has diverged; run 'gg merge' or 'gg rebase'")
@@ -115,7 +119,7 @@ func updateToBranch(ctx context.Context, g *git.Git, cfg *git.Config, branch str
 	// while merging the local changes, then move the branch ref to match the
 	// current revision. This is only really "safe" because of the ancestor
 	// check before.
-	if err := g.CheckoutRev(ctx, target, git.CheckoutOptions{Merge: true}); err != nil {
+	if err := g.CheckoutRev(ctx, target.String(), git.CheckoutOptions{Merge: true}); err != nil {
 		return err
 	}
 	if err := g.NewBranch(ctx, branch, git.BranchOptions{Overwrite: true, Checkout: true}); err != nil {
@@ -124,10 +128,10 @@ func updateToBranch(ctx context.Context, g *git.Git, cfg *git.Config, branch str
 	return nil
 }
 
-// targetForUpdate returns the revision to use for
-// fast-forwarding a branch. If targetForUpdate returns an empty
-// string, it means that no target could be found.
-func targetForUpdate(cfg *git.Config, branch string) string {
+// targetForUpdate returns the revision to use for fast-forwarding a
+// branch. If targetForUpdate returns an empty string, it means that no
+// target could be found. The ref returned may not exist.
+func targetForUpdate(cfg *git.Config, branch string) git.Ref {
 	if branch == "" {
 		return ""
 	}
@@ -155,5 +159,5 @@ func targetForUpdate(cfg *git.Config, branch string) string {
 	if remote == nil {
 		return ""
 	}
-	return remote.MapFetch(remoteRef).String()
+	return remote.MapFetch(remoteRef)
 }

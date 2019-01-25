@@ -474,6 +474,55 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 			t.Errorf("foo.txt = %q; want %q", got, wantContent)
 		}
 	})
+	t.Run("NotPresentInRemote", func(t *testing.T) {
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+
+		// Create a repository A and clone it to repository B.
+		if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+			t.Fatal(err)
+		}
+		rev1, err := env.git.WithDir("repoA").Head(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
+			t.Fatal(err)
+		}
+
+		// Create a new branch in repository B.
+		repoBPath := env.root.FromSlash("repoB")
+		gitB := env.git.WithDir(repoBPath)
+		if err := gitB.NewBranch(ctx, "foo", git.BranchOptions{}); err != nil {
+			t.Fatal(err)
+		}
+
+		// Call gg to switch to foo branch.
+		_, err = env.gg(ctx, repoBPath, "update", "foo")
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Verify that HEAD was moved to foo branch.
+		if r, err := gitB.Head(ctx); err != nil {
+			t.Fatal(err)
+		} else {
+			if r.Commit != rev1.Commit {
+				names := map[git.Hash]string{
+					rev1.Commit: "first commit",
+				}
+				t.Errorf("after update foo, HEAD = %s; want %s",
+					prettyCommit(r.Commit, names),
+					prettyCommit(rev1.Commit, names))
+			}
+			if got, want := r.Ref, git.BranchRef("foo"); got != want {
+				t.Errorf("after update foo, HEAD ref = %s; want %s", got, want)
+			}
+		}
+	})
 }
 
 func TestUpdate_ToCommit(t *testing.T) {
