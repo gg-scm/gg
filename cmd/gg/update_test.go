@@ -20,6 +20,7 @@ import (
 
 	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/git"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestUpdate_NoArgs(t *testing.T) {
@@ -577,6 +578,150 @@ func TestUpdate_ToCommit(t *testing.T) {
 		}
 		if got := r.Ref; got != git.Head {
 			t.Errorf("after update master, HEAD ref = %s; want %s", got, git.Head)
+		}
+	}
+
+	// Verify that foo.txt has the first commit's content.
+	if got, err := env.root.ReadFile("foo.txt"); err != nil {
+		t.Error(err)
+	} else if want := "Apple\n"; got != want {
+		t.Errorf("foo.txt = %q; want %q", got, want)
+	}
+}
+
+func TestUpdate_Unclean(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	// Create a repository with two commits.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Apple\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	h1, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Banana\n")); err != nil {
+		t.Fatal(err)
+	}
+	h2, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Introduce local changes.
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Coconut\n")); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to update to the first commit. It should cause a merge
+	// conflict, but not fail.
+	_, err = env.gg(ctx, env.root.String(), "update", h1.String())
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Verify that HEAD is the first commit.
+	if r, err := env.git.Head(ctx); err != nil {
+		t.Fatal(err)
+	} else {
+		if r.Commit != h1 {
+			names := map[git.Hash]string{
+				h1: "first commit",
+				h2: "second commit",
+			}
+			t.Errorf("after update %v, HEAD = %s; want %s",
+				h1,
+				prettyCommit(r.Commit, names),
+				prettyCommit(h1, names))
+		}
+		if got, want := r.Ref, git.Head; got != want {
+			t.Errorf("after update %v, HEAD ref = %s; want %s", h1, got, want)
+		}
+	}
+
+	// Verify that foo.txt has merge conflicts.
+	st, err := env.git.Status(ctx, git.StatusOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []git.StatusEntry{
+		{Code: git.StatusCode{'U', 'U'}, Name: "foo.txt"},
+	}
+	if diff := cmp.Diff(want, st); diff != "" {
+		t.Errorf("status (-want +got):\n%s", diff)
+	}
+}
+
+func TestUpdate_Clean(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	// Create a repository with two commits.
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Apple\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	h1, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Banana\n")); err != nil {
+		t.Fatal(err)
+	}
+	h2, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Introduce local changes.
+	if err := env.root.Apply(filesystem.Write("foo.txt", "Coconut\n")); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to update cleanly to the first commit.
+	_, err = env.gg(ctx, env.root.String(), "update", "--clean", h1.String())
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Verify that HEAD is the first commit.
+	if r, err := env.git.Head(ctx); err != nil {
+		t.Fatal(err)
+	} else {
+		if r.Commit != h1 {
+			names := map[git.Hash]string{
+				h1: "first commit",
+				h2: "second commit",
+			}
+			t.Errorf("after update %v, HEAD = %s; want %s",
+				h1,
+				prettyCommit(r.Commit, names),
+				prettyCommit(h1, names))
+		}
+		if got, want := r.Ref, git.Head; got != want {
+			t.Errorf("after update %v, HEAD ref = %s; want %s", h1, got, want)
 		}
 	}
 

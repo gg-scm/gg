@@ -739,10 +739,40 @@ func (g *Git) AbortMerge(ctx context.Context) error {
 
 // CheckoutOptions specifies the command-line options for `git checkout`.
 type CheckoutOptions struct {
-	// If Merge is true and there are local changes to one or more files
-	// that differ between the current branch and the branch being
-	// switched to, then Git performs a three-way merge on the files.
-	Merge bool
+	// ConflictBehavior specifies the behavior when encountering locally
+	// modified files.
+	ConflictBehavior CheckoutConflictBehavior
+}
+
+// CheckoutConflictBehavior specifies the behavior of checkout with
+// local modifications.
+type CheckoutConflictBehavior int
+
+// Possible checkout behaviors when encountering locally modified files.
+const (
+	// AbortOnFileChange stops the checkout if a file that is modified
+	// locally differs between the current HEAD and the target commit.
+	// This is the default behavior.
+	AbortOnFileChange CheckoutConflictBehavior = iota
+	// MergeLocal performs a three-way merge on any differing files.
+	MergeLocal
+	// DiscardLocal uses the target commit's content regardless of local
+	// modifications.
+	DiscardLocal
+)
+
+// String returns the Go constant name of the behavior.
+func (ccb CheckoutConflictBehavior) String() string {
+	switch ccb {
+	case AbortOnFileChange:
+		return "AbortOnFileChange"
+	case MergeLocal:
+		return "MergeLocal"
+	case DiscardLocal:
+		return "DiscardLocal"
+	default:
+		return fmt.Sprintf("CheckoutConflictBehavior(%d)", int(ccb))
+	}
 }
 
 // CheckoutBranch switches HEAD to another branch and updates the
@@ -753,6 +783,9 @@ func (g *Git) CheckoutBranch(ctx context.Context, branch string, opts CheckoutOp
 	if err := validateBranch(branch); err != nil {
 		return fmt.Errorf("%s: %v", errPrefix, err)
 	}
+	if opts.ConflictBehavior != AbortOnFileChange && opts.ConflictBehavior != MergeLocal && opts.ConflictBehavior != DiscardLocal {
+		return fmt.Errorf("%s: unknown conflict behavior in options", errPrefix)
+	}
 	// Verify that the branch exists. `git checkout` will attempt to
 	// create branches if they don't exist if there's a remote tracking
 	// branch of the same name.
@@ -762,8 +795,11 @@ func (g *Git) CheckoutBranch(ctx context.Context, branch string, opts CheckoutOp
 
 	// Run checkout with branch name.
 	args := []string{g.exe, "checkout", "--quiet"}
-	if opts.Merge {
+	switch opts.ConflictBehavior {
+	case MergeLocal:
 		args = append(args, "--merge")
+	case DiscardLocal:
+		args = append(args, "--force")
 	}
 	args = append(args, branch, "--")
 	if err := g.run(ctx, errPrefix, args); err != nil {
@@ -783,8 +819,11 @@ func (g *Git) CheckoutRev(ctx context.Context, rev string, opts CheckoutOptions)
 
 	// Run checkout with the revision.
 	args := []string{g.exe, "checkout", "--quiet", "--detach"}
-	if opts.Merge {
+	switch opts.ConflictBehavior {
+	case MergeLocal:
 		args = append(args, "--merge")
+	case DiscardLocal:
+		args = append(args, "--force")
 	}
 	args = append(args, rev, "--")
 	if err := g.run(ctx, errPrefix, args); err != nil {

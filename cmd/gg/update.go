@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
@@ -25,7 +26,7 @@ import (
 const updateSynopsis = "update working directory (or switch revisions)"
 
 func update(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg update [[-r] REV]", updateSynopsis+`
+	f := flag.NewFlagSet(true, "gg update [--clean] [[-r] REV]", updateSynopsis+`
 
 aliases: up, checkout, co
 
@@ -37,11 +38,17 @@ aliases: up, checkout, co
 	If the commit is not a descendant or ancestor of the HEAD commit,
 	the update is aborted.`)
 	rev := f.String("r", "", "`rev`ision")
+	clean := f.Bool("clean", false, "discard uncommitted changes (no backup)")
+	f.Alias("clean", "C")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
 	} else if err != nil {
 		return usagef("%v", err)
+	}
+	behavior := git.MergeLocal
+	if *clean {
+		behavior = git.DiscardLocal
 	}
 	var r *git.Rev
 	switch {
@@ -58,7 +65,7 @@ aliases: up, checkout, co
 		if branch == "" {
 			return errors.New("can't update with no branch checked out; run 'gg update BRANCH'")
 		}
-		return updateToBranch(ctx, cc.git, cfg, branch)
+		return updateToBranch(ctx, cc.git, cfg, branch, behavior)
 	case f.NArg() == 0 && *rev != "":
 		var err error
 		r, err = cc.git.ParseRev(ctx, *rev)
@@ -77,31 +84,35 @@ aliases: up, checkout, co
 	b := r.Ref.Branch()
 	if b == "" {
 		return cc.git.CheckoutRev(ctx, r.Commit.String(), git.CheckoutOptions{
-			Merge: true,
+			ConflictBehavior: behavior,
 		})
 	}
 	cfg, err := cc.git.ReadConfig(ctx)
 	if err != nil {
 		return err
 	}
-	return updateToBranch(ctx, cc.git, cfg, b)
+	return updateToBranch(ctx, cc.git, cfg, b, behavior)
 }
 
-// updateToBranch switches to another branch (preserving local changes
-// via merge) and fast-forwards it. If branch is the empty string, then
-// updateToBranch does nothing.
-func updateToBranch(ctx context.Context, g *git.Git, cfg *git.Config, branch string) error {
+// updateToBranch switches to another branch and fast-forwards it.
+// If branch is the empty string, then updateToBranch does nothing.
+// behavior must be one of MergeLocal or DiscardLocal or updateToBranch
+// returns an error.
+func updateToBranch(ctx context.Context, g *git.Git, cfg *git.Config, branch string, behavior git.CheckoutConflictBehavior) error {
+	if behavior != git.MergeLocal && behavior != git.DiscardLocal {
+		return fmt.Errorf("updateToBranch takes MergeLocal or DiscardLocal as behaviors (got %v)", behavior)
+	}
 	if branch == "" {
 		return nil
 	}
 	target := targetForUpdate(cfg, branch)
 	if target == "" {
 		// No fast-forward target, so just do a simple checkout.
-		return g.CheckoutBranch(ctx, branch, git.CheckoutOptions{Merge: true})
+		return g.CheckoutBranch(ctx, branch, git.CheckoutOptions{ConflictBehavior: behavior})
 	}
 	if _, err := g.ParseRev(ctx, target.String()); err != nil {
 		// Remote-tracking branch does not exist, so just do a simple checkout.
-		return g.CheckoutBranch(ctx, branch, git.CheckoutOptions{Merge: true})
+		return g.CheckoutBranch(ctx, branch, git.CheckoutOptions{ConflictBehavior: behavior})
 	}
 
 	// Check out and fast-forward.
@@ -119,7 +130,7 @@ func updateToBranch(ctx context.Context, g *git.Git, cfg *git.Config, branch str
 	// while merging the local changes, then move the branch ref to match the
 	// current revision. This is only really "safe" because of the ancestor
 	// check before.
-	if err := g.CheckoutRev(ctx, target.String(), git.CheckoutOptions{Merge: true}); err != nil {
+	if err := g.CheckoutRev(ctx, target.String(), git.CheckoutOptions{ConflictBehavior: behavior}); err != nil {
 		return err
 	}
 	if err := g.NewBranch(ctx, branch, git.BranchOptions{Overwrite: true, Checkout: true}); err != nil {

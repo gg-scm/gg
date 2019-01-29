@@ -132,10 +132,18 @@ func TestCheckoutBranch(t *testing.T) {
 		{
 			name:         "Merge",
 			branch:       "foo",
-			opts:         CheckoutOptions{Merge: true},
+			opts:         CheckoutOptions{ConflictBehavior: MergeLocal},
 			localContent: "content C\n" + masterContent,
 			wantHead:     *foo,
 			wantContent:  "content C\n" + fooContent,
+		},
+		{
+			name:         "Force",
+			branch:       "foo",
+			opts:         CheckoutOptions{ConflictBehavior: DiscardLocal},
+			localContent: "content C\n",
+			wantHead:     *foo,
+			wantContent:  fooContent,
 		},
 	}
 	for _, test := range tests {
@@ -290,10 +298,18 @@ func TestCheckoutRev(t *testing.T) {
 		{
 			name:         "Merge",
 			rev:          "foo",
-			opts:         CheckoutOptions{Merge: true},
+			opts:         CheckoutOptions{ConflictBehavior: MergeLocal},
 			localContent: "content C\n" + masterContent,
 			wantHead:     Rev{Commit: foo.Commit, Ref: "HEAD"},
 			wantContent:  "content C\n" + fooContent,
+		},
+		{
+			name:         "Force",
+			rev:          "foo",
+			opts:         CheckoutOptions{ConflictBehavior: DiscardLocal},
+			localContent: "content C\n",
+			wantHead:     Rev{Commit: foo.Commit, Ref: "HEAD"},
+			wantContent:  fooContent,
 		},
 	}
 	for _, test := range tests {
