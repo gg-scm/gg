@@ -249,6 +249,42 @@ func TestCommit_SelectiveWrongFile(t *testing.T) {
 	}
 }
 
+func TestCommit_PartialWrongFile(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.initRepoWithHistory(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	r, err := env.git.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := env.gg(ctx, env.root.String(), "commit", "-m", "foo.txt", "bad", "bar.txt"); err == nil {
+		t.Error("gg did not return error")
+	} else if isUsage(err) {
+		t.Fatal(err)
+	}
+	curr, err := env.git.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if curr.Commit != r.Commit {
+		t.Error("Created a new commit; wanted no-op")
+	}
+}
+
 func TestCommit_Amend(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
