@@ -1,5 +1,68 @@
 # Release Notes
 
+## 0.7.0 (2019-02-13)
+
+0.7 is a huge technical milestone for gg: most interactions with Git are now
+going through a comprehensively tested Go library instead of constructing
+command-line arguments ad-hoc. This means more input validation and less surface
+area for bugs.
+
+gg 0.7 drops support for Git 2.7.4: 2.11.0 is now the earliest supported version
+of Git.
+
+### Features
+
+-  New command: [`identify`](https://gg-scm.io/cmd/identify/) to get the current
+   commit hash. ([#94](https://github.com/zombiezen/gg/issues/94))
+-  `commit` uses a Mercurial-like commit message template when the editor is
+   invoked.
+-  `pull` now pulls all refs from the remote instead of just one.
+   ([#87](https://github.com/zombiezen/gg/issues/87))
+-  The `update` command has been overhauled to be even closer to Mercurial
+   semantics. `update` now uses "merge" behavior all the time
+   ([#93](https://github.com/zombiezen/gg/issues/93)) and will fast-forward
+   before switching the working copy to a new branch.
+-  `update` now has a `--clean` flag
+   ([#92](https://github.com/zombiezen/gg/issues/92))
+-  `mail` now accepts comma-separated reviewers in `-R` flag.
+   ([#83](https://github.com/zombiezen/gg/issues/83))
+-  `gerrithook` now caches the hook script it downloads.
+   ([#61](https://github.com/zombiezen/gg/issues/61))
+
+### Bug Fixes
+
+-  As mentioned in the introduction, most interactions with the Git subprocess
+   go through a [high-level API](https://godoc.org/gg-scm.io/pkg/internal/git)
+   now to reduce escaping issues. This should make gg more architecturally
+   robust.
+-  Previous versions of gg would never send `SIGTERM` correctly to its Git
+   subprocess on receiving an interrupt, instead just waiting for the command
+   to finish. This has been fixed.
+-  `backout` now correctly attaches stdin to the editor.
+   ([#85](https://github.com/zombiezen/gg/issues/85))
+-  `push` now correctly consults the fetch URL when evaluating whether a push
+   would result in a creation. ([#75](https://github.com/zombiezen/gg/issues/75))
+-  gg now escapes pathspec characters on an as-needed basis, which should reduce
+   most of the confusing error messages bubbled up from Git.
+   ([#57](https://github.com/zombiezen/gg/issues/57))
+-  `update` now uses more Mercurial-like logic for updating branches, correcting
+   surprising behavior when pulling from fork branches.
+   ([#80](https://github.com/zombiezen/gg/issues/80))
+-  `update` now correctly merges the local state when given a branch name
+   instead of exiting. ([#76](https://github.com/zombiezen/gg/issues/76))
+-  `commit` no longer tries to commit untracked files when given a directory
+   argument. ([#74](https://github.com/zombiezen/gg/issues/74))
+-  `gerrithook` now respects the `core.hooksPath` configuration setting.
+   ([#89](https://github.com/zombiezen/gg/issues/89))
+
+### Known Issues
+
+One of the known issues in 0.6 is still present in 0.7:
+
+-   `revert` does not produce errors if you pass it unknown files.
+    ([#58](https://github.com/zombiezen/gg/issues/58)). This may be confusing,
+    but does not negatively affect your data.
+
 ## 0.6.1 (2018-08-22)
 
 ### Bug Fixes
