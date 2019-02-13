@@ -44,8 +44,7 @@ jobs:
     - stage: release
       os: linux
       env: ""
-      install: go get -u golang.org/x/vgo
-      script: &releaseScript "mkdir -p dist && (cd dist && ../misc/release.bash)"
+      script: &releaseScript "mkdir -p dist && (cd dist && GO111MODULE=on ../misc/release.bash)"
       deploy:
         provider: releases
         api_key: $GITHUB_TOKEN
@@ -57,7 +56,6 @@ jobs:
     - stage: release
       os: osx
       env: ""
-      install: go get -u golang.org/x/vgo
       script: *releaseScript
       deploy:
         provider: releases
