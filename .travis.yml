@@ -44,6 +44,7 @@ jobs:
     - stage: release
       os: linux
       env: ""
+      install: ""
       script: &releaseScript "mkdir -p dist && (cd dist && GO111MODULE=on ../misc/release.bash)"
       deploy:
         provider: releases
@@ -56,6 +57,7 @@ jobs:
     - stage: release
       os: osx
       env: ""
+      install: ""
       script: *releaseScript
       deploy:
         provider: releases
