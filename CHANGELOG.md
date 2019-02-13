@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.7.1 (2019-02-13)
+
+The release scripts for 0.7.0 failed, so 0.7.1 is the first actual release of
+0.7.
+
 ## 0.7.0 (2019-02-13)
 
 0.7 is a huge technical milestone for gg: most interactions with Git are now
