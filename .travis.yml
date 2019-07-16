@@ -1,13 +1,13 @@
 language: go
 go_import_path: gg-scm.io/pkg
-go: "1.11.x"
+go: "1.12.x"
 install:
   - "if [[ \"$TRAVIS_OS_NAME\" = \"osx\" ]]; then brew update && brew install xz; fi"
   - "misc/build-git.bash ~/git \"$GIT_VERSION\""
-  - "go get github.com/mattn/goveralls"
+  - "(cd $HOME && go get github.com/mattn/goveralls)"
   - "go mod download"
 script:
-  - "PATH=\"$HOME/git/bin-wrappers:$PATH\" go test -v -covermode=count -coverprofile=coverage.out -coverpkg=./... ./..."
+  - "PATH=\"$HOME/git/bin-wrappers:$PATH\" go test -mod=readonly -v -covermode=count -coverprofile=coverage.out -coverpkg=./... ./..."
   - "goveralls -coverprofile=coverage.out -service=travis-ci"
 jobs:
   allow_failures:
