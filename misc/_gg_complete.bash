@@ -17,8 +17,6 @@
 # https://www.gnu.org/software/bash/manual/bash.html#Programmable-Completion
 # https://eli.thegreenplace.net/2013/12/26/adding-bash-completion-for-your-own-tools-an-example-for-pss
 
-# TODO(soon): Advanced commands.
-
 _gg_complete() {
   local curr_word prev_word subcmd_idx subcmd
   curr_word="${COMP_WORDS[COMP_CWORD]}"
@@ -85,6 +83,10 @@ _gg_complete() {
   if [[ "$curr_word" == -* ]]; then
     # An option.
     case "$subcmd" in
+      backout)
+        COMPREPLY=( $(compgen -W '-e -edit --edit -n -no-commit --no-commit -r' -- "$curr_word") )
+        return 0
+        ;;
       branch)
         COMPREPLY=( $(compgen -W '-d -delete --delete -f -force --force -r' -- "$curr_word") )
         return 0
@@ -101,12 +103,28 @@ _gg_complete() {
         COMPREPLY=( $(compgen -W '-b -ignore-space-change --ignore-space-change -B -ignore-blank-lines --ignore-blank-lines -c -U -r -stat --stat -w -ignore-all-space --ignore-all-space -Z -ignore-space-at-eol --ignore-space-at-eol -M -C -copies-unmodified --copies-unmodified' -- "$curr_word") )
         return 0
         ;;
+      evolve)
+        COMPREPLY=( $(compgen -W '-d -dst --dst -l -list --list' -- "$curr_word") )
+        return 0
+        ;;
+      gerrithook)
+        COMPREPLY=( $(compgen -W '-url --url -cached --cached' -- "$curr_word") )
+        return 0
+        ;;
+      histedit)
+        COMPREPLY=( $(compgen -W '-abort --abort -continue --continue -edit-plan --edit-plan -exec --exec' -- "$curr_word") )
+        return 0
+        ;;
       id|identify)
         COMPREPLY=( $(compgen -W '-r' -- "$curr_word") )
         return 0
         ;;
       log|history)
         COMPREPLY=( $(compgen -W '-follow --follow -follow-first --follow-first -G -graph --graph -r -reverse --reverse -stat --stat' -- "$curr_word") )
+        return 0
+        ;;
+      mail)
+        COMPREPLY=( $(compgen -W '-allow-dirty --allow-dirty -d -dest --dest -for --for -r -R -reviewer --reviewer -CC --CC -cc --cc -notify --notify -notify-to --notify-to -notify-cc --notify-cc -notify-bcc --notify-bcc -m -p -publish-comments --publish-comments' -- "$curr_word") )
         return 0
         ;;
       merge)
@@ -121,8 +139,16 @@ _gg_complete() {
         COMPREPLY=( $(compgen -W '-create --create -d -dest --dest -f -n -dry-run --dry-run -r' -- "$curr_word") )
         return 0
         ;;
+      rebase)
+        COMPREPLY=( $(compgen -W '-base --base -dst --dst -src --src -abort --abort -continue --continue' -- "$curr_word") )
+        return 0
+        ;;
       remove|rm)
         COMPREPLY=( $(compgen -W '-after --after -f -force --force -r' -- "$curr_word") )
+        return 0
+        ;;
+      requestpull|pr)
+        COMPREPLY=( $(compgen -W '-body --body -e -edit --edit -n -dry-run --dry-run -maintainer-edits --maintainer-edits -R -reviewer --reviewer -title --title' -- "$curr_word") )
         return 0
         ;;
       revert)
@@ -133,6 +159,10 @@ _gg_complete() {
         COMPREPLY=( $(compgen -W '-r -clean --clean -C' -- "$curr_word") )
         return 0
         ;;
+      upstream)
+        COMPREPLY=( $(compgen -W '-b' -- "$curr_word") )
+        return 0
+        ;;
       *)
         COMPREPLY=()
         return 0
@@ -141,13 +171,13 @@ _gg_complete() {
   else
     # A positional argument.
     case "$subcmd" in
-      add|check|clone|init|remove|rm|st|status)
+      add|check|clone|evolve|init|remove|rm|st|status)
         # Commands that only deal with files.
         compopt -o nospace -o filenames
         COMPREPLY=( $(compgen -f -- "$curr_word") )
         return 0
         ;;
-      backout|branch|checkout|co|id|identify|merge|up|update)
+      backout|branch|checkout|co|histedit|id|identify|merge|rebase|up|update|upstream)
         # Commands that only deal with revisions.
         COMPREPLY=( $(compgen -W "$(named_revs)" -- "$curr_word") )
         return 0
@@ -179,6 +209,10 @@ _gg_complete() {
             ;;
         esac
         ;;
+      gerrithook)
+        COMPREPLY=( $(compgen -W 'on off' -- "$curr_word") )
+        return 0
+        ;;
       log|history)
         case "$prev_word" in
           -r)
@@ -188,6 +222,27 @@ _gg_complete() {
           *)
             compopt -o nospace -o filenames
             COMPREPLY=( $(compgen -f -- "$curr_word") )
+            return 0
+            ;;
+        esac
+        ;;
+      mail)
+        case "$prev_word" in
+          -r|-d|-dest|--dest|-for|--for)
+            COMPREPLY=( $(compgen -W "$(named_revs)" -- "$curr_word") )
+            return 0
+            ;;
+          -m|-R|-reviewer|--reviewer|-CC|--CC|-cc|--cc|-notify-to|--notify-to|-notify-cc|--notify-cc|-notify-bcc|--notify-bcc)
+            # Don't complete for message or emails.
+            COMPREPLY=()
+            return 0
+            ;;
+          -notify|--notify)
+            COMPREPLY=( $(compgen -W 'none owner owner_reviewers all' -- "$curr_word") )
+            return 0
+            ;;
+          *)
+            COMPREPLY=( $(compgen -W "$(git remote)" -- "$curr_word") )
             return 0
             ;;
         esac
