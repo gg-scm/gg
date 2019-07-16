@@ -20,7 +20,7 @@
 # TODO(soon): Advanced commands.
 
 _gg_complete() {
-  local curr_word prev_word subcmd_idx subcmd comp_prefix
+  local curr_word prev_word subcmd_idx subcmd
   curr_word="${COMP_WORDS[COMP_CWORD]}"
   prev_word="${COMP_WORDS[COMP_CWORD-1]}"
   if [[ "$prev_word" == '=' ]]; then
