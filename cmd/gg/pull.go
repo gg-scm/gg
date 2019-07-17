@@ -16,12 +16,11 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/sigterm"
+	"golang.org/x/xerrors"
 )
 
 const pullSynopsis = "pull changes from the specified source"
@@ -71,7 +70,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		if repo == "" {
 			if _, ok := remotes["origin"]; !ok {
-				return errors.New("no source given and no remote named \"origin\" found")
+				return xerrors.New("no source given and no remote named \"origin\" found")
 			}
 			repo = "origin"
 		}
@@ -84,7 +83,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	} else {
 		remoteRef = git.Ref(*remoteRefArg)
 		if !remoteRef.IsValid() {
-			return fmt.Errorf("invalid ref %q", *remoteRefArg)
+			return xerrors.Errorf("invalid ref %q", *remoteRefArg)
 		}
 	}
 

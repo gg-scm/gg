@@ -18,12 +18,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
 
 	"gg-scm.io/pkg/internal/sigterm"
+	"golang.org/x/xerrors"
 )
 
 // hashSize is the number of bytes in a hash.
@@ -35,11 +35,11 @@ type Hash [hashSize]byte
 // ParseHash parses a hex-encoded hash.
 func ParseHash(s string) (Hash, error) {
 	if len(s) != hex.EncodedLen(hashSize) {
-		return Hash{}, fmt.Errorf("parse hash %q: wrong size", s)
+		return Hash{}, xerrors.Errorf("parse hash %q: wrong size", s)
 	}
 	var h Hash
 	if _, err := hex.Decode(h[:], []byte(s)); err != nil {
-		return Hash{}, fmt.Errorf("parse hash %q: %v", s, err)
+		return Hash{}, xerrors.Errorf("parse hash %q: %w", s, err)
 	}
 	return h, nil
 }
@@ -143,7 +143,7 @@ func (g *Git) HeadRef(ctx context.Context) (Ref, error) {
 	}
 	name, err := oneLine(stdout.String())
 	if err != nil {
-		return "", fmt.Errorf("%s: %v", errPrefix, err)
+		return "", xerrors.Errorf("%s: %w", errPrefix, err)
 	}
 	return Ref(name), nil
 }
@@ -152,7 +152,7 @@ func (g *Git) HeadRef(ctx context.Context) (Ref, error) {
 func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 	errPrefix := fmt.Sprintf("parse revision %q", refspec)
 	if err := validateRev(refspec); err != nil {
-		return nil, fmt.Errorf("%s: %v", errPrefix, err)
+		return nil, xerrors.Errorf("%s: %w", errPrefix, err)
 	}
 
 	out, err := g.output(ctx, errPrefix, []string{g.exe, "rev-parse", "-q", "--verify", "--revs-only", refspec + "^0"})
@@ -161,11 +161,11 @@ func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 	}
 	commitHex, err := oneLine(out)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", errPrefix, err)
+		return nil, xerrors.Errorf("%s: %w", errPrefix, err)
 	}
 	h, err := ParseHash(commitHex)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", errPrefix, err)
+		return nil, xerrors.Errorf("%s: %w", errPrefix, err)
 	}
 
 	out, err = g.output(ctx, errPrefix, []string{g.exe, "rev-parse", "-q", "--verify", "--revs-only", "--symbolic-full-name", refspec})
@@ -178,7 +178,7 @@ func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 	}
 	refName, err := oneLine(out)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", errPrefix, err)
+		return nil, xerrors.Errorf("%s: %w", errPrefix, err)
 	}
 	return &Rev{
 		Commit: h,
@@ -195,7 +195,7 @@ func (g *Git) ListRefs(ctx context.Context) (map[Ref]Hash, error) {
 	}
 	refs, err := parseRefs(out)
 	if err != nil {
-		return refs, fmt.Errorf("%s: %v", errPrefix, err)
+		return refs, xerrors.Errorf("%s: %w", errPrefix, err)
 	}
 	return refs, nil
 }
@@ -207,29 +207,29 @@ func parseRefs(out string) (map[Ref]Hash, error) {
 	for len(out) > 0 {
 		eol := strings.IndexByte(out, '\n')
 		if eol == -1 {
-			return refs, errors.New("parse refs: unexpected EOF")
+			return refs, xerrors.New("parse refs: unexpected EOF")
 		}
 		line := out[:eol]
 		out = out[eol+1:]
 
 		sp := strings.IndexFunc(line, isSpace)
 		if sp == -1 {
-			return refs, fmt.Errorf("parse refs: could not parse line %q", line)
+			return refs, xerrors.Errorf("parse refs: could not parse line %q", line)
 		}
 		h, err := ParseHash(line[:sp])
 		if err != nil {
-			return refs, fmt.Errorf("parse refs: hash of ref %q: %v", line[sp+1:], err)
+			return refs, xerrors.Errorf("parse refs: hash of ref %q: %w", line[sp+1:], err)
 		}
 		ref := Ref(strings.TrimLeftFunc(line[sp+1:], isSpace))
 		if strings.HasSuffix(string(ref), "^{}") {
 			// Dereferenced tag. This takes precedence over the previous hash stored in the map.
 			ref = ref[:len(ref)-3]
 			if tags[ref] {
-				return refs, fmt.Errorf("parse refs: multiple hashes found for tag %v", ref)
+				return refs, xerrors.Errorf("parse refs: multiple hashes found for tag %v", ref)
 			}
 			tags[ref] = true
 		} else if _, exists := refs[ref]; exists {
-			return refs, fmt.Errorf("parse refs: multiple hashes found for %v", ref)
+			return refs, xerrors.Errorf("parse refs: multiple hashes found for %v", ref)
 		}
 		refs[ref] = h
 	}

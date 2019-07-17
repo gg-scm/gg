@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -27,6 +26,7 @@ import (
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
+	"golang.org/x/xerrors"
 )
 
 const commitSynopsis = "commit the specified files or all outstanding changes"
@@ -69,7 +69,7 @@ aliases: ci
 		return err
 	}
 	if !hasChanges && !*amend {
-		return errors.New("nothing changed")
+		return xerrors.New("nothing changed")
 	}
 	var diffStatus []git.DiffStatusEntry
 	if *amend {
@@ -79,7 +79,7 @@ aliases: ci
 			return err
 		}
 		if len(diffStatus) == 0 {
-			return errors.New("amend would create an empty commit")
+			return xerrors.New("amend would create an empty commit")
 		}
 	} else {
 		// For commits, we can reuse the information from the status call.
@@ -192,7 +192,7 @@ func commitMessageTemplate(ctx context.Context, g *git.Git, status []git.DiffSta
 		// Use previous commit message.
 		info, err := g.CommitInfo(ctx, "HEAD")
 		if err != nil {
-			return nil, fmt.Errorf("gather commit message template: %v", err)
+			return nil, xerrors.Errorf("gather commit message template: %w", err)
 		}
 		buf.WriteString(info.Message)
 	} else if gitDir, err := g.GitDir(ctx); err == nil {
@@ -321,30 +321,30 @@ func verifyNoMissingOrUnmerged(status []git.StatusEntry) (hasChanges bool, _ err
 		case ent.Code.IsUnmerged():
 			unmerged++
 		default:
-			return false, fmt.Errorf("unhandled status: %v", ent)
+			return false, xerrors.Errorf("unhandled status: %v", ent)
 		}
 	}
 	if unmerged == 1 {
-		return false, errors.New("1 unmerged file; see 'gg status'")
+		return false, xerrors.New("1 unmerged file; see 'gg status'")
 	}
 	if unmerged > 1 {
-		return false, fmt.Errorf("%d unmerged files; see 'gg status'", unmerged)
+		return false, xerrors.Errorf("%d unmerged files; see 'gg status'", unmerged)
 	}
 	if !hasChanges {
 		switch missing {
 		case 0:
 			return false, nil
 		case 1:
-			return false, errors.New("nothing changed (1 missing file; see 'gg status')")
+			return false, xerrors.New("nothing changed (1 missing file; see 'gg status')")
 		default:
-			return false, fmt.Errorf("nothing changed (%d missing files; see 'gg status')", missing)
+			return false, xerrors.Errorf("nothing changed (%d missing files; see 'gg status')", missing)
 		}
 	}
 	if missingStaged == 1 {
-		return true, errors.New("git has staged changes for 1 missing file; see 'gg status'")
+		return true, xerrors.New("git has staged changes for 1 missing file; see 'gg status'")
 	}
 	if missingStaged > 1 {
-		return true, fmt.Errorf("git has staged changes for %d missing files; see 'gg status'", missingStaged)
+		return true, xerrors.Errorf("git has staged changes for %d missing files; see 'gg status'", missingStaged)
 	}
 	return true, nil
 }

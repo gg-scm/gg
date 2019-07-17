@@ -16,12 +16,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/sigterm"
+	"golang.org/x/xerrors"
 )
 
 const cloneSynopsis = "make a copy of an existing repository"
@@ -92,7 +92,7 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 				Track:      true,
 			})
 			if err != nil {
-				return fmt.Errorf("mirroring local branch %q: %v", name, err)
+				return xerrors.Errorf("mirroring local branch %q: %v", name, err)
 			}
 		}
 	}

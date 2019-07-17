@@ -16,10 +16,10 @@ package git
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"io"
 	"strings"
+
+	"golang.org/x/xerrors"
 )
 
 // StatusOptions specifies the command-line arguments for `git status`.
@@ -109,18 +109,18 @@ func readStatusEntry(data string, renameBug bool) (StatusEntry, string, error) {
 		return StatusEntry{}, "", io.EOF
 	}
 	if len(data) < 4 { // 2 bytes + 1 space + 1 NUL
-		return StatusEntry{}, data, errors.New("read status entry: unexpected EOF")
+		return StatusEntry{}, data, xerrors.New("read status entry: unexpected EOF")
 	}
 	var ent StatusEntry
 	copy(ent.Code[:], data)
 	if data[2] != ' ' {
-		return StatusEntry{}, data, fmt.Errorf("read status entry: expected ' ', got %q", data[2])
+		return StatusEntry{}, data, xerrors.Errorf("read status entry: expected ' ', got %q", data[2])
 	}
 
 	// Read name and from.
 	i := strings.IndexByte(data[3:], 0)
 	if i == -1 {
-		return StatusEntry{}, "", errors.New("read status entry: unexpected EOF reading name")
+		return StatusEntry{}, "", xerrors.New("read status entry: unexpected EOF reading name")
 	}
 	ent.Name = TopPath(data[3 : 3+i])
 	data = data[4+i:]
@@ -133,7 +133,7 @@ func readStatusEntry(data string, renameBug bool) (StatusEntry, string, error) {
 	if ent.Code[0] == 'R' || ent.Code[0] == 'C' || ent.Code[1] == 'R' || ent.Code[1] == 'C' {
 		i := strings.IndexByte(data, 0)
 		if i == -1 {
-			return StatusEntry{}, "", errors.New("read status entry: unexpected EOF reading from")
+			return StatusEntry{}, "", xerrors.New("read status entry: unexpected EOF reading from")
 		}
 		ent.From = TopPath(data[:i])
 		data = data[i+1:]
@@ -141,7 +141,7 @@ func readStatusEntry(data string, renameBug bool) (StatusEntry, string, error) {
 
 	// Check code validity at very end in order to consume as much as possible.
 	if !ent.Code.isValid() {
-		return StatusEntry{}, data, fmt.Errorf("read status entry: invalid code %q %q", ent.Code[0], ent.Code[1])
+		return StatusEntry{}, data, xerrors.Errorf("read status entry: invalid code %q %q", ent.Code[0], ent.Code[1])
 	}
 	return ent, data, nil
 }
@@ -273,15 +273,15 @@ type DiffStatusOptions struct {
 func (g *Git) DiffStatus(ctx context.Context, opts DiffStatusOptions) ([]DiffStatusEntry, error) {
 	if opts.Commit1 != "" {
 		if err := validateRev(opts.Commit1); err != nil {
-			return nil, fmt.Errorf("diff status: %v", err)
+			return nil, xerrors.Errorf("diff status: %w", err)
 		}
 	}
 	if opts.Commit2 != "" {
 		if opts.Commit1 == "" {
-			return nil, errors.New("diff status: Commit2 set without Commit1 being set")
+			return nil, xerrors.New("diff status: Commit2 set without Commit1 being set")
 		}
 		if err := validateRev(opts.Commit2); err != nil {
-			return nil, fmt.Errorf("diff status: %v", err)
+			return nil, xerrors.Errorf("diff status: %w", err)
 		}
 	}
 	args := []string{g.exe, "diff", "--name-status", "-z"}
@@ -329,7 +329,7 @@ func readDiffStatusEntry(data string) (DiffStatusEntry, string, error) {
 		return DiffStatusEntry{}, "", io.EOF
 	}
 	if len(data) < 2 {
-		return DiffStatusEntry{}, data, errors.New("read diff entry: unexpected EOF")
+		return DiffStatusEntry{}, data, xerrors.New("read diff entry: unexpected EOF")
 	}
 	var ent DiffStatusEntry
 	ent.Code = DiffStatusCode(data[0])
@@ -346,11 +346,11 @@ func readDiffStatusEntry(data string) (DiffStatusEntry, string, error) {
 			}
 		}
 		if !foundNul {
-			return DiffStatusEntry{}, data, errors.New("read diff entry: expected '\\x00' after 'R' or 'C', but not found")
+			return DiffStatusEntry{}, data, xerrors.New("read diff entry: expected '\\x00' after 'R' or 'C', but not found")
 		}
 	} else {
 		if data[1] != 0 {
-			return DiffStatusEntry{}, data, fmt.Errorf("read diff entry: expected '\\x00', got %q", data[1])
+			return DiffStatusEntry{}, data, xerrors.Errorf("read diff entry: expected '\\x00', got %q", data[1])
 		}
 		data = data[2:]
 	}
@@ -359,21 +359,21 @@ func readDiffStatusEntry(data string) (DiffStatusEntry, string, error) {
 	if hasFrom {
 		i := strings.IndexByte(data, 0)
 		if i == -1 {
-			return DiffStatusEntry{}, "", errors.New("read diff entry: unexpected EOF")
+			return DiffStatusEntry{}, "", xerrors.New("read diff entry: unexpected EOF")
 		}
 		// TODO(someday): Persist this value. Until then, just skip.
 		data = data[i+1:]
 	}
 	i := strings.IndexByte(data, 0)
 	if i == -1 {
-		return DiffStatusEntry{}, "", errors.New("read diff entry: unexpected EOF")
+		return DiffStatusEntry{}, "", xerrors.New("read diff entry: unexpected EOF")
 	}
 	ent.Name = TopPath(data[:i])
 	data = data[i+1:]
 
 	// Check code validity at very end in order to consume as much as possible.
 	if !ent.Code.isValid() {
-		return DiffStatusEntry{}, data, fmt.Errorf("read diff entry: invalid code %v", ent.Code)
+		return DiffStatusEntry{}, data, xerrors.Errorf("read diff entry: invalid code %v", ent.Code)
 	}
 	return ent, data, nil
 }

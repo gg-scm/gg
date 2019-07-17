@@ -19,12 +19,13 @@ package flag // import "gg-scm.io/pkg/internal/flag"
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"sort"
 	"strconv"
 	"strings"
+
+	"golang.org/x/xerrors"
 )
 
 // A FlagSet represents a set of defined flags. The zero value of a
@@ -190,20 +191,20 @@ flags:
 			if name == "h" || name == "help" {
 				return errHelp
 			}
-			return fmt.Errorf("flag provided but not defined: -%s", name)
+			return xerrors.Errorf("flag provided but not defined: -%s", name)
 		}
 		if !hasval {
 			if ff.value.IsBoolFlag() {
 				val = "true"
 			} else if i+1 >= len(arguments) {
-				return fmt.Errorf("flag needs an argument: -%s", name)
+				return xerrors.Errorf("flag needs an argument: -%s", name)
 			} else {
 				i++
 				val = arguments[i]
 			}
 		}
 		if err := ff.value.Set(val); err != nil {
-			return fmt.Errorf("invalid value %q for flag -%s: %v", val, name, err)
+			return xerrors.Errorf("invalid value %q for flag -%s: %w", val, name, err)
 		}
 	}
 	f.args = append(f.args, arguments[i:]...)
@@ -443,4 +444,4 @@ func IsHelp(e error) bool {
 	return e == errHelp
 }
 
-var errHelp = errors.New("flag: help requested")
+var errHelp = xerrors.New("flag: help requested")

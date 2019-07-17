@@ -17,11 +17,12 @@
 package git
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
+
+	"golang.org/x/xerrors"
 )
 
 // Color returns the ANSI escape sequence for the given configuration
@@ -36,7 +37,7 @@ func (cfg *Config) Color(name string, default_ string) ([]byte, error) {
 	}
 	seq, err := parseColorDesc(desc)
 	if err != nil {
-		return nil, fmt.Errorf("config %s: %v", name, err)
+		return nil, xerrors.Errorf("config %s: %w", name, err)
 	}
 	return seq, nil
 }
@@ -62,7 +63,7 @@ func parseColorDesc(val string) ([]byte, error) {
 			}
 		default:
 			if _, ok := parseColor(word, false); ok {
-				return nil, errors.New("can specify at most foreground and background color")
+				return nil, xerrors.New("can specify at most foreground and background color")
 			}
 		}
 		setattr := true
@@ -129,7 +130,7 @@ func parseColorDesc(val string) ([]byte, error) {
 			}
 			buf = append(buf, '9')
 		default:
-			return nil, fmt.Errorf("unknown attribute %s", word)
+			return nil, xerrors.Errorf("unknown attribute %s", word)
 		}
 	}
 	if fg == "" && bg == "" && len(buf) == 2 {
@@ -248,13 +249,13 @@ func (cfg *Config) ColorBool(name string, isTerm bool) (bool, error) {
 		if name == "color.diff" {
 			color, err := cfg.ColorBool("diff.color", isTerm)
 			if err != nil {
-				return false, fmt.Errorf("config %s: %v", name, err)
+				return false, xerrors.Errorf("config %s: %w", name, err)
 			}
 			return color, nil
 		}
 		color, err := cfg.ColorBool("color.ui", isTerm)
 		if err != nil {
-			return false, fmt.Errorf("config %s: %v", name, err)
+			return false, xerrors.Errorf("config %s: %w", name, err)
 		}
 		return color, nil
 	}
@@ -274,7 +275,7 @@ func (cfg *Config) ColorBool(name string, isTerm bool) (bool, error) {
 	}
 	color, ok := parseBool(v)
 	if !ok {
-		return false, fmt.Errorf("config %s: cannot parse %q as a bool", name, v)
+		return false, xerrors.Errorf("config %s: cannot parse %q as a bool", name, v)
 	}
 	return color && isTerm, nil
 }
@@ -286,7 +287,7 @@ type limitedReader struct {
 
 func (l *limitedReader) Read(p []byte) (n int, err error) {
 	if l.N <= 0 {
-		return 0, errors.New("read limit reached")
+		return 0, xerrors.New("read limit reached")
 	}
 	if int64(len(p)) > l.N {
 		p = p[0:l.N]

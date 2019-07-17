@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"golang.org/x/xerrors"
 )
 
 // ListRemoteRefs lists all of the refs in a remote repository.
@@ -38,7 +40,7 @@ func (g *Git) ListRemoteRefs(ctx context.Context, remote string) (map[Ref]Hash, 
 	}
 	refs, err := parseRefs(out)
 	if err != nil {
-		return refs, fmt.Errorf("%s: %v", errPrefix, err)
+		return refs, xerrors.Errorf("%s: %w", errPrefix, err)
 	}
 	return refs, nil
 }

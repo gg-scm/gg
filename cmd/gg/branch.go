@@ -23,6 +23,7 @@ import (
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/terminal"
+	"golang.org/x/xerrors"
 )
 
 const branchSynopsis = "list or manage branches"
@@ -142,7 +143,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		// Create or update
 		for _, b := range f.Args() {
 			if strings.HasPrefix(b, "-") {
-				return fmt.Errorf("invalid branch name %q", b)
+				return xerrors.Errorf("invalid branch name %q", b)
 			}
 		}
 		target := git.Head.String()
@@ -183,12 +184,12 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 				Checkout:   i == 0 && *rev == "",
 			})
 			if err != nil {
-				return fmt.Errorf("branch %q: %v", b, err)
+				return xerrors.Errorf("branch %q: %w", b, err)
 			}
 			if len(upstreamArgs) > 0 && !exists {
 				upstreamArgs[len(upstreamArgs)-1] = b
 				if err := cc.git.Run(ctx, upstreamArgs...); err != nil {
-					return fmt.Errorf("branch %q: %v", b, err)
+					return xerrors.Errorf("branch %q: %w", b, err)
 				}
 			}
 		}

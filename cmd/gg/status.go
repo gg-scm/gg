@@ -16,12 +16,12 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/terminal"
+	"golang.org/x/xerrors"
 )
 
 const statusSynopsis = "show changed files in the working directory"
@@ -152,10 +152,10 @@ aliases: st, check`)
 		}
 	}
 	if foundUnrecognized {
-		return errors.New("unrecognized output from git status. Please file a bug at https://github.com/zombiezen/gg/issues/new and include the output from this command.")
+		return xerrors.New("unrecognized output from git status. Please file a bug at https://github.com/zombiezen/gg/issues/new and include the output from this command.")
 	}
 	if hitRenameBug {
-		return errors.New("version of Git has buggy rename detection; please upgrade. See https://github.com/zombiezen/gg/issues/60 for details.")
+		return xerrors.New("version of Git has buggy rename detection; please upgrade. See https://github.com/zombiezen/gg/issues/60 for details.")
 	}
 	if statusErr != nil {
 		return statusErr

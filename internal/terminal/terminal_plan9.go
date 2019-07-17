@@ -14,10 +14,6 @@
 
 package terminal
 
-import (
-	"golang.org/x/sys/unix"
-)
-
 func isTerminal(fd uintptr) bool {
 	return false
 }

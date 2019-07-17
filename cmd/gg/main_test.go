@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -33,6 +32,7 @@ import (
 	"gg-scm.io/pkg/internal/git"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"golang.org/x/xerrors"
 )
 
 func TestNewXDGDirs(t *testing.T) {
@@ -192,7 +192,7 @@ func (env *testEnv) writeConfig(config []byte) error {
 	fullConfig := "[user]\nname = User\nemail = foo@example.com\n" + string(config)
 	err := env.topDir.Apply(filesystem.Write(".gitconfig", fullConfig))
 	if err != nil {
-		return fmt.Errorf("write git config: %v", err)
+		return xerrors.Errorf("write git config: %w", err)
 	}
 	return nil
 }
@@ -201,7 +201,7 @@ func (env *testEnv) writeConfig(config []byte) error {
 func (env *testEnv) writeGitHubAuth(tokenFile []byte) error {
 	err := env.topDir.Apply(filesystem.Write("xdgconfig/gg/github_token", string(tokenFile)))
 	if err != nil {
-		return fmt.Errorf("write GitHub auth: %v", err)
+		return xerrors.Errorf("write GitHub auth: %w", err)
 	}
 	return nil
 }
@@ -220,13 +220,13 @@ func (env *testEnv) editorCmd(content []byte) (string, error) {
 		cpPath, cpPathError = exec.LookPath("cp")
 	})
 	if cpPathError != nil {
-		return "", fmt.Errorf("editor command: cp not found: %v", cpPathError)
+		return "", xerrors.Errorf("editor command: cp not found: %w", cpPathError)
 	}
 	fname := fmt.Sprintf("msg%02d", env.editFile)
 	env.editFile++
 	err := env.topDir.Apply(filesystem.Write(fname, string(content)))
 	if err != nil {
-		return "", fmt.Errorf("editor command: %v", err)
+		return "", xerrors.Errorf("editor command: %w", err)
 	}
 	dst := env.topDir.FromSlash(fname)
 	return fmt.Sprintf("%s %s", cpPath, escape.Shell(dst)), nil
@@ -260,7 +260,7 @@ func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte,
 			if name == "git" {
 				return gitPath, gitPathError
 			}
-			return "", errors.New("look path stubbed")
+			return "", xerrors.New("look path stubbed")
 		},
 	}
 	err := run(ctx, pctx, args)

@@ -16,13 +16,12 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/sigterm"
+	"golang.org/x/xerrors"
 )
 
 const pushSynopsis = "push changes to the specified destination"
@@ -94,7 +93,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	switch {
 	case *dstRefArg == "":
 		if !srcRef.IsValid() {
-			return errors.New("cannot infer destination (source is not a ref). Use -d to specify destination ref.")
+			return xerrors.New("cannot infer destination (source is not a ref). Use -d to specify destination ref.")
 		}
 		dstRef = srcRef
 	case strings.HasPrefix(*dstRefArg, "refs/"):
@@ -176,7 +175,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 			return err
 		}
 		if !clean {
-			return errors.New("working copy has uncommitted changes. " +
+			return xerrors.New("working copy has uncommitted changes. " +
 				"Either commit them, stash them, or use gg mail --allow-dirty if this is intentional.")
 		}
 	}
@@ -199,12 +198,12 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 	if *dstBranch == "" {
 		branch := srcBranch
 		if branch == "" {
-			return errors.New("cannot infer destination (source is not a branch). Use -d to specify destination branch.")
+			return xerrors.New("cannot infer destination (source is not a branch). Use -d to specify destination branch.")
 		}
 		up := inferUpstream(cfg, branch)
 		*dstBranch = up.Branch()
 		if *dstBranch == "" {
-			return fmt.Errorf("cannot infer destination (upstream %s is not a branch). Use -d to specify destination branch.", up)
+			return xerrors.Errorf("cannot infer destination (upstream %s is not a branch). Use -d to specify destination branch.", up)
 		}
 	} else {
 		*dstBranch = strings.TrimPrefix(*dstBranch, "refs/for/")
@@ -299,10 +298,10 @@ func escapeGerritMessage(sb *strings.Builder, msg string) {
 func verifyPushRemoteRef(ctx context.Context, g *git.Git, remote string, ref git.Ref) error {
 	refs, err := g.ListRemoteRefs(ctx, remote)
 	if err != nil {
-		return fmt.Errorf("verify remote ref %s: %v", ref, err)
+		return xerrors.Errorf("verify remote ref %s: %w", ref, err)
 	}
 	if _, present := refs[ref]; !present {
-		return fmt.Errorf("remote %s does not have ref %s", remote, ref)
+		return xerrors.Errorf("remote %s does not have ref %s", remote, ref)
 	}
 	return nil
 }
@@ -326,7 +325,7 @@ func inferPushRepo(cfg *git.Config, branch string) (string, error) {
 	}
 	remotes := cfg.ListRemotes()
 	if _, ok := remotes["origin"]; !ok {
-		return "", errors.New("no destination given and no remote named \"origin\" found")
+		return "", xerrors.New("no destination given and no remote named \"origin\" found")
 	}
 	return "origin", nil
 }

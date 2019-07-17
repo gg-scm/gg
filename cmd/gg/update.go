@@ -16,11 +16,10 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
+	"golang.org/x/xerrors"
 )
 
 const updateSynopsis = "update working directory (or switch revisions)"
@@ -63,7 +62,7 @@ aliases: up, checkout, co
 		}
 		branch := ref.Branch()
 		if branch == "" {
-			return errors.New("can't update with no branch checked out; run 'gg update BRANCH'")
+			return xerrors.New("can't update with no branch checked out; run 'gg update BRANCH'")
 		}
 		return updateToBranch(ctx, cc.git, cfg, branch, behavior)
 	case f.NArg() == 0 && *rev != "":
@@ -100,7 +99,7 @@ aliases: up, checkout, co
 // returns an error.
 func updateToBranch(ctx context.Context, g *git.Git, cfg *git.Config, branch string, behavior git.CheckoutConflictBehavior) error {
 	if behavior != git.MergeLocal && behavior != git.DiscardLocal {
-		return fmt.Errorf("updateToBranch takes MergeLocal or DiscardLocal as behaviors (got %v)", behavior)
+		return xerrors.Errorf("updateToBranch takes MergeLocal or DiscardLocal as behaviors (got %v)", behavior)
 	}
 	if branch == "" {
 		return nil
@@ -124,7 +123,7 @@ func updateToBranch(ctx context.Context, g *git.Git, cfg *git.Config, branch str
 	if isAncestor, err := g.IsAncestor(ctx, git.BranchRef(branch).String(), target.String()); err != nil {
 		return err
 	} else if !isAncestor {
-		return errors.New("upstream has diverged; run 'gg merge' or 'gg rebase'")
+		return xerrors.New("upstream has diverged; run 'gg merge' or 'gg rebase'")
 	}
 	// Here's the trickiness: move the working copy to the given revision
 	// while merging the local changes, then move the branch ref to match the

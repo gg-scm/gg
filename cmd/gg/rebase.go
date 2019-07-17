@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -24,6 +23,7 @@ import (
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/sigterm"
+	"golang.org/x/xerrors"
 )
 
 const rebaseSynopsis = "move revision (and descendants) to a different branch"
@@ -77,7 +77,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		return sigterm.Run(ctx, c)
 	case *src != "":
 		if strings.HasPrefix(*src, "-") {
-			return fmt.Errorf("revision cannot start with '-'")
+			return xerrors.Errorf("revision cannot start with '-'")
 		}
 		ancestor, err := cc.git.IsAncestor(ctx, *src, git.Head.String())
 		if err != nil {
@@ -101,10 +101,10 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 			return err
 		}
 		if len(descend) == 0 {
-			return fmt.Errorf("%s is not part of any branch", *src)
+			return xerrors.Errorf("%s is not part of any branch", *src)
 		}
 		if len(descend) > 1 {
-			return fmt.Errorf("%s is in multiple branches", *src)
+			return xerrors.Errorf("%s is in multiple branches", *src)
 		}
 		editorCmd := fmt.Sprintf(
 			"%s log --reverse --first-parent --pretty='tformat:pick %%H' %s~..%s >",
@@ -159,7 +159,7 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		upstream := f.Arg(0)
 		if strings.HasPrefix(upstream, "-") {
-			return errors.New("upstream ref cannot start with a dash")
+			return xerrors.New("upstream ref cannot start with a dash")
 		}
 		if upstream == "" {
 			upstream = "@{upstream}"
@@ -234,22 +234,22 @@ func continueRebase(ctx context.Context, cc *cmdContext) error {
 func findDescendants(ctx context.Context, git *git.Git, object string) ([]git.Ref, error) {
 	refs, err := branchesContaining(ctx, git, object)
 	if err != nil {
-		return nil, fmt.Errorf("find descendants of %s: %v", object, err)
+		return nil, xerrors.Errorf("find descendants of %s: %w", object, err)
 	}
 	n := 0
 	for i := range refs {
 		others, err := branchesContaining(ctx, git, refs[i].String())
 		if err != nil {
-			return nil, fmt.Errorf("find descendants of %s: %v", object, err)
+			return nil, xerrors.Errorf("find descendants of %s: %w", object, err)
 		}
 		if len(others) == 0 {
-			return nil, fmt.Errorf("find descendants of %s: inconsistent git output for %s", object, refs[i])
+			return nil, xerrors.Errorf("find descendants of %s: inconsistent git output for %s", object, refs[i])
 		}
 		if len(others) > 1 {
 			continue
 		}
 		if others[0] != refs[i] {
-			return nil, fmt.Errorf("find descendants of %s: inconsistent git output for %s", object, refs[i])
+			return nil, xerrors.Errorf("find descendants of %s: inconsistent git output for %s", object, refs[i])
 		}
 		refs[n] = refs[i]
 		n++
@@ -263,7 +263,7 @@ func branchesContaining(ctx context.Context, g *git.Git, object string) ([]git.R
 	// TODO(soon): Turn this into an API.
 	out, err := g.Output(ctx, "for-each-ref", "--contains="+object, "--format=%(refname)", "--", "refs/heads/*")
 	if err != nil {
-		return nil, fmt.Errorf("list branches: %v", err)
+		return nil, xerrors.Errorf("list branches: %w", err)
 	}
 	var refs []git.Ref
 	for _, line := range strings.Split(strings.TrimSuffix(out, "\n"), "\n") {

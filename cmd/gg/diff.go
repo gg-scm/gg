@@ -16,12 +16,12 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/sigterm"
+	"golang.org/x/xerrors"
 )
 
 const diffSynopsis = "diff repository (or selected files)"
@@ -125,7 +125,7 @@ func (r *revFlag) String() string {
 
 func (r *revFlag) Set(s string) error {
 	if s == "" {
-		return errors.New("blank revision")
+		return xerrors.New("blank revision")
 	}
 	if r.r1 == "" {
 		r.r1 = s
@@ -135,7 +135,7 @@ func (r *revFlag) Set(s string) error {
 		r.r2 = s
 		return nil
 	}
-	return errors.New("can only pass a revision flag at most twice")
+	return xerrors.New("can only pass a revision flag at most twice")
 }
 
 func (r *revFlag) Get() interface{} {

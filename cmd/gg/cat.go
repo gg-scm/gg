@@ -16,11 +16,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
+	"golang.org/x/xerrors"
 )
 
 const catSynopsis = "output the current or given revision of files"
@@ -59,10 +59,10 @@ func catFile(ctx context.Context, cc *cmdContext, rev *git.Rev, path string) err
 		return err
 	}
 	if len(paths) == 0 {
-		return fmt.Errorf("%s does not exist at %v", path, rev.Commit)
+		return xerrors.Errorf("%s does not exist at %v", path, rev.Commit)
 	}
 	if len(paths) > 1 {
-		return fmt.Errorf("%s names multiple paths at %v", path, rev.Commit)
+		return xerrors.Errorf("%s names multiple paths at %v", path, rev.Commit)
 	}
 	var topPath git.TopPath
 	for p := range paths {

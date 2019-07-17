@@ -22,6 +22,7 @@ import (
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/sigterm"
+	"golang.org/x/xerrors"
 )
 
 const evolveSynopsis = "sync with Gerrit changes in upstream"
@@ -50,7 +51,7 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 		var err error
 		dstRev, err = cc.git.ParseRev(ctx, "@{upstream}")
 		if err != nil {
-			return fmt.Errorf("no upstream found: %v", err)
+			return xerrors.Errorf("no upstream found: %w", err)
 		}
 	} else {
 		var err error
@@ -99,7 +100,7 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 			continue
 		}
 		if last != i+1 {
-			return fmt.Errorf("found commit %s that skips Gerrit change %s. Must manually resolve.", submitted[c.id], featureChanges[i+1].id)
+			return xerrors.Errorf("found commit %s that skips Gerrit change %s. Must manually resolve.", submitted[c.id], featureChanges[i+1].id)
 		}
 		last = i
 	}
@@ -126,7 +127,7 @@ func readChanges(ctx context.Context, g *git.Git, head, base string) ([]change, 
 		Revs: []string{head, "^" + base},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("read changes %s..%s: %v", base, head, err)
+		return nil, xerrors.Errorf("read changes %s..%s: %w", base, head, err)
 	}
 	var changes []change
 	for commits.Next() {
@@ -137,7 +138,7 @@ func readChanges(ctx context.Context, g *git.Git, head, base string) ([]change, 
 		})
 	}
 	if err := commits.Close(); err != nil {
-		return nil, fmt.Errorf("read changes %s..%s: %v", base, head, err)
+		return nil, xerrors.Errorf("read changes %s..%s: %w", base, head, err)
 	}
 	return changes, nil
 }
