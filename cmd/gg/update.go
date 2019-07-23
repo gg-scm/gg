@@ -113,6 +113,11 @@ func updateToBranch(ctx context.Context, g *git.Git, cfg *git.Config, branch str
 		// Remote-tracking branch does not exist, so just do a simple checkout.
 		return g.CheckoutBranch(ctx, branch, git.CheckoutOptions{ConflictBehavior: behavior})
 	}
+	if isAheadOfTarget, err := g.IsAncestor(ctx, target.String(), git.BranchRef(branch).String()); err != nil {
+		return err
+	} else if isAheadOfTarget {
+		return g.CheckoutBranch(ctx, branch, git.CheckoutOptions{ConflictBehavior: behavior})
+	}
 
 	// Check out and fast-forward.
 	//
