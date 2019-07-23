@@ -786,9 +786,14 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 				prettyCommit(parent.Commit, names),
 				prettyCommit(baseRev.Commit, names))
 		}
-		// Write new data to foo.txt.
 		const amendedData = "This is edited history\n"
-		if err := env.root.Apply(filesystem.Write("foo.txt", amendedData)); err != nil {
+		err = env.root.Apply(
+			// Write new data to foo.txt.
+			filesystem.Write("foo.txt", amendedData),
+			// Write content to an untracked file.
+			filesystem.Write("untracked.txt", dummyContent),
+		)
+		if err != nil {
 			t.Fatal(err)
 		}
 
@@ -824,6 +829,10 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		// Verify that bar.txt does not exist in the first edited commit.
 		if err := objectExists(ctx, env.git, "HEAD~", "bar.txt"); err == nil {
 			t.Error("bar.txt @ HEAD~ exists")
+		}
+		// Verify that untracked.txt does not exist in the first edited commit.
+		if err := objectExists(ctx, env.git, "HEAD~", "untracked.txt"); err == nil {
+			t.Error("untracked.txt @ HEAD~ exists")
 		}
 
 		// Verify that the commit message of the second edited commit is the same as before.

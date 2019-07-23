@@ -326,6 +326,7 @@ func TestStageTracked(t *testing.T) {
 	err = env.root.Apply(
 		filesystem.Write("modified.txt", modifiedNew),
 		filesystem.Write("added.txt", addContent),
+		filesystem.Write("untracked.txt", dummyContent),
 		filesystem.Remove("deleted.txt"),
 	)
 	if err != nil {
@@ -356,6 +357,10 @@ func TestStageTracked(t *testing.T) {
 		{
 			Code: StatusCode{'D', ' '},
 			Name: "deleted.txt",
+		},
+		{
+			Code: StatusCode{'?', '?'},
+			Name: "untracked.txt",
 		},
 	}
 	diff := cmp.Diff(want, got,
