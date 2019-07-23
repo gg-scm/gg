@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -69,7 +70,7 @@ func (g *Git) GitDir(ctx context.Context) (string, error) {
 	// TODO(someday): Use --absolute-git-dir when minimum supported
 	// Git version >= 2.13.2.
 	const errPrefix = "find .git directory"
-	out, err := g.output(ctx, errPrefix, []string{g.exe, "rev-parse", "--git-common-dir"})
+	out, err := g.output(ctx, errPrefix, []string{g.exe, "rev-parse", "--git-dir"})
 	if err != nil {
 		return "", err
 	}
@@ -94,22 +95,33 @@ func (g *Git) GitDir(ctx context.Context) (string, error) {
 // shared among different working trees, given the configuration. Any
 // symlinks are resolved.
 func (g *Git) CommonDir(ctx context.Context) (string, error) {
+	// TODO(someday): Use --git-common-dir when minimum supported
+	// Git version > 2.12.5. See https://github.com/zombiezen/gg/issues/105.
 	const errPrefix = "find .git directory"
-	out, err := g.output(ctx, errPrefix, []string{g.exe, "rev-parse", "--git-common-dir"})
+	for i := len(g.env) - 1; i >= 0; i-- {
+		e := g.env[i]
+		const envVar = "GIT_COMMON_DIR="
+		if len(e) > len(envVar) && strings.HasPrefix(e, envVar) {
+			return e[len(envVar):], nil
+		}
+	}
+	dir, err := g.GitDir(ctx)
 	if err != nil {
 		return "", err
 	}
-	line, err := oneLine(out)
-	if err != nil {
+	commonDirData, err := ioutil.ReadFile(filepath.Join(dir, "commondir"))
+	commonDir := dir
+	if err == nil {
+		commonDir = strings.TrimSuffix(string(commonDirData), "\n")
+		if filepath.IsAbs(commonDir) {
+			commonDir = filepath.Clean(commonDir)
+		} else {
+			commonDir = filepath.Join(dir, commonDir)
+		}
+	} else if !os.IsNotExist(err) {
 		return "", xerrors.Errorf("%s: %w", errPrefix, err)
 	}
-	var path string
-	if filepath.IsAbs(line) {
-		path = filepath.Clean(line)
-	} else {
-		path = filepath.Join(g.dir, line)
-	}
-	evaled, err := filepath.EvalSymlinks(path)
+	evaled, err := filepath.EvalSymlinks(commonDir)
 	if err != nil {
 		return "", xerrors.Errorf("%s: %w", errPrefix, err)
 	}

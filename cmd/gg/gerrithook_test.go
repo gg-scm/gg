@@ -82,6 +82,40 @@ func TestGerritHook(t *testing.T) {
 			t.Errorf(".git/hooks/commit-msg content = %q; want %q", got, wantContent)
 		}
 	})
+	t.Run("Subdir", func(t *testing.T) {
+		// Regression test for https://github.com/zombiezen/gg/issues/105
+
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := env.git.Init(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Mkdir("foo")); err != nil {
+			t.Fatal(err)
+		}
+		const wantContent = "#!/bin/bash\necho Hello World\n"
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if want := "/foo/commit-msg"; r.URL.Path != want {
+				t.Errorf("HTTP path = %q; want %q", r.URL.Path, want)
+			}
+			w.Header().Set("Content-Length", strconv.Itoa(len(wantContent)))
+			io.WriteString(w, wantContent)
+		}))
+		defer srv.Close()
+		env.roundTripper = srv.Client().Transport
+
+		if _, err := env.gg(ctx, env.root.FromSlash("foo"), "gerrithook", "--url="+srv.URL+"/foo/commit-msg", "on"); err != nil {
+			t.Errorf("%+v", err)
+		}
+		if got, err := env.root.ReadFile(".git/hooks/commit-msg"); err != nil {
+			t.Error(err)
+		} else if got != wantContent {
+			t.Errorf(".git/hooks/commit-msg content = %q; want %q", got, wantContent)
+		}
+	})
 	t.Run("Cached", func(t *testing.T) {
 		env, err := newTestEnv(ctx, t)
 		if err != nil {

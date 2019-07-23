@@ -15,9 +15,11 @@
 package git
 
 import (
+	"context"
 	"os/exec"
 	"testing"
 
+	"gg-scm.io/pkg/internal/filesystem"
 	"golang.org/x/xerrors"
 )
 
@@ -91,4 +93,109 @@ func TestCommandError(t *testing.T) {
 			t.Errorf("commandError(%q, %v, %q) = %q; want %q", test.prefix, test.runError, test.stderr, got, test.want)
 		}
 	}
+}
+
+func TestDirs(t *testing.T) {
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	ctx := context.Background()
+
+	t.Run("SingleRepo", func(t *testing.T) {
+		env, err := newTestEnv(ctx, gitPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := env.g.Init(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Mkdir("foo")); err != nil {
+			t.Fatal(err)
+		}
+
+		if got, err := env.g.GitDir(ctx); err != nil {
+			t.Error("env.g.GitDir(ctx):", err)
+		} else if want := env.root.FromSlash(".git"); got != want {
+			t.Errorf("env.g.GitDir(ctx) = %q; want %q", got, want)
+		}
+		if got, err := env.g.CommonDir(ctx); err != nil {
+			t.Error("env.g.CommonDir(ctx):", err)
+		} else if want := env.root.FromSlash(".git"); got != want {
+			t.Errorf("env.g.CommonDir(ctx) = %q; want %q", got, want)
+		}
+		t.Run("Subdir", func(t *testing.T) {
+			// Regression test for https://github.com/zombiezen/gg/issues/105
+
+			g := env.g.WithDir(env.root.FromSlash("foo"))
+			if got, err := g.GitDir(ctx); err != nil {
+				t.Error("env.g.WithDir(\"foo\").GitDir(ctx):", err)
+			} else if want := env.root.FromSlash(".git"); got != want {
+				t.Errorf("env.g.WithDir(\"foo\").GitDir(ctx) = %q; want %q", got, want)
+			}
+			if got, err := g.CommonDir(ctx); err != nil {
+				t.Error("env.g.WithDir(\"foo\").CommonDir(ctx):", err)
+			} else if want := env.root.FromSlash(".git"); got != want {
+				t.Errorf("env.g.WithDir(\"foo\").CommonDir(ctx) = %q; want %q", got, want)
+			}
+		})
+	})
+	t.Run("WorkTree", func(t *testing.T) {
+		env, err := newTestEnv(ctx, gitPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		// Create a repository with a single commit.
+		sharedDir := env.root.FromSlash("shared")
+		if err := env.g.Init(ctx, sharedDir); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("shared/file.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		sharedGit := env.g.WithDir(sharedDir)
+		if err := sharedGit.Add(ctx, []Pathspec{"file.txt"}, AddOptions{}); err != nil {
+			t.Fatal(err)
+		}
+		if err := sharedGit.Commit(ctx, "first", CommitOptions{}); err != nil {
+			t.Fatal(err)
+		}
+		// Create linked worktree "foo".
+		linkedDir := env.root.FromSlash("foo")
+		if err := env.g.WithDir(sharedDir).Run(ctx, "worktree", "add", linkedDir); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Mkdir("foo/bar")); err != nil {
+			t.Fatal(err)
+		}
+
+		linkedGit := env.g.WithDir(env.root.FromSlash("foo"))
+		if got, err := linkedGit.GitDir(ctx); err != nil {
+			t.Error("env.g.WithDir(\"foo\").GitDir(ctx):", err)
+		} else if want := env.root.FromSlash("shared/.git/worktrees/foo"); got != want {
+			t.Errorf("env.g.WithDir(\"foo\").GitDir(ctx) = %q; want %q", got, want)
+		}
+		if got, err := linkedGit.CommonDir(ctx); err != nil {
+			t.Error("env.g.WithDir(\"foo\").CommonDir(ctx):", err)
+		} else if want := env.root.FromSlash("shared/.git"); got != want {
+			t.Errorf("env.g.WithDir(\"foo\").CommonDir(ctx) = %q; want %q", got, want)
+		}
+		t.Run("Subdir", func(t *testing.T) {
+			// Regression test for https://github.com/zombiezen/gg/issues/105
+
+			subdirGit := env.g.WithDir(env.root.FromSlash("foo/bar"))
+			if got, err := subdirGit.GitDir(ctx); err != nil {
+				t.Error("env.g.WithDir(\"foo/bar\").GitDir(ctx):", err)
+			} else if want := env.root.FromSlash("shared/.git/worktrees/foo"); got != want {
+				t.Errorf("env.g.WithDir(\"foo/bar\").GitDir(ctx) = %q; want %q", got, want)
+			}
+			if got, err := subdirGit.CommonDir(ctx); err != nil {
+				t.Error("env.g.WithDir(\"foo/bar\").CommonDir(ctx):", err)
+			} else if want := env.root.FromSlash("shared/.git"); got != want {
+				t.Errorf("env.g.WithDir(\"foo/bar\").CommonDir(ctx) = %q; want %q", got, want)
+			}
+		})
+	})
 }
