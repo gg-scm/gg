@@ -35,7 +35,7 @@ import (
 const requestPullSynopsis = "create a GitHub pull request"
 
 func requestPull(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg requestpull [-n] [-e=0] [--title=MSG [--body=MSG]] [BRANCH]", requestPullSynopsis+`
+	f := flag.NewFlagSet(true, "gg requestpull [-n] [-e=0] [--title=MSG [--body=MSG]] [--draft] [-R user1[,user2]] [BRANCH]", requestPullSynopsis+`
 
 aliases: pr
 

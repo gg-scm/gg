@@ -4,9 +4,9 @@
     ],
     "cmd_class": "basic",
     "date": "2018-07-16 08:42:42-07:00",
-    "lastmod": "2019-07-23 20:41:10-07:00",
+    "lastmod": "2019-07-24 10:01:02-07:00",
     "title": "gg requestpull",
-    "usage": "gg requestpull [-n] [-e=0] [--title=MSG [--body=MSG]] [BRANCH]"
+    "usage": "gg requestpull [-n] [-e=0] [--title=MSG [--body=MSG]] [--draft] [-R user1[,user2]] [BRANCH]"
 }
 
 create a GitHub pull request
