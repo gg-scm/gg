@@ -146,6 +146,12 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Always evaluate symlinks in the root directory path so as to make path
+	// comparisons easier (simple equality). This is mostly relevant on macOS.
+	topDir, err = filepath.EvalSymlinks(topDir)
+	if err != nil {
+		return nil, err
+	}
 	topFS := filesystem.Dir(topDir)
 	err = topFS.Apply(
 		filesystem.Mkdir("scratch"),

@@ -163,6 +163,12 @@ func newTestEnv(ctx context.Context, gitPath string) (*testEnv, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Always evaluate symlinks in the root directory path so as to make path
+	// comparisons easier (simple equality). This is mostly relevant on macOS.
+	topPath, err = filepath.EvalSymlinks(topPath)
+	if err != nil {
+		return nil, err
+	}
 	top := filesystem.Dir(topPath)
 	if err := top.Apply(filesystem.Mkdir("scratch")); err != nil {
 		os.RemoveAll(topPath)
