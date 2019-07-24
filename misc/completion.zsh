@@ -233,6 +233,7 @@ _gg() {
         '(-body -title)'{-e,-edit}'[invoke editor on pull request message]' \
         '(-e -edit)-body=[pull request description]' \
         '(-e -edit)-title=[pull request title]' \
+        '-draft[create a pull request as draft]' \
         {-n,-dry-run}'[prints the pull request instead of creating it]' \
         '-maintainer-edits=[allow maintainers to edit this branch]:on/off:(0 1)' \
         '*'{-R,-reviewer}'=[GitHub usernames of reviewers to add]:user:' \

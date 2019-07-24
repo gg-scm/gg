@@ -49,6 +49,7 @@ func TestRequestPull(t *testing.T) {
 		title     string
 		body      string
 		reviewers []string
+		draft     bool
 	}{
 		{
 			name:        "Shared",
@@ -139,6 +140,18 @@ func TestRequestPull(t *testing.T) {
 			title:     "Commit title",
 			body:      "Commit description",
 			reviewers: []string{"octocat", "zombiezen"},
+		},
+		{
+			name:        "Draft",
+			branch:      "shared",
+			upstreamURL: "https://github.com/example/foo.git",
+			args:        []string{"--draft"},
+
+			headOwner: "example",
+			headRef:   "shared",
+			title:     "Commit title",
+			body:      "Commit description",
+			draft:     true,
 		},
 	}
 	for _, test := range tests {
@@ -248,6 +261,9 @@ func TestRequestPull(t *testing.T) {
 			}
 			if got, want := prs[0].body, test.body; got != want {
 				t.Errorf("Body = %q; want %q", got, want)
+			}
+			if got, want := prs[0].draft, test.draft; got != want {
+				t.Errorf("Draft = %t; want %t", got, want)
 			}
 			if got, want := prs[0].maintainerCanModify, true; got != want {
 				t.Errorf("Maintainer can modify = %t; want %t", got, want)
@@ -516,6 +532,7 @@ type fakePullRequest struct {
 	body      string
 	reviewers []string
 
+	draft               bool
 	maintainerCanModify bool
 }
 
@@ -528,6 +545,8 @@ type fakeGitHubPullRequestAPI struct {
 	prs []fakePullRequest
 }
 
+const testDraftAccept = "application/vnd.github.shadow-cat-preview+json"
+
 func (api *fakeGitHubPullRequestAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Host == "api.github.com" {
 		if got, want := r.Header.Get("Authorization"), "token "+api.permittedToken; got != want {
@@ -536,8 +555,8 @@ func (api *fakeGitHubPullRequestAPI) ServeHTTP(w http.ResponseWriter, r *http.Re
 			http.Error(w, `{"message":"Bad auth token"}`, http.StatusUnauthorized)
 			return
 		}
-		if got, want := r.Header.Get("Accept"), "application/vnd.github.v3+json"; got != want {
-			api.errorer.Errorf("Accept header = %q; want %q", got, want)
+		if got, want := r.Header.Get("Accept"), "application/vnd.github.v3+json"; got != want && got != draftPRAPIAccept {
+			api.errorer.Errorf("Accept header = %q; want %q or %q", got, want, draftPRAPIAccept)
 		}
 		pathParts := strings.Split(strings.TrimPrefix(path.Clean(r.URL.Path), "/"), "/")
 		switch {
@@ -573,6 +592,10 @@ func (api *fakeGitHubPullRequestAPI) createPullRequest(w http.ResponseWriter, r 
 		http.Error(w, `{"message":"Missing required fields"}`, http.StatusUnprocessableEntity)
 		return
 	}
+	draft := jsonBool(body["draft"], false)
+	if got := r.Header.Get("Accept"); draft && got != draftPRAPIAccept {
+		api.errorer.Errorf("draft unavailable with Accept = %q; want %q", got, draftPRAPIAccept)
+	}
 	headOwner, headRef := owner, head
 	if i := strings.IndexByte(head, ':'); i != -1 {
 		headOwner, headRef = head[:i], head[i+1:]
@@ -590,6 +613,7 @@ func (api *fakeGitHubPullRequestAPI) createPullRequest(w http.ResponseWriter, r 
 		headRef:             headRef,
 		title:               title,
 		body:                jsonString(body["body"]),
+		draft:               draft,
 		maintainerCanModify: jsonBool(body["maintainer_can_modify"], true),
 	})
 	api.mu.Unlock()

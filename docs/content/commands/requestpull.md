@@ -4,7 +4,7 @@
     ],
     "cmd_class": "basic",
     "date": "2018-07-16 08:42:42-07:00",
-    "lastmod": "2018-07-16 22:25:30-07:00",
+    "lastmod": "2019-07-23 20:41:10-07:00",
     "title": "gg requestpull",
     "usage": "gg requestpull [-n] [-e=0] [--title=MSG [--body=MSG]] [BRANCH]"
 }
@@ -39,6 +39,8 @@ create pull requests in any repositories you have access to.
 <dl class="flag_list">
 	<dt>-body description</dt>
 	<dd>pull request description (requires --title)</dd>
+	<dt>-draft</dt>
+	<dd>create a pull request as draft</dd>
 	<dt>-e</dt>
 	<dt>-edit</dt>
 	<dd>invoke editor on pull request message (ignored if --title is specified)</dd>

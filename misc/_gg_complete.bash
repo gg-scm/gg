@@ -148,7 +148,7 @@ _gg_complete() {
         return 0
         ;;
       requestpull|pr)
-        COMPREPLY=( $(compgen -W '-body --body -e -edit --edit -n -dry-run --dry-run -maintainer-edits --maintainer-edits -R -reviewer --reviewer -title --title' -- "$curr_word") )
+        COMPREPLY=( $(compgen -W '-body --body -draft --draft -e -edit --edit -n -dry-run --dry-run -maintainer-edits --maintainer-edits -R -reviewer --reviewer -title --title' -- "$curr_word") )
         return 0
         ;;
       revert)

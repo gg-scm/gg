@@ -60,6 +60,7 @@ aliases: pr
 
 [personal access token]: https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/`)
 	bodyFlag := f.String("body", "", "pull request `description` (requires --title)")
+	draft := f.Bool("draft", false, "create a pull request as draft")
 	edit := f.Bool("e", true, "invoke editor on pull request message (ignored if --title is specified)")
 	f.Alias("e", "edit")
 	dryRun := f.Bool("n", false, "prints the pull request instead of creating it")
@@ -159,8 +160,12 @@ aliases: pr
 		title, body = *titleFlag, *bodyFlag
 	}
 	if *dryRun {
-		_, err := fmt.Fprintf(cc.stdout, "%s/%s: %s\nMerge into %s:%s from %s:%s\n",
-			baseOwner, baseRepo, title, baseOwner, baseBranch, headOwner, branch)
+		draftText := ""
+		if *draft {
+			draftText = "[DRAFT] "
+		}
+		_, err := fmt.Fprintf(cc.stdout, "%s%s/%s: %s\nMerge into %s:%s from %s:%s\n",
+			draftText, baseOwner, baseRepo, title, baseOwner, baseBranch, headOwner, branch)
 		if err != nil {
 			return err
 		}
@@ -202,6 +207,7 @@ aliases: pr
 		headBranch:             branch,
 		title:                  title,
 		body:                   body,
+		draft:                  *draft,
 		disableMaintainerEdits: !*maintainerEdits,
 	})
 	if err != nil {
@@ -312,6 +318,7 @@ type pullRequestParams struct {
 	title string
 	body  string
 
+	draft                  bool
 	disableMaintainerEdits bool
 }
 
@@ -339,7 +346,7 @@ func createPullRequest(ctx context.Context, client *http.Client, params pullRequ
 		return 0, "", xerrors.Errorf("create pull request: %w", err)
 	}
 	req.Header.Set("User-Agent", userAgentString())
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Accept", draftPRAPIAccept)
 	req.Header.Set("Authorization", "token "+params.authToken)
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	reqBody := map[string]interface{}{
@@ -350,6 +357,9 @@ func createPullRequest(ctx context.Context, client *http.Client, params pullRequ
 	}
 	if params.body != "" {
 		reqBody["body"] = params.body
+	}
+	if params.draft {
+		reqBody["draft"] = true
 	}
 	reqBodyJSON, err := json.Marshal(reqBody)
 	req.Body = ioutil.NopCloser(bytes.NewReader(reqBodyJSON))
@@ -421,6 +431,10 @@ func addPullRequestReviewers(ctx context.Context, client *http.Client, params pu
 	}
 	return nil
 }
+
+// draftPRAPIAccept is the media type that GitHub uses to enable the draft PR
+// feature.
+const draftPRAPIAccept = "application/vnd.github.shadow-cat-preview+json"
 
 func parseGitHubErrorResponse(resp *http.Response) error {
 	t, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
