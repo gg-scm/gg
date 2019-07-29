@@ -906,6 +906,21 @@ func (g *Git) NewBranch(ctx context.Context, name string, opts BranchOptions) er
 	return g.run(ctx, errPrefix, args)
 }
 
+// NullTreeHash computes the hash of an empty tree and adds it to the
+// repository. This is sometimes useful as a diff comparison target.
+func (g *Git) NullTreeHash(ctx context.Context) (Hash, error) {
+	const errPrefix = "git hash-object"
+	out, err := g.output(ctx, errPrefix, []string{g.exe, "hash-object", "-t", "tree", "--stdin"})
+	if err != nil {
+		return Hash{}, err
+	}
+	h, err := ParseHash(strings.TrimSuffix(out, "\n"))
+	if err != nil {
+		return Hash{}, xerrors.Errorf("%s: %w", errPrefix, err)
+	}
+	return h, nil
+}
+
 // commandError returns a new error with the information from an
 // unsuccessful run of a subprocess.
 func commandError(prefix string, runError error, stderr []byte) error {

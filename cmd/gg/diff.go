@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/sigterm"
@@ -96,11 +95,11 @@ func diff(ctx context.Context, cc *cmdContext, args []string) error {
 			// Compare to the null tree.
 
 			// Run connects stdin to /dev/null.
-			zeroHash, err := cc.git.Output(ctx, "hash-object", "-t", "tree", "--stdin")
+			zeroHash, err := cc.git.NullTreeHash(ctx)
 			if err != nil {
 				return err
 			}
-			diffArgs = append(diffArgs, strings.TrimSuffix(zeroHash, "\n"))
+			diffArgs = append(diffArgs, zeroHash.String())
 		}
 	}
 	diffArgs = append(diffArgs, "--")

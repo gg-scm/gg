@@ -199,3 +199,24 @@ func TestDirs(t *testing.T) {
 		})
 	})
 }
+
+func TestNullTreeHash(t *testing.T) {
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, gitPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	got, err := env.g.NullTreeHash(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := Hash{0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60, 0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04}
+	if got != want {
+		t.Errorf("env.g.NullTreeHash(ctx) = %v; want %v", got, want)
+	}
+}
