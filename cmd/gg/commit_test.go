@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
 	"path/filepath"
@@ -371,6 +372,104 @@ func TestCommit_Amend(t *testing.T) {
 		t.Errorf("HEAD~ after amend = %s; want %s",
 			prettyCommit(newParent.Commit, changes),
 			prettyCommit(parent, changes))
+	}
+
+	// Verify that the commit incorporated all the changes from the working copy.
+	if data, err := catBlob(ctx, env.git, r2.Commit.String(), "added.txt"); err != nil {
+		t.Error(err)
+	} else if string(data) != addContent {
+		t.Errorf("added.txt = %q; want %q", data, addContent)
+	}
+	if data, err := catBlob(ctx, env.git, r2.Commit.String(), "modified.txt"); err != nil {
+		t.Error(err)
+	} else if string(data) != modifiedNew {
+		t.Errorf("modified.txt = %q; want %q", data, modifiedNew)
+	}
+	if err := objectExists(ctx, env.git, r2.Commit.String(), "deleted.txt"); err == nil {
+		t.Error("deleted.txt exists")
+	}
+
+	// Verify that the commit message matches the given message.
+	if info, err := env.git.CommitInfo(ctx, r2.Commit.String()); err != nil {
+		t.Error(err)
+	} else if info.Message != wantMessage {
+		t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
+	}
+}
+
+func TestCommit_AmendRootCommit(t *testing.T) {
+	// Regression test for https://github.com/zombiezen/gg/issues/106
+
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the first commit with modified.txt and deleted.txt.
+	const (
+		addContent  = "It's...\n"
+		modifiedOld = "The Larch\n"
+		modifiedNew = "The Chestnut\n"
+	)
+	err = env.root.Apply(
+		filesystem.Write("modified.txt", modifiedOld),
+		filesystem.Write("deleted.txt", dummyContent),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "modified.txt", "deleted.txt"); err != nil {
+		t.Fatal(err)
+	}
+	r1, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Arrange working copy changes.
+	err = env.root.Apply(
+		filesystem.Write("modified.txt", modifiedNew),
+		filesystem.Write("added.txt", addContent),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.trackFiles(ctx, "added.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.git.Remove(ctx, []git.Pathspec{"deleted.txt"}, git.RemoveOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to make a commit.
+	const wantMessage = "gg amended this commit\n"
+	if _, err := env.gg(ctx, env.root.String(), "commit", "--amend", "-m", "gg amended this commit"); err != nil {
+		t.Error(err)
+	}
+
+	// Verify that a new commit was created and has a parent of HEAD~.
+	r2, err := env.git.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	changes := map[git.Hash]string{
+		r1:        "first commit",
+		r2.Commit: "amended commit",
+	}
+	if r2.Commit == r1 {
+		t.Fatal("commit --amend did not create a new commit in the working copy")
+	}
+	if ref := r2.Ref; ref != "refs/heads/master" {
+		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
+	}
+	if newParent, err := env.git.ParseRev(ctx, "HEAD~"); err == nil {
+		t.Errorf("HEAD~ = %s; want error", prettyCommit(newParent.Commit, changes))
 	}
 
 	// Verify that the commit incorporated all the changes from the working copy.
@@ -936,11 +1035,17 @@ func TestCommitMessageTemplate(t *testing.T) {
 				}
 			}
 
-			got, err := commitMessageTemplate(ctx, env.git, test.status, test.amend, test.commentChar)
+			buf := new(bytes.Buffer)
+			if test.amend {
+				buf.WriteString(headCommitMsg)
+			} else {
+				buf.Write(maybeMergeMessage(ctx, env.git))
+			}
+			err = commitMessageTemplate(ctx, env.git, test.status, buf, test.commentChar)
 			if err != nil {
 				t.Fatal("commitMessageTemplate:", err)
 			}
-			if string(got) != test.want {
+			if got := buf.String(); got != test.want {
 				t.Errorf("commitMessageTemplate(...) =\n%s*** want: ***\n%s", got, test.want)
 			}
 		})

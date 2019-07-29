@@ -58,6 +58,17 @@ aliases: ci
 	for _, arg := range f.Args() {
 		pathspecs = append(pathspecs, git.LiteralPath(arg))
 	}
+	if *amend {
+		return doAmend(ctx, cc, *msg, pathspecs)
+	}
+	return doCommit(ctx, cc, *msg, pathspecs)
+}
+
+const commitMsgFilename = "COMMIT_MSG"
+
+func doCommit(ctx context.Context, cc *cmdContext, msg string, pathspecs []git.Pathspec) error {
+	// Get status on files. First level of assurance is to stop empty commits.
+	// This status info may get used for interactive commit message template.
 	status, err := cc.git.Status(ctx, git.StatusOptions{
 		Pathspecs: pathspecs,
 	})
@@ -68,28 +79,17 @@ aliases: ci
 	if err != nil {
 		return err
 	}
-	if !hasChanges && !*amend {
+	if !hasChanges {
 		return xerrors.New("nothing changed")
 	}
+	// Reuse the information from the status call.
 	var diffStatus []git.DiffStatusEntry
-	if *amend {
-		var err error
-		diffStatus, err = amendedDiffStatus(ctx, cc.git, pathspecs)
-		if err != nil {
-			return err
-		}
-		if len(diffStatus) == 0 {
-			return xerrors.New("amend would create an empty commit")
-		}
-	} else {
-		// For commits, we can reuse the information from the status call.
-		for _, ent := range status {
-			diffStatus = append(diffStatus, statusIntoHeadDiffStatus(ent))
-		}
+	for _, ent := range status {
+		diffStatus = append(diffStatus, statusIntoHeadDiffStatus(ent))
 	}
 
 	// Get message from user.
-	if *msg == "" {
+	if msg == "" {
 		sort.Slice(diffStatus, func(i, j int) bool {
 			return diffStatus[i].Name < diffStatus[j].Name
 		})
@@ -103,48 +103,125 @@ aliases: ci
 		if err != nil {
 			return err
 		}
-		initial, err := commitMessageTemplate(ctx, cc.git, diffStatus, *amend, commentChar)
+		msgBuf := new(bytes.Buffer)
+		msgBuf.Write(maybeMergeMessage(ctx, cc.git))
+		err = commitMessageTemplate(ctx, cc.git, diffStatus, msgBuf, commentChar)
 		if err != nil {
 			return err
 		}
-		editorOut, err := cc.editor.open(ctx, "COMMIT_MSG", initial)
+		editorOut, err := cc.editor.open(ctx, commitMsgFilename, msgBuf.Bytes())
 		if err != nil {
 			return err
 		}
-		*msg = cleanupMessage(string(editorOut), commentChar)
+		msg = cleanupMessage(string(editorOut), commentChar)
 	} else {
-		*msg = cleanupMessage(*msg, "")
+		msg = cleanupMessage(msg, "")
 	}
 
-	// Commit or amend as appropriate.
+	// Commit as appropriate.
 	if len(pathspecs) > 0 {
-		if *amend {
-			return cc.git.AmendFiles(ctx, pathspecs, git.AmendOptions{Message: *msg})
-		}
-		return cc.git.CommitFiles(ctx, *msg, pathspecs, git.CommitOptions{})
+		return cc.git.CommitFiles(ctx, msg, pathspecs, git.CommitOptions{})
 	}
-	if *amend {
-		return cc.git.AmendAll(ctx, git.AmendOptions{Message: *msg})
-	}
-	return cc.git.CommitAll(ctx, *msg, git.CommitOptions{})
+	return cc.git.CommitAll(ctx, msg, git.CommitOptions{})
 }
 
-func amendedDiffStatus(ctx context.Context, g *git.Git, pathspecs []git.Pathspec) ([]git.DiffStatusEntry, error) {
+func maybeMergeMessage(ctx context.Context, g *git.Git) []byte {
+	gitDir, err := g.GitDir(ctx)
+	if err != nil {
+		return nil
+	}
+	mergeMsg, err := ioutil.ReadFile(filepath.Join(gitDir, "MERGE_MSG"))
+	if err != nil {
+		return nil
+	}
+	return mergeMsg
+}
+
+func doAmend(ctx context.Context, cc *cmdContext, msg string, pathspecs []git.Pathspec) error {
+
+	// Get status on files (may get used for interactive commit message template).
+	status, err := cc.git.Status(ctx, git.StatusOptions{
+		Pathspecs: pathspecs,
+	})
+	if err != nil {
+		return err
+	}
+	if _, err := verifyNoMissingOrUnmerged(status); err != nil {
+		return err
+	}
+	commitInfo, err := cc.git.CommitInfo(ctx, "HEAD")
+	if err != nil {
+		return err
+	}
+	var base git.Hash
+	switch len(commitInfo.Parents) {
+	case 0:
+		base, err = cc.git.NullTreeHash(ctx)
+		if err != nil {
+			return err
+		}
+	case 1:
+		base = commitInfo.Parents[0]
+	default:
+		return xerrors.New("cannot amend a merge, use `git commit --amend`")
+	}
+	diffStatus, err := amendedDiffStatus(ctx, cc.git, base.String(), pathspecs)
+	if err != nil {
+		return err
+	}
+	if len(diffStatus) == 0 {
+		return xerrors.New("amend would create an empty commit")
+	}
+
+	// Get message from user.
+	if msg == "" {
+		// Open message in editor.
+		cfg, err := cc.git.ReadConfig(ctx)
+		if err != nil {
+			return err
+		}
+		commentChar, err := cfg.CommentChar()
+		if err != nil {
+			return err
+		}
+		msgBuf := new(bytes.Buffer)
+		msgBuf.WriteString(commitInfo.Message)
+		err = commitMessageTemplate(ctx, cc.git, diffStatus, msgBuf, commentChar)
+		if err != nil {
+			return err
+		}
+		editorOut, err := cc.editor.open(ctx, commitMsgFilename, msgBuf.Bytes())
+		if err != nil {
+			return err
+		}
+		msg = cleanupMessage(string(editorOut), commentChar)
+	} else {
+		msg = cleanupMessage(msg, "")
+	}
+
+	// Amend as appropriate.
+	if len(pathspecs) > 0 {
+		return cc.git.AmendFiles(ctx, pathspecs, git.AmendOptions{Message: msg})
+	}
+	return cc.git.AmendAll(ctx, git.AmendOptions{Message: msg})
+}
+
+func amendedDiffStatus(ctx context.Context, g *git.Git, baseRev string, pathspecs []git.Pathspec) ([]git.DiffStatusEntry, error) {
 	if len(pathspecs) == 0 {
 		// Simple case: just run diff status.
-		return g.DiffStatus(ctx, git.DiffStatusOptions{Commit1: "HEAD~"})
+		return g.DiffStatus(ctx, git.DiffStatusOptions{Commit1: baseRev})
 	}
 	// More complex case: have to merge changed file status into base status.
-	base, err := g.DiffStatus(ctx, git.DiffStatusOptions{Commit1: "HEAD~", Commit2: "HEAD"})
+	base, err := g.DiffStatus(ctx, git.DiffStatusOptions{Commit1: baseRev, Commit2: "HEAD"})
 	if err != nil {
 		return nil, err
 	}
 	// TODO(someday): If we evaluated pathspecs in-process, this DiffStatus would be unnecessary.
-	filterBase, err := g.DiffStatus(ctx, git.DiffStatusOptions{Commit1: "HEAD~", Commit2: "HEAD", Pathspecs: pathspecs})
+	filterBase, err := g.DiffStatus(ctx, git.DiffStatusOptions{Commit1: baseRev, Commit2: "HEAD", Pathspecs: pathspecs})
 	if err != nil {
 		return nil, err
 	}
-	local, err := g.DiffStatus(ctx, git.DiffStatusOptions{Commit1: "HEAD~", Pathspecs: pathspecs})
+	local, err := g.DiffStatus(ctx, git.DiffStatusOptions{Commit1: baseRev, Pathspecs: pathspecs})
 	if err != nil {
 		return nil, err
 	}
@@ -182,24 +259,10 @@ func amendedDiffStatus(ctx context.Context, g *git.Git, pathspecs []git.Pathspec
 	return status, nil
 }
 
-func commitMessageTemplate(ctx context.Context, g *git.Git, status []git.DiffStatusEntry, amend bool, commentChar string) ([]byte, error) {
+func commitMessageTemplate(ctx context.Context, g *git.Git, status []git.DiffStatusEntry, buf *bytes.Buffer, commentChar string) error {
 	headRef, err := g.HeadRef(ctx)
 	if err != nil {
-		return nil, err
-	}
-	buf := new(bytes.Buffer)
-	if amend {
-		// Use previous commit message.
-		info, err := g.CommitInfo(ctx, "HEAD")
-		if err != nil {
-			return nil, xerrors.Errorf("gather commit message template: %w", err)
-		}
-		buf.WriteString(info.Message)
-	} else if gitDir, err := g.GitDir(ctx); err == nil {
-		// Opportunistically grab the merge message.
-		if mergeMsg, err := ioutil.ReadFile(filepath.Join(gitDir, "MERGE_MSG")); err == nil {
-			buf.Write(mergeMsg)
-		}
+		return err
 	}
 	if !bytes.HasSuffix(buf.Bytes(), []byte("\n")) {
 		buf.WriteByte('\n')
@@ -248,7 +311,7 @@ func commitMessageTemplate(ctx context.Context, g *git.Git, status []git.DiffSta
 			fmt.Fprintf(buf, "%s chmod %s\n", commentChar, ent.Name)
 		}
 	}
-	return buf.Bytes(), nil
+	return nil
 }
 
 func cleanupMessage(s string, commentPrefix string) string {
