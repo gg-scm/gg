@@ -45,7 +45,7 @@ aliases: history`)
 		return usagef("only one file allowed")
 	}
 	var logArgs []string
-	logArgs = append(logArgs, "log", "--decorate=auto")
+	logArgs = append(logArgs, "log", "--decorate=auto", "--date-order")
 	if *follow {
 		logArgs = append(logArgs, "--follow")
 	}
