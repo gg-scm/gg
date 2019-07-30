@@ -66,7 +66,11 @@ aliases: history`)
 			return usagef("revisions must not start with '-'")
 		}
 	}
-	logArgs = append(logArgs, *rev...)
+	if len(*rev) == 0 {
+		logArgs = append(logArgs, "--all")
+	} else {
+		logArgs = append(logArgs, *rev...)
+	}
 	logArgs = append(logArgs, "--")
 	logArgs = append(logArgs, f.Args()...)
 	c := cc.git.Command(ctx, logArgs...)
