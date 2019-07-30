@@ -129,6 +129,39 @@ func TestRef(t *testing.T) {
 			branch:   "master",
 		},
 		{
+			ref:     "refs/heads//master",
+			invalid: true,
+		},
+		{
+			ref:     "refs/heads/foo.",
+			invalid: true,
+		},
+		{
+			ref:      "refs/heads/foo.bar",
+			isBranch: true,
+			branch:   "foo.bar",
+		},
+		{
+			ref:     "refs/heads/foo..bar",
+			invalid: true,
+		},
+		{
+			ref:     "refs/heads/master:bar",
+			invalid: true,
+		},
+		{
+			ref:     "refs/heads/foo bar",
+			invalid: true,
+		},
+		{
+			ref:     "refs/heads/foo~bar",
+			invalid: true,
+		},
+		{
+			ref:     "refs/heads/foo^bar",
+			invalid: true,
+		},
+		{
 			ref:   "refs/tags/v1.2.3",
 			isTag: true,
 			tag:   "v1.2.3",

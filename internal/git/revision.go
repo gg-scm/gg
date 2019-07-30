@@ -75,7 +75,15 @@ func BranchRef(b string) Ref {
 
 // IsValid reports whether r is a valid reference.
 func (r Ref) IsValid() bool {
-	return r != "" && r[0] != '-'
+	// See https://git-scm.com/docs/git-check-ref-format for details.
+	return r != "" &&
+		r[0] != '-' && r[0] != '.' &&
+		r[len(r)-1] != '.' &&
+		!strings.ContainsAny(string(r), " :~^\\") &&
+		!strings.Contains(string(r), "..") &&
+		!strings.Contains(string(r), "@{") &&
+		!strings.Contains(string(r), "//") &&
+		!strings.Contains(string(r), "/.")
 }
 
 // String returns the ref as a string.
@@ -85,7 +93,7 @@ func (r Ref) String() string {
 
 // IsBranch reports whether r starts with "refs/heads/".
 func (r Ref) IsBranch() bool {
-	return strings.HasPrefix(string(r), branchPrefix)
+	return r.IsValid() && strings.HasPrefix(string(r), branchPrefix)
 }
 
 // Branch returns the string after "refs/heads/" or an empty string
@@ -99,7 +107,7 @@ func (r Ref) Branch() string {
 
 // IsTag reports whether r starts with "refs/tags/".
 func (r Ref) IsTag() bool {
-	return strings.HasPrefix(string(r), tagPrefix)
+	return r.IsValid() && strings.HasPrefix(string(r), tagPrefix)
 }
 
 // Tag returns the string after "refs/tags/" or an empty string
