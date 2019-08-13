@@ -164,10 +164,12 @@ func (g *Git) WithDir(dir string) *Git {
 	} else {
 		dir = filepath.Join(g.dir, dir)
 	}
-	g2 := new(Git)
-	*g2 = *g
-	g2.dir = dir
-	return g2
+	return &Git{
+		exe: g.exe,
+		dir: dir,
+		env: g.env,
+		log: g.log,
+	}
 }
 
 const (
