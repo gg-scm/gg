@@ -82,7 +82,7 @@ _gg() {
         {-d,-delete}'[delete the given branch]' \
         {-f,-force}'[force]' \
         '-r=[revision]:rev:named_revs' \
-        ':name:branches'
+        '*:name:branches'
       ;;
     clone)
       _arguments -S : \
@@ -133,8 +133,8 @@ _gg() {
       _arguments -S : \
         ':command:' \
         - start \
-        '*-exec=[execute the shell command after each line creating a commit]:command:_command_names -e'
-        ':upstream:rev_names'
+        '*-exec=[execute the shell command after each line creating a commit]:command:_command_names -e' \
+        ':upstream:named_revs' \
         - abort \
         '-abort[abort an edit already in progress]' \
         - 'continue' \
