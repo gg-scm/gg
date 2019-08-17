@@ -1,0 +1,86 @@
+# Copyright 2019 The gg Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Build
+on: push
+jobs:
+  latest_git:
+    name: Latest Git
+    runs-on: ubuntu-18.04
+    steps:
+    - &install_xz_linux
+      name: Install xz
+      run: |
+        apt-get install -y --no-install-recommends xz-utils
+    - &setup_go
+      name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.12
+    - &checkout_code
+      name: Check out code
+      uses: actions/checkout@v1
+    - &install_latest_git
+      name: Install Git 2.20.1
+      run: misc/build-git.bash ~/git 2.20.1
+    - &download_deps
+      name: Download dependencies
+      run: go mod download
+      env:
+        GO111MODULE: on
+    - &run_tests
+      name: Run tests
+      run: &runtests |
+        PATH="$HOME/git/bin-wrappers:$PATH" \
+          go test \
+            -mod=readonly \
+            -v \
+            ./...
+      env:
+        GO111MODULE: on
+  ubuntu_lts_git:
+    name: Ubuntu LTS Git
+    runs-on: ubuntu-18.04
+    steps:
+    - *install_xz_linux
+    - *setup_go
+    - *checkout_code
+    - name: Build Git 2.17.1
+      run: misc/build-git.bash ~/git 2.17.1
+    - *download_deps
+    - *run_tests
+  debian_stable_git:
+    name: Debian Stable Git
+    runs-on: ubuntu-18.04
+    steps:
+    - *install_xz_linux
+    - *setup_go
+    - *checkout_code
+    - name: Build Git 2.11.0
+      run: misc/build-git.bash ~/git 2.11.0
+    - *download_deps
+    - *run_tests
+  mac:
+    name: macOS
+    runs-on: macOS-10.14
+    steps:
+    - name: Install xz
+      run: brew update && brew install xz
+    - *setup_go
+    - *checkout_code
+    - *install_latest_git
+    - *download_deps
+    - *run_tests
+
+
