@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Update Docs
+name: Docs
 on:
   push:
     branches:
@@ -22,7 +22,8 @@ jobs:
     name: Hugo
     runs-on: ubuntu-18.04
     steps:
-    - uses: actions/checkout@master
+    - name: Check out code
+      uses: actions/checkout@v1
     - name: Download Hugo
       run: |
         curl -fsSL https://github.com/gohugoio/hugo/releases/download/v0.53/hugo_0.53_Linux-64bit.tar.gz | tar zxf - -C "$HOME" hugo
