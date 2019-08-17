@@ -29,15 +29,18 @@ jobs:
     - name: Run Hugo
       run: |
         HUGO_GOOGLEANALYTICS=UA-2285538-10 "$HOME/hugo" -s docs
-    - name: Stage GitHub Pages Commit
+    - name: Stage Hugo output
       run: |
         cd docs/public && \
         echo 'gg-scm.io' > CNAME && \
         git init && \
         git fetch "https://github.com/$GITHUB_REPOSITORY" gh-pages && \
         git reset --soft FETCH_HEAD && \
-        git add . && \
+        git add .
+    - name: Create GitHub Pages commit
+      run: |
         git -c user.name='GitHub Actions' -c user.email='no-reply@zombiezen.com' commit -m 'Deploy gg-scm.io'
+      continue-on-error: true
     - name: Push to GitHub Pages
       run: |
         cd docs/public && git push \
