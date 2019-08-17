@@ -34,7 +34,7 @@ jobs:
         cd docs/public && \
         echo 'gg-scm.io' > CNAME && \
         git init && \
-        git fetch ../.. gh-pages && \
+        git fetch "https://github.com/$GITHUB_REPOSITORY" gh-pages && \
         git reset --soft FETCH_HEAD && \
         git add . && \
         git -c user.name='GitHub Actions' -c user.email='no-reply@zombiezen.com' commit -m 'Deploy gg-scm.io'
