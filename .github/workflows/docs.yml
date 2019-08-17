@@ -1,0 +1,47 @@
+# Copyright 2019 The gg Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Update Docs
+on:
+  push:
+    branches:
+    - master
+jobs:
+  hugo:
+    name: Hugo
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@master
+    - name: Download Hugo
+      run: |
+        curl -fsSL https://github.com/gohugoio/hugo/releases/download/v0.53/hugo_0.53_Linux-64bit.tar.gz | tar zxf - -C "$HOME" hugo
+    - name: Run Hugo
+      run: |
+        HUGO_GOOGLEANALYTICS=UA-2285538-10 "$HOME/hugo" -s docs
+    - name: Stage GitHub Pages Commit
+      run: |
+        cd docs/public && \
+        echo 'gg-scm.io' > CNAME && \
+        git init && \
+        git fetch ../.. gh-pages && \
+        git reset --soft FETCH_HEAD && \
+        git add . && \
+        git -c user.name='GitHub Actions' -c user.email='no-reply@zombiezen.com' commit -m 'Deploy gg-scm.io'
+    - name: Push to GitHub Pages
+      run: |
+        cd docs/public && git push \
+          "https://x-access-token:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY" \
+          HEAD:gh-pages
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
