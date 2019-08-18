@@ -244,6 +244,85 @@ func parseRefs(out string) (map[Ref]Hash, error) {
 	return refs, nil
 }
 
+// A RefMutation describes an operation to perform on a ref. The zero value is
+// a no-op.
+type RefMutation struct {
+	command  string
+	newvalue string
+	oldvalue string
+}
+
+// DeleteRef returns a RefMutation that unconditionally deletes a ref.
+func DeleteRef() RefMutation {
+	return RefMutation{command: "delete"}
+}
+
+// DeleteRefIfMatches returns a RefMutation that attempts to delete a ref, but
+// fails if it has the given value.
+func DeleteRefIfMatches(oldvalue string) RefMutation {
+	return RefMutation{command: "delete", oldvalue: oldvalue}
+}
+
+// String returns the mutation in a form similar to a line of input to
+// `git update-ref --stdin`.
+func (mut RefMutation) String() string {
+	switch mut.command {
+	case "":
+		return ""
+	case "update", "create":
+		if mut.oldvalue != "" {
+			return mut.command + " <ref> " + mut.newvalue + " " + mut.oldvalue
+		}
+		return mut.command + " <ref> " + mut.newvalue
+	case "delete", "verify":
+		if mut.oldvalue != "" {
+			return mut.command + " <ref> " + mut.oldvalue
+		}
+		return mut.command + " <ref>"
+	default:
+		return mut.command + " <ref>"
+	}
+}
+
+// MutateRefs atomically modifies zero or more refs.
+func (g *Git) MutateRefs(ctx context.Context, muts map[Ref]RefMutation) error {
+	input := new(bytes.Buffer)
+	for ref, mut := range muts {
+		if mut.command == "" {
+			continue
+		}
+		input.WriteString(mut.command)
+		input.WriteByte(' ')
+		input.WriteString(ref.String())
+		input.WriteByte(0)
+		switch mut.command {
+		case "update":
+			input.WriteString(mut.newvalue)
+			input.WriteByte(0)
+			input.WriteString(mut.oldvalue)
+			input.WriteByte(0)
+		case "create":
+			input.WriteString(mut.newvalue)
+			input.WriteByte(0)
+		case "delete", "verify":
+			input.WriteString(mut.oldvalue)
+			input.WriteByte(0)
+		default:
+			panic("unknown command " + mut.command)
+		}
+	}
+
+	c := g.command(ctx, []string{g.exe, "update-ref", "--stdin", "-z"})
+	c.Stdin = input
+	output := new(bytes.Buffer)
+	c.Stderr = &limitWriter{w: output, n: errorOutputLimit}
+	c.Stdout = c.Stderr
+	if err := sigterm.Run(ctx, c); err != nil {
+		return commandError("git update-ref", err, output.Bytes())
+	}
+	return nil
+}
+
 // Rev is a parsed reference to a single commit.
 type Rev struct {
 	Commit Hash

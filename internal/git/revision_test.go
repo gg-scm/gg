@@ -502,3 +502,110 @@ func TestListRefs(t *testing.T) {
 		t.Errorf("refs (-want +got):\n%s", diff)
 	}
 }
+
+func TestMutateRefs(t *testing.T) {
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	ctx := context.Background()
+
+	setupRepo := func(ctx context.Context, env *testEnv) error {
+		// Create the first master commit.
+		if err := env.g.Init(ctx, "."); err != nil {
+			return err
+		}
+		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+			return err
+		}
+		if err := env.g.Add(ctx, []Pathspec{"foo.txt"}, AddOptions{}); err != nil {
+			return err
+		}
+		if err := env.g.Commit(ctx, "first commit", CommitOptions{}); err != nil {
+			return err
+		}
+
+		// Create a new branch.
+		if err := env.g.NewBranch(ctx, "foo", BranchOptions{}); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	t.Run("DeleteRef", func(t *testing.T) {
+		env, err := newTestEnv(ctx, gitPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := setupRepo(ctx, env); err != nil {
+			t.Fatal(err)
+		}
+
+		// Delete the branch with MutateRefs.
+		muts := map[Ref]RefMutation{"refs/heads/foo": DeleteRef()}
+		if err := env.g.MutateRefs(ctx, muts); err != nil {
+			t.Errorf("MutateRefs(ctx, %v): %v", muts, err)
+		}
+
+		// Verify that "refs/heads/foo" is no longer valid.
+		if r, err := env.g.ParseRev(ctx, "refs/heads/foo"); err == nil {
+			t.Errorf("refs/heads/foo = %v; should not exist", r.Commit)
+		}
+	})
+	t.Run("DeleteRefIfMatches/Match", func(t *testing.T) {
+		env, err := newTestEnv(ctx, gitPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := setupRepo(ctx, env); err != nil {
+			t.Fatal(err)
+		}
+		r, err := env.g.Head(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Delete the branch with MutateRefs.
+		muts := map[Ref]RefMutation{"refs/heads/foo": DeleteRefIfMatches(r.Commit.String())}
+		if err := env.g.MutateRefs(ctx, muts); err != nil {
+			t.Errorf("MutateRefs(ctx, %v): %v", muts, err)
+		}
+
+		// Verify that "refs/heads/foo" is no longer valid.
+		if r, err := env.g.ParseRev(ctx, "refs/heads/foo"); err == nil {
+			t.Errorf("refs/heads/foo = %v; should not exist", r.Commit)
+		}
+	})
+	t.Run("DeleteRefIfMatches/NoMatch", func(t *testing.T) {
+		env, err := newTestEnv(ctx, gitPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+		if err := setupRepo(ctx, env); err != nil {
+			t.Fatal(err)
+		}
+		r, err := env.g.Head(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Attempt to delete the branch with MutateRefs.
+		badCommit := r.Commit
+		badCommit[len(badCommit)-1]++ // twiddle last byte
+		muts := map[Ref]RefMutation{"refs/heads/foo": DeleteRefIfMatches(badCommit.String())}
+		if err := env.g.MutateRefs(ctx, muts); err == nil {
+			t.Errorf("MutateRefs(ctx, %v) did not return error", muts)
+		}
+
+		// Verify that "refs/heads/foo" has stayed the same.
+		if got, err := env.g.ParseRev(ctx, "refs/heads/foo"); err != nil {
+			t.Error(err)
+		} else if got.Commit != r.Commit {
+			t.Errorf("refs/heads/foo = %v; want %v", got.Commit, r.Commit)
+		}
+	})
+}
