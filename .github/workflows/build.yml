@@ -19,29 +19,23 @@ jobs:
     name: Latest Git
     runs-on: ubuntu-18.04
     steps:
-    - &install_xz_linux
-      name: Install xz
+    - name: Install xz
       run: |
         apt-get install -y --no-install-recommends xz-utils
-    - &setup_go
-      name: Set up Go
+    - name: Set up Go
       uses: actions/setup-go@v1
       with:
         go-version: 1.12
-    - &checkout_code
-      name: Check out code
+    - name: Check out code
       uses: actions/checkout@v1
-    - &install_latest_git
-      name: Install Git 2.20.1
+    - name: Install Git 2.20.1
       run: misc/build-git.bash ~/git 2.20.1
-    - &download_deps
-      name: Download dependencies
+    - name: Download dependencies
       run: go mod download
       env:
         GO111MODULE: on
-    - &run_tests
-      name: Run tests
-      run: &runtests |
+    - name: Run tests
+      run: |
         PATH="$HOME/git/bin-wrappers:$PATH" \
           go test \
             -mod=readonly \
@@ -53,34 +47,84 @@ jobs:
     name: Ubuntu LTS Git
     runs-on: ubuntu-18.04
     steps:
-    - *install_xz_linux
-    - *setup_go
-    - *checkout_code
+    - name: Install xz
+      run: |
+        apt-get install -y --no-install-recommends xz-utils
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.12
+    - name: Check out code
+      uses: actions/checkout@v1
     - name: Build Git 2.17.1
       run: misc/build-git.bash ~/git 2.17.1
-    - *download_deps
-    - *run_tests
+    - name: Download dependencies
+      run: go mod download
+      env:
+        GO111MODULE: on
+    - name: Run tests
+      run: |
+        PATH="$HOME/git/bin-wrappers:$PATH" \
+          go test \
+            -mod=readonly \
+            -v \
+            ./...
+      env:
+        GO111MODULE: on
   debian_stable_git:
     name: Debian Stable Git
     runs-on: ubuntu-18.04
     steps:
-    - *install_xz_linux
-    - *setup_go
-    - *checkout_code
+    - name: Install xz
+      run: |
+        apt-get install -y --no-install-recommends xz-utils
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.12
+    - name: Check out code
+      uses: actions/checkout@v1
     - name: Build Git 2.11.0
       run: misc/build-git.bash ~/git 2.11.0
-    - *download_deps
-    - *run_tests
+    - name: Download dependencies
+      run: go mod download
+      env:
+        GO111MODULE: on
+    - name: Run tests
+      run: |
+        PATH="$HOME/git/bin-wrappers:$PATH" \
+          go test \
+            -mod=readonly \
+            -v \
+            ./...
+      env:
+        GO111MODULE: on
   mac:
     name: macOS
     runs-on: macOS-10.14
     steps:
     - name: Install xz
       run: brew update && brew install xz
-    - *setup_go
-    - *checkout_code
-    - *install_latest_git
-    - *download_deps
-    - *run_tests
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.12
+    - name: Check out code
+      uses: actions/checkout@v1
+    - name: Install Git 2.20.1
+      run: misc/build-git.bash ~/git 2.20.1
+    - name: Download dependencies
+      run: go mod download
+      env:
+        GO111MODULE: on
+    - name: Run tests
+      run: |
+        PATH="$HOME/git/bin-wrappers:$PATH" \
+          go test \
+            -mod=readonly \
+            -v \
+            ./...
+      env:
+        GO111MODULE: on
 
 
