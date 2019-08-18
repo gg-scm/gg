@@ -307,8 +307,7 @@ func (env *testEnv) initRepoWithHistory(ctx context.Context, dir string) error {
 	return nil
 }
 
-// addFiles runs `git add -N` with the slash-separated paths relative to
-// env.root.
+// addFiles runs `git add` with the slash-separated paths relative to env.root.
 func (env *testEnv) addFiles(ctx context.Context, files ...string) error {
 	// Use the first file's directory as the Git working directory.
 	anchor := env.root.FromSlash(files[0])
