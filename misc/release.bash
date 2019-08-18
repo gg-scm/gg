@@ -14,27 +14,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o pipefail
+set -euo pipefail
 
 if [[ $# -gt 1 ]]; then
   echo "usage: misc/release.bash [VERSION]" 1>&2
   exit 64
 fi
-srcroot="$(dirname "$(dirname "${BASH_SOURCE[0]}")")" || exit 1
-release_version="${1:-$(echo "$TRAVIS_TAG" | sed -n -e 's/v\([0-9].*\)/\1/p')}"
+srcroot="$(dirname "$(dirname "${BASH_SOURCE[0]}")")"
+release_version="${1:-$(echo "$GITHUB_REF" | sed -n -e 's/\(^|.*/\)v\([0-9].*\)$/\2/p')}"
 if [[ -z "$release_version" ]]; then
   echo "misc/release.bash: cannot infer version, please pass explicitly" 1>&2
   exit 1
 fi
-release_os="$(go env GOOS)" || exit 1
-release_arch="$(go env GOARCH)" || exit 1
+release_os="$(go env GOOS)"
+release_arch="$(go env GOARCH)"
 release_name="gg-${release_version}-${release_os}_${release_arch}"
 
 echo "Creating ${release_name}.tar.gz..." 1>&2
-stagedir="$(mktemp -d 2>/dev/null || mktemp -d -t gg_release)" || exit 1
+stagedir="$(mktemp -d 2>/dev/null || mktemp -d -t gg_release)"
 trap 'rm -rf $stagedir' EXIT
 distroot="$stagedir/$release_name"
-mkdir "$distroot" || exit 1
-cp "$srcroot/README.md" "$srcroot/CHANGELOG.md" "$srcroot/LICENSE" "$distroot/" || exit 1
-"$srcroot/misc/build.bash" "$distroot/gg" "$release_version" || exit 1
-tar -zcf - -C "$stagedir" "$release_name" > "${release_name}.tar.gz" || exit 1
+mkdir "$distroot"
+cp "$srcroot/README.md" "$srcroot/CHANGELOG.md" "$srcroot/LICENSE" "$distroot/"
+"$srcroot/misc/build.bash" "$distroot/gg" "$release_version"
+tar -zcf - -C "$stagedir" "$release_name" > "${release_name}.tar.gz"

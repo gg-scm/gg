@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o pipefail
+set -euo pipefail
 
 commitinfo() {
   git rev-parse HEAD | tr -d '\n' || return 1
@@ -29,8 +29,8 @@ if [[ $# -ne 1 && $# -ne 2 ]]; then
   echo "usage: misc/build.bash OUT [VERSION]" 1>&2
   exit 64
 fi
-buildtime="$(date -u '+%Y-%m-%dT%TZ')" || exit 1
-cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" || exit 1
-commit="${TRAVIS_COMMIT:-$(commitinfo)}" || exit 1
-version="${2:-$(echo "$TRAVIS_TAG" | sed -n -e 's/v\([0-9].*\)/\1/p')}" || exit 1
+buildtime="$(date -u '+%Y-%m-%dT%TZ')"
+cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")"
+commit="${GITHUB_SHA:-$(commitinfo)}"
+version="${2:-$(echo "$GITHUB_REF" | sed -n -e 's/\(^|.*/\)v\([0-9].*\)$/\2/p')}"
 go build -o "$1" -ldflags="-X main.versionInfo=${version} -X main.buildCommit=${commit} -X main.buildTime=${buildtime}" gg-scm.io/pkg/cmd/gg
