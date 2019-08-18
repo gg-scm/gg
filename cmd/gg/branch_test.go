@@ -17,6 +17,9 @@ package main
 import (
 	"context"
 	"testing"
+
+	"gg-scm.io/pkg/internal/filesystem"
+	"gg-scm.io/pkg/internal/git"
 )
 
 func TestBranch(t *testing.T) {
@@ -107,4 +110,111 @@ func TestBranch_Upstream(t *testing.T) {
 	if mergeBranch := cfg.Value("branch.foo.merge"); mergeBranch != "refs/heads/master" {
 		t.Errorf("branch.foo.remote = %q; want \"refs/heads/master\"", mergeBranch)
 	}
+}
+
+func TestBranch_Delete(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("Merged", func(t *testing.T) {
+		t.Parallel()
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+
+		if err := env.initRepoWithHistory(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.git.NewBranch(ctx, "foo", git.BranchOptions{}); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := env.gg(ctx, env.root.String(), "branch", "--delete", "foo"); err != nil {
+			t.Error(err)
+		}
+
+		// Verify that "refs/heads/foo" is no longer valid.
+		if r, err := env.git.ParseRev(ctx, "refs/heads/foo"); err == nil {
+			t.Errorf("refs/heads/foo = %v; should not exist", r.Commit)
+		}
+	})
+	t.Run("Unmerged", func(t *testing.T) {
+		t.Parallel()
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+
+		if err := env.initRepoWithHistory(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.git.NewBranch(ctx, "foo", git.BranchOptions{Checkout: true}); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "foo.txt"); err != nil {
+			t.Fatal(err)
+		}
+		want, err := env.newCommit(ctx, ".")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := env.gg(ctx, env.root.String(), "branch", "--delete", "foo"); err == nil {
+			t.Error("gg branch --delete did not return an error")
+		} else if isUsage(err) {
+			t.Error(err)
+		}
+
+		// Verify that "refs/heads/foo" is still valid.
+		if r, err := env.git.ParseRev(ctx, "refs/heads/foo"); err != nil {
+			t.Error(err)
+		} else if r.Commit != want {
+			t.Errorf("refs/heads/foo = %v; want %v", r.Commit, want)
+		}
+	})
+	t.Run("UnmergedForce", func(t *testing.T) {
+		t.Parallel()
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+
+		if err := env.initRepoWithHistory(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.git.NewBranch(ctx, "foo", git.BranchOptions{Checkout: true}); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.addFiles(ctx, "foo.txt"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := env.newCommit(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := env.gg(ctx, env.root.String(), "branch", "--force", "--delete", "foo"); err != nil {
+			t.Error(err)
+		}
+
+		// Verify that "refs/heads/foo" is no longer valid.
+		if r, err := env.git.ParseRev(ctx, "refs/heads/foo"); err == nil {
+			t.Errorf("refs/heads/foo = %v; should not exist", r.Commit)
+		}
+	})
 }

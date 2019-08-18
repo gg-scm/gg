@@ -59,16 +59,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		if *rev != "" {
 			return usagef("can't pass -r for delete")
 		}
-		var branchArgs []string
-		branchArgs = append(branchArgs, "branch", "--delete")
-		if *force {
-			branchArgs = append(branchArgs, "--force")
-		}
-		branchArgs = append(branchArgs, "--")
-		branchArgs = append(branchArgs, f.Args()...)
-		if err := cc.git.Run(ctx, branchArgs...); err != nil {
-			return err
-		}
+		return deleteBranches(ctx, cc.git, f.Args(), *force)
 	case f.NArg() == 0:
 		// List
 		if *force {
@@ -77,68 +68,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		if *rev != "" {
 			return usagef("can't pass -r without branch names")
 		}
-
-		// Get color settings. Most errors can be ignored without impacting
-		// the command output.
-		var (
-			currentColor []byte
-			localColor   []byte
-		)
-		cfg, err := cc.git.ReadConfig(ctx)
-		if err != nil {
-			return err
-		}
-		colorize, err := cfg.ColorBool("color.branch", terminal.IsTerminal(cc.stdout))
-		if err != nil {
-			fmt.Fprintln(cc.stderr, "gg:", err)
-		} else if colorize {
-			currentColor, err = cfg.Color("color.branch.current", "green")
-			if err != nil {
-				fmt.Fprintln(cc.stderr, "gg:", err)
-			}
-			localColor, err = cfg.Color("color.branch.local", "")
-			if err != nil {
-				fmt.Fprintln(cc.stderr, "gg:", err)
-			}
-		}
-
-		// List branches.
-		head, err := cc.git.Head(ctx)
-		if err != nil {
-			return err
-		}
-		refs, err := cc.git.ListRefs(ctx)
-		if err != nil {
-			return err
-		}
-		branches := make([]string, 0, len(refs))
-		for ref := range refs {
-			if b := ref.Branch(); b != "" {
-				branches = append(branches, b)
-			}
-		}
-		sort.Strings(branches)
-
-		if colorize {
-			if err := terminal.ResetTextStyle(cc.stdout); err != nil {
-				return err
-			}
-		}
-		for _, b := range branches {
-			color, marker := localColor, ' '
-			if head.Ref == git.BranchRef(b) {
-				color, marker = currentColor, '*'
-			}
-			if _, err := fmt.Fprintf(cc.stdout, "%s%c %s\n", color, marker, b); err != nil {
-				return err
-			}
-			if colorize {
-				if err := terminal.ResetTextStyle(cc.stdout); err != nil {
-					return err
-				}
-			}
-		}
-		return nil
+		return listBranches(ctx, cc)
 	default:
 		// Create or update
 		for _, b := range f.Args() {
@@ -193,6 +123,115 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 				}
 			}
 		}
+	}
+	return nil
+}
+
+func listBranches(ctx context.Context, cc *cmdContext) error {
+	// Get color settings. Most errors can be ignored without impacting
+	// the command output.
+	var (
+		currentColor []byte
+		localColor   []byte
+	)
+	cfg, err := cc.git.ReadConfig(ctx)
+	if err != nil {
+		return err
+	}
+	colorize, err := cfg.ColorBool("color.branch", terminal.IsTerminal(cc.stdout))
+	if err != nil {
+		fmt.Fprintln(cc.stderr, "gg:", err)
+	} else if colorize {
+		currentColor, err = cfg.Color("color.branch.current", "green")
+		if err != nil {
+			fmt.Fprintln(cc.stderr, "gg:", err)
+		}
+		localColor, err = cfg.Color("color.branch.local", "")
+		if err != nil {
+			fmt.Fprintln(cc.stderr, "gg:", err)
+		}
+	}
+
+	// List branches.
+	head, err := cc.git.Head(ctx)
+	if err != nil {
+		return err
+	}
+	refs, err := cc.git.ListRefs(ctx)
+	if err != nil {
+		return err
+	}
+	branches := make([]string, 0, len(refs))
+	for ref := range refs {
+		if b := ref.Branch(); b != "" {
+			branches = append(branches, b)
+		}
+	}
+	sort.Strings(branches)
+
+	if colorize {
+		if err := terminal.ResetTextStyle(cc.stdout); err != nil {
+			return err
+		}
+	}
+	for _, b := range branches {
+		color, marker := localColor, ' '
+		if head.Ref == git.BranchRef(b) {
+			color, marker = currentColor, '*'
+		}
+		if _, err := fmt.Fprintf(cc.stdout, "%s%c %s\n", color, marker, b); err != nil {
+			return err
+		}
+		if colorize {
+			if err := terminal.ResetTextStyle(cc.stdout); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func deleteBranches(ctx context.Context, g *git.Git, branchNames []string, force bool) error {
+	branchRefs := make([]git.Ref, 0, len(branchNames))
+	for _, name := range branchNames {
+		r := git.BranchRef(name)
+		if !r.IsValid() {
+			return xerrors.Errorf("invalid branch name %q", name)
+		}
+		branchRefs = append(branchRefs, r)
+	}
+	head, err := g.Head(ctx)
+	if err != nil {
+		return err
+	}
+	if head.Ref.IsValid() {
+		for _, ref := range branchRefs {
+			if head.Ref == ref {
+				return xerrors.Errorf("cannot delete checked-out branch %q", head.Ref.Branch())
+			}
+		}
+	}
+	allRefs, err := g.ListRefs(ctx)
+	if err != nil {
+		return err
+	}
+	if !force {
+		for _, thisRef := range branchRefs {
+			others, err := branchesContaining(ctx, g, allRefs[thisRef].String())
+			if err != nil {
+				return err
+			}
+			if len(others) <= 1 {
+				return xerrors.Errorf("changes in branch %q are not merged into other branches; use --force to delete", thisRef.Branch())
+			}
+		}
+	}
+	muts := make(map[git.Ref]git.RefMutation, len(branchRefs))
+	for _, ref := range branchRefs {
+		muts[ref] = git.DeleteRefIfMatches(allRefs[ref].String())
+	}
+	if err := g.MutateRefs(ctx, muts); err != nil {
+		return err
 	}
 	return nil
 }
