@@ -38,7 +38,7 @@ func (g *Git) ListRemoteRefs(ctx context.Context, remote string) (map[Ref]Hash, 
 	if len(out) == 0 {
 		return nil, nil
 	}
-	refs, err := parseRefs(out)
+	refs, err := parseRefs(out, true)
 	if err != nil {
 		return refs, xerrors.Errorf("%s: %w", errPrefix, err)
 	}

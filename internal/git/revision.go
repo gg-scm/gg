@@ -73,6 +73,11 @@ func BranchRef(b string) Ref {
 	return branchPrefix + Ref(b)
 }
 
+// TagRef returns a ref for the given tag name.
+func TagRef(t string) Ref {
+	return tagPrefix + Ref(t)
+}
+
 // IsValid reports whether r is a valid reference.
 func (r Ref) IsValid() bool {
 	// See https://git-scm.com/docs/git-check-ref-format for details.
@@ -194,21 +199,36 @@ func (g *Git) ParseRev(ctx context.Context, refspec string) (*Rev, error) {
 	}, nil
 }
 
-// ListRefs lists all of the refs in the repository.
+// ListRefs lists all of the refs in the repository with tags dereferenced.
 func (g *Git) ListRefs(ctx context.Context) (map[Ref]Hash, error) {
 	const errPrefix = "git show-ref"
 	out, err := g.output(ctx, errPrefix, []string{g.exe, "show-ref", "--dereference", "--head"})
 	if err != nil {
 		return nil, err
 	}
-	refs, err := parseRefs(out)
+	refs, err := parseRefs(out, false)
 	if err != nil {
 		return refs, xerrors.Errorf("%s: %w", errPrefix, err)
 	}
 	return refs, nil
 }
 
-func parseRefs(out string) (map[Ref]Hash, error) {
+// ListRefsVerbatim lists all of the refs in the repository. Tags will not be
+// dereferenced.
+func (g *Git) ListRefsVerbatim(ctx context.Context) (map[Ref]Hash, error) {
+	const errPrefix = "git show-ref"
+	out, err := g.output(ctx, errPrefix, []string{g.exe, "show-ref", "--head"})
+	if err != nil {
+		return nil, err
+	}
+	refs, err := parseRefs(out, true)
+	if err != nil {
+		return refs, xerrors.Errorf("%s: %w", errPrefix, err)
+	}
+	return refs, nil
+}
+
+func parseRefs(out string, ignoreDerefs bool) (map[Ref]Hash, error) {
 	refs := make(map[Ref]Hash)
 	tags := make(map[Ref]bool)
 	isSpace := func(c rune) bool { return c == ' ' || c == '\t' }
@@ -231,6 +251,9 @@ func parseRefs(out string) (map[Ref]Hash, error) {
 		ref := Ref(strings.TrimLeftFunc(line[sp+1:], isSpace))
 		if strings.HasSuffix(string(ref), "^{}") {
 			// Dereferenced tag. This takes precedence over the previous hash stored in the map.
+			if ignoreDerefs {
+				continue
+			}
 			ref = ref[:len(ref)-3]
 			if tags[ref] {
 				return refs, xerrors.Errorf("parse refs: multiple hashes found for tag %v", ref)
