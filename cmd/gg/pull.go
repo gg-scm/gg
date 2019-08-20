@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
@@ -26,27 +27,19 @@ import (
 const pullSynopsis = "pull changes from the specified source"
 
 func pull(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg pull [-u] [-r REF] [SOURCE]", pullSynopsis+`
+	f := flag.NewFlagSet(true, "gg pull [-u] [-r REV [...]] [SOURCE]", pullSynopsis+`
 
-	The fetched reference is written to FETCH_HEAD.
+	Local branches with the same name as a remote branch will be
+	fast-forwarded if possible.
 
-	If no source repository is given and a branch with a remote tracking
-	branch is currently checked out, then that remote is used. Otherwise,
-	the remote called "origin" is used.
+	If no source repository is given and a branch with an upstream branch
+	is currently checked out, then the upstream's remote is used.
+	Otherwise, the remote called "origin" is used.
 
-	If no remote reference is given and the source repository is a named
-	remote (like "origin"), then the remote's configured refspecs will be
-	fetched. (This usually means that all the remote-tracking branches
-	will be updated.) Any refs deleted on the remote will be pruned.
-
-	Otherwise, the source repository is assumed to be a URL. Only a single
-	ref will be fetched in this case and written to `+"`FETCH_HEAD`"+`, a
-	special ref name. If no remote reference is given and a branch is
-	currently checked out, then the branch's remote tracking branch is
-	used or the branch with the same name if the branch has no remote
-	tracking branch. Otherwise `+"`HEAD`"+` is used.`)
-	remoteRefArg := f.String("r", "", "remote `ref`erence intended to be pulled")
-	tags := f.Bool("tags", true, "pull all tags from remote")
+	If no revisions are specified, then all the remote's refs will be
+	fetched. If the source is a named remote, then its remote
+	tracking branches will be pruned.`)
+	remoteRefArgs := f.MultiString("r", "`ref`s to pull")
 	update := f.Bool("u", false, "update to new head if new descendants were pulled")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
@@ -62,11 +55,11 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		return err
 	}
 	remotes := cfg.ListRemotes()
-	branch := currentBranch(ctx, cc)
+	headBranch := currentBranch(ctx, cc)
 	repo := f.Arg(0)
 	if repo == "" {
-		if branch != "" {
-			repo = cfg.Value("branch." + branch + ".remote")
+		if headBranch != "" {
+			repo = cfg.Value("branch." + headBranch + ".remote")
 		}
 		if repo == "" {
 			if _, ok := remotes["origin"]; !ok {
@@ -75,30 +68,35 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 			repo = "origin"
 		}
 	}
-	var remoteRef git.Ref
-	if *remoteRefArg == "" {
-		if _, isNamedRemote := remotes[repo]; !isNamedRemote {
-			remoteRef = inferUpstream(cfg, branch)
+	allLocalRefs, err := cc.git.ListRefsVerbatim(ctx)
+	if err != nil {
+		return err
+	}
+	allRemoteRefs, err := cc.git.ListRemoteRefs(ctx, repo)
+	if err != nil {
+		return err
+	}
+
+	_, isNamedRemote := remotes[repo]
+	gitArgs, branches, err := buildFetchArgs(repo, isNamedRemote, allLocalRefs, allRemoteRefs, *remoteRefArgs)
+	if err != nil {
+		return err
+	}
+	if !isNamedRemote {
+		// Delete anything under refs/ggpull/...
+		// (Need to do this before fetching, but after validating that this
+		// invocation will be reasonable.)
+		localMuts := make(map[git.Ref]git.RefMutation, len(allLocalRefs))
+		for ref := range allLocalRefs {
+			if strings.HasPrefix(ref.String(), "refs/ggpull/") {
+				localMuts[ref] = git.DeleteRef()
+			}
 		}
-	} else {
-		remoteRef = git.Ref(*remoteRefArg)
-		if !remoteRef.IsValid() {
-			return xerrors.Errorf("invalid ref %q", *remoteRefArg)
+		if err := cc.git.MutateRefs(ctx, localMuts); err != nil {
+			return xerrors.Errorf("clearing refs/ggpull: %w", err)
 		}
 	}
 
-	gitArgs := []string{"fetch"}
-	if *tags {
-		gitArgs = append(gitArgs, "--tags")
-	}
-	if _, isNamedRemote := remotes[repo]; remoteRef == "" && isNamedRemote {
-		// TODO(soon): Add tests for pruning.
-		gitArgs = append(gitArgs, "--prune")
-	}
-	gitArgs = append(gitArgs, "--", repo)
-	if remoteRef != "" {
-		gitArgs = append(gitArgs, remoteRef.String()+":")
-	}
 	c := cc.git.Command(ctx, gitArgs...)
 	c.Stdin = cc.stdin
 	c.Stdout = cc.stdout
@@ -106,9 +104,137 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	if err := sigterm.Run(ctx, c); err != nil {
 		return err
 	}
+	remoteName := ""
+	if isNamedRemote {
+		remoteName = repo
+	}
+	if err := reconcileBranches(ctx, cc.git, headBranch, remoteName, allLocalRefs, allRemoteRefs, branches); err != nil {
+		return err
+	}
 	if *update {
-		if err := updateToBranch(ctx, cc.git, cfg, branch, git.MergeLocal); err != nil {
+		// TODO(soon): Update to the fetched remote branch, not the local upstream.
+		if err := updateToBranch(ctx, cc.git, cfg, headBranch, git.MergeLocal); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func buildFetchArgs(repo string, isNamedRemote bool, localRefs, remoteRefs map[git.Ref]git.Hash, remoteRefArgs []string) (gitArgs []string, branches []git.Ref, _ error) {
+	gitArgs = []string{"fetch"}
+	if !isNamedRemote {
+		gitArgs = append(gitArgs, "--refmap=+refs/heads/*:refs/ggpull/*")
+	}
+	var tags []git.Ref
+	if len(remoteRefArgs) == 0 {
+		for ref := range remoteRefs {
+			switch {
+			case ref.IsBranch():
+				branches = append(branches, ref)
+			case ref.IsTag():
+				tags = append(tags, ref)
+			}
+		}
+		if isNamedRemote {
+			// Don't specify refs so remote-tracking branches can be pruned.
+			gitArgs = append(gitArgs, "--prune", "--tags", "--", repo)
+			return gitArgs, branches, nil
+		}
+	} else {
+		// -r flag given. Filter remote refs by given set.
+		for _, arg := range remoteRefArgs {
+			switch ref := git.Ref(arg); {
+			case ref.IsBranch():
+				if _, exists := remoteRefs[ref]; !exists {
+					return nil, nil, xerrors.Errorf("can't find ref %q on remote %q", arg, repo)
+				}
+				branches = append(branches, ref)
+				continue
+			case ref.IsTag():
+				if _, exists := remoteRefs[ref]; !exists {
+					return nil, nil, xerrors.Errorf("can't find ref %q on remote %q", arg, repo)
+				}
+				tags = append(tags, ref)
+				continue
+			}
+			branchRef := git.BranchRef(arg)
+			if _, hasBranch := remoteRefs[branchRef]; hasBranch {
+				branches = append(branches, branchRef)
+				continue
+			}
+			tagRef := git.TagRef(arg)
+			if _, hasTag := remoteRefs[tagRef]; hasTag {
+				tags = append(tags, tagRef)
+				continue
+			}
+			return nil, nil, xerrors.Errorf("can't find ref %q on remote %q", arg, repo)
+		}
+	}
+	gitArgs = append(gitArgs, "--", repo)
+	for _, branch := range branches {
+		gitArgs = append(gitArgs, branch.String()+":")
+	}
+	for _, tag := range tags {
+		if localHash, hasTag := localRefs[tag]; hasTag {
+			// (Already validated above that ref exists on remote.)
+			if remoteHash := remoteRefs[tag]; localHash != remoteHash {
+				return nil, nil, xerrors.Errorf("tag %q is %v on remote, does not match %v locally", tag.Tag(), remoteHash, localHash)
+			}
+			continue
+		}
+		gitArgs = append(gitArgs, "+"+tag.String()+":"+tag.String())
+	}
+	return gitArgs, branches, nil
+}
+
+func reconcileBranches(ctx context.Context, g *git.Git, headBranch, remoteName string, localRefs, remoteRefs map[git.Ref]git.Hash, branches []git.Ref) error {
+	for _, branchRef := range branches {
+		branchName := branchRef.Branch()
+		if branchName == headBranch {
+			continue
+		}
+		localCommit, existsLocally := localRefs[branchRef]
+		remoteCommit := remoteRefs[branchRef]
+
+		// If the branch doesn't exist yet, then create it.
+		if !existsLocally {
+			err := g.NewBranch(ctx, branchName, git.BranchOptions{
+				StartPoint: remoteCommit.String(),
+			})
+			if err != nil {
+				return err
+			}
+			// And set upstream, if necessary.
+			if remoteName != "" {
+				if err := g.Run(ctx, "config", "branch."+branchName+".remote", remoteName); err != nil {
+					return err
+				}
+				if err := g.Run(ctx, "config", "branch."+branchName+".merge", branchRef.String()); err != nil {
+					return err
+				}
+			}
+			continue
+		}
+
+		// If branch didn't change, move on.
+		if localCommit == remoteCommit {
+			continue
+		}
+
+		// If branch can be fast-forwarded, then do it.
+		isOlder, err := g.IsAncestor(ctx, localCommit.String(), remoteCommit.String())
+		if err != nil {
+			return err
+		}
+		if isOlder {
+			err := g.NewBranch(ctx, branchName, git.BranchOptions{
+				StartPoint: remoteCommit.String(),
+				Overwrite:  true,
+			})
+			if err != nil {
+				return err
+			}
+			continue
 		}
 	}
 	return nil

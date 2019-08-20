@@ -29,6 +29,12 @@
     changeset. Since this significantly improves the developer experience, I
     have opted to define descendants of commit X in Git as *any commit reachable
     by one or more references under `refs/heads/` that contains X*.
+-   When pushing or pulling changes, gg maps the local branch names directly to
+    the remote branch names. The upstream branch should only be consulted for
+    merge-related decisions. This matches how pull request flows typically work
+    anyway, and allows `gg pull` to operate the same on a random URL as a named
+    remote. For Gerrit workflows (the primary case where I would choose a
+    differing push destination), `gg mail` works fine.
 
 ## Testing
 

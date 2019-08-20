@@ -22,6 +22,133 @@ import (
 	"gg-scm.io/pkg/internal/git"
 )
 
+type pullTestCommits struct {
+	originalMaster git.Hash
+	newMaster      git.Hash
+	localCommit    git.Hash
+	divergeCommitA git.Hash
+	divergeCommitB git.Hash
+}
+
+func (commits pullTestCommits) Names() map[git.Hash]string {
+	return map[git.Hash]string{
+		commits.originalMaster: "original master",
+		commits.newMaster:      "new master",
+		commits.localCommit:    "commit to local branch",
+		commits.divergeCommitA: "diverge commit in repoA",
+		commits.divergeCommitB: "diverge commit in repoB",
+	}
+}
+
+// setupPullTest arranges two repositories in the test environment, repoA and
+// repoB, with repoB as a clone of repoA. repoA and repoB are then modified to
+// test a bunch of salient conditions:
+//
+//     - repoB will have a branch "master" that is one commit behind repoA.
+//       This will be the checked out branch.
+//     - repoB will have a branch "local" that is one commit ahead repoA.
+//     - repoB will have a branch "diverge" that is one commit ahead and one
+//       commit behind repoA.
+//     - repoA will have a branch "newbranch" that isn't present in repoB.
+//     - repoB will have a branch "delbranch" that was originally in repoA, but
+//       was deleted after the initial clone.
+//     - repoA will have a tag "first" that isn't present in repoB.
+func setupPullTest(ctx context.Context, env *testEnv) (pullTestCommits, error) {
+	var commits pullTestCommits
+
+	// Make shared history.
+	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
+		return pullTestCommits{}, err
+	}
+	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
+	for _, name := range []string{"delbranch", "diverge", "local"} {
+		if err := gitA.NewBranch(ctx, name, git.BranchOptions{}); err != nil {
+			return pullTestCommits{}, err
+		}
+	}
+	rev1, err := gitA.Head(ctx)
+	if err != nil {
+		return pullTestCommits{}, err
+	}
+	commits.originalMaster = rev1.Commit
+	if _, err := env.gg(ctx, env.root.String(), "clone", "repoA", "repoB"); err != nil {
+		return pullTestCommits{}, err
+	}
+
+	// Make changes to repoA.
+	if err := gitA.NewBranch(ctx, "newbranch", git.BranchOptions{}); err != nil {
+		return pullTestCommits{}, err
+	}
+	if err := gitA.MutateRefs(ctx, map[git.Ref]git.RefMutation{"refs/heads/delbranch": git.DeleteRef()}); err != nil {
+		return pullTestCommits{}, err
+	}
+	if err := gitA.Run(ctx, "tag", "-a", "-m", "my tag", "first"); err != nil {
+		return pullTestCommits{}, err
+	}
+	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
+		return pullTestCommits{}, err
+	}
+	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
+		return pullTestCommits{}, err
+	}
+	commits.newMaster, err = env.newCommit(ctx, "repoA")
+	if err != nil {
+		return pullTestCommits{}, err
+	}
+	if err := gitA.CheckoutBranch(ctx, "diverge", git.CheckoutOptions{}); err != nil {
+		return pullTestCommits{}, err
+	}
+	if err := env.root.Apply(filesystem.Write("repoA/bar.txt", dummyContent)); err != nil {
+		return pullTestCommits{}, err
+	}
+	if err := env.addFiles(ctx, "repoA/bar.txt"); err != nil {
+		return pullTestCommits{}, err
+	}
+	commits.divergeCommitA, err = env.newCommit(ctx, "repoA")
+	if err != nil {
+		return pullTestCommits{}, err
+	}
+	// Ensure repoA's HEAD points to master.
+	if err := gitA.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+		return pullTestCommits{}, err
+	}
+
+	// Make changes to repoB.
+	gitB := env.git.WithDir(env.root.FromSlash("repoB"))
+	if err := gitB.CheckoutBranch(ctx, "diverge", git.CheckoutOptions{}); err != nil {
+		return pullTestCommits{}, err
+	}
+	if err := env.root.Apply(filesystem.Write("repoB/baz.txt", dummyContent)); err != nil {
+		return pullTestCommits{}, err
+	}
+	if err := env.addFiles(ctx, "repoB/baz.txt"); err != nil {
+		return pullTestCommits{}, err
+	}
+	commits.divergeCommitB, err = env.newCommit(ctx, "repoB")
+	if err != nil {
+		return pullTestCommits{}, err
+	}
+	if err := gitB.CheckoutBranch(ctx, "local", git.CheckoutOptions{}); err != nil {
+		return pullTestCommits{}, err
+	}
+	if err := env.root.Apply(filesystem.Write("repoB/local.txt", dummyContent)); err != nil {
+		return pullTestCommits{}, err
+	}
+	if err := env.addFiles(ctx, "repoB/local.txt"); err != nil {
+		return pullTestCommits{}, err
+	}
+	commits.localCommit, err = env.newCommit(ctx, "repoB")
+	if err != nil {
+		return pullTestCommits{}, err
+	}
+	// Ensure repoB's HEAD points to master.
+	if err := gitB.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+		return pullTestCommits{}, err
+	}
+
+	return commits, nil
+}
+
 func TestPull(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -31,34 +158,7 @@ func TestPull(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	// Create repository A with some history and clone it to repository B.
-	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
-		t.Fatal(err)
-	}
-	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
-	rev1, err := gitA.Head(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	commit1 := rev1.Commit
-	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
-		t.Fatal(err)
-	}
-
-	// Make changes in repository A: add a tag, a branch, and a new commit.
-	if err := gitA.NewBranch(ctx, "foo", git.BranchOptions{}); err != nil {
-		t.Fatal(err)
-	}
-	if err := gitA.Run(ctx, "tag", "first"); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
-		t.Fatal(err)
-	}
-	commit2, err := env.newCommit(ctx, "repoA")
+	commits, err := setupPullTest(ctx, env)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,53 +166,67 @@ func TestPull(t *testing.T) {
 	// Call gg to pull from A into B.
 	repoBPath := env.root.FromSlash("repoB")
 	if _, err := env.gg(ctx, repoBPath, "pull"); err != nil {
+		t.Error(err)
+	}
+
+	gitB := env.git.WithDir(repoBPath)
+	refs, err := gitB.ListRefs(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := gitB.ReadConfig(ctx)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Verify that HEAD has not moved from the first commit.
-	commitNames := map[git.Hash]string{
-		commit1: "shared commit",
-		commit2: "remote commit",
+	refChecks := []struct {
+		ref        git.Ref
+		want       git.Hash
+		wantGone   bool
+		wantRemote string
+		wantMerge  string
+	}{
+		{ref: git.Head, want: commits.originalMaster},
+		{ref: "refs/remotes/origin/master", want: commits.newMaster},
+		{ref: "refs/remotes/origin/local", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/diverge", want: commits.divergeCommitA},
+		{ref: "refs/remotes/origin/newbranch", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/delbranch", wantGone: true},
+		{ref: "refs/ggpull/master", wantGone: true},
+		{ref: "refs/ggpull/local", wantGone: true},
+		{ref: "refs/ggpull/diverge", wantGone: true},
+		{ref: "refs/ggpull/newbranch", wantGone: true},
+		{ref: "refs/ggpull/delbranch", wantGone: true},
+		{ref: "refs/heads/master", want: commits.originalMaster, wantRemote: "origin", wantMerge: "refs/heads/master"},
+		{ref: "refs/heads/local", want: commits.localCommit, wantRemote: "origin", wantMerge: "refs/heads/local"},
+		{ref: "refs/heads/diverge", want: commits.divergeCommitB, wantRemote: "origin", wantMerge: "refs/heads/diverge"},
+		{ref: "refs/heads/newbranch", want: commits.originalMaster, wantRemote: "origin", wantMerge: "refs/heads/newbranch"},
+		{ref: "refs/heads/delbranch", want: commits.originalMaster, wantRemote: "origin", wantMerge: "refs/heads/delbranch"},
+		{ref: "refs/tags/first", want: commits.originalMaster},
 	}
-	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.Head(ctx); err != nil {
-		t.Error(err)
-	} else {
-		if r.Commit != commit1 {
-			t.Errorf("HEAD = %s; want %s",
-				prettyCommit(r.Commit, commitNames),
-				prettyCommit(commit1, commitNames))
+	for _, check := range refChecks {
+		if branch := check.ref.Branch(); branch != "" {
+			gotRemote := cfg.Value("branch." + branch + ".remote")
+			gotMerge := cfg.Value("branch." + branch + ".merge")
+			if gotRemote != check.wantRemote || gotMerge != check.wantMerge {
+				t.Errorf("branch %q remote = %q, merge = %q; want remote = %q, merge = %q", branch, gotRemote, gotMerge, check.wantRemote, check.wantMerge)
+			}
 		}
-		if r.Ref != "refs/heads/master" {
-			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref)
+		got, exists := refs[check.ref]
+		if !exists {
+			if !check.wantGone {
+				t.Errorf("%v is missing; want %s", check.ref, prettyCommit(check.want, commits.Names()))
+			}
+			continue
 		}
-	}
-
-	// Verify that the remote tracking branch for master has moved to the new commit.
-	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/master"); err != nil {
-		t.Error(err)
-	} else if r.Commit != commit2 {
-		t.Errorf("refs/remotes/origin/master = %s; want %s",
-			prettyCommit(r.Commit, commitNames),
-			prettyCommit(commit2, commitNames))
-	}
-
-	// Verify that a remote tracking branch was created for foo.
-	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/foo"); err != nil {
-		t.Error(err)
-	} else if r.Commit != commit1 {
-		t.Errorf("refs/remotes/origin/foo = %s; want %s",
-			prettyCommit(r.Commit, commitNames),
-			prettyCommit(commit1, commitNames))
-	}
-
-	// Verify that the tag was mirrored in repository B.
-	if r, err := gitB.ParseRev(ctx, "first"); err != nil {
-		t.Error(err)
-	} else if r.Commit != commit1 {
-		t.Errorf("origin/master = %s; want %s",
-			prettyCommit(r.Commit, commitNames),
-			prettyCommit(commit1, commitNames))
+		if check.wantGone {
+			t.Errorf("%v = %s; should not exist", check.ref, prettyCommit(got, commits.Names()))
+			continue
+		}
+		if got != check.want {
+			names := commits.Names()
+			t.Errorf("%v = %s; want %s", check.ref, prettyCommit(got, names), prettyCommit(check.want, names))
+		}
 	}
 }
 
@@ -125,42 +239,8 @@ func TestPullWithArgument(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	// Create repository A with some history and clone it to repository B.
-	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
-		t.Fatal(err)
-	}
-	repoAPath := env.root.FromSlash("repoA")
-	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gitA.Head(ctx)
+	commits, err := setupPullTest(ctx, env)
 	if err != nil {
-		t.Fatal(err)
-	}
-	commit1 := rev1.Commit
-	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
-		t.Fatal(err)
-	}
-
-	// Make changes in repository A: add a tag, a branch, and a new commit.
-	if err := gitA.NewBranch(ctx, "foo", git.BranchOptions{}); err != nil {
-		t.Fatal(err)
-	}
-	if err := gitA.Run(ctx, "tag", "first"); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
-		t.Fatal(err)
-	}
-	commit2, err := env.newCommit(ctx, "repoA")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Move HEAD to a different commit in repository A.
-	// We want to check that the corresponding branch is pulled independently of HEAD.
-	if err := gitA.CheckoutRev(ctx, "HEAD^", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -169,49 +249,71 @@ func TestPullWithArgument(t *testing.T) {
 	if err := env.root.Apply(filesystem.Rename("repoA", "repoC")); err != nil {
 		t.Fatal(err)
 	}
-
 	// Call gg to pull from repository C into repository B.
 	repoBPath := env.root.FromSlash("repoB")
 	repoCPath := env.root.FromSlash("repoC")
 	if _, err := env.gg(ctx, repoBPath, "pull", repoCPath); err != nil {
+		t.Error(err)
+	}
+
+	gitB := env.git.WithDir(repoBPath)
+	refs, err := gitB.ListRefs(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := gitB.ReadConfig(ctx)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Verify that HEAD has not moved from the first commit.
-	commitNames := map[git.Hash]string{
-		commit1: "shared commit",
-		commit2: "remote commit",
+	refChecks := []struct {
+		ref        git.Ref
+		want       git.Hash
+		wantGone   bool
+		wantRemote string
+		wantMerge  string
+	}{
+		{ref: git.Head, want: commits.originalMaster},
+		{ref: "refs/remotes/origin/master", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/local", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/diverge", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/newbranch", wantGone: true},
+		{ref: "refs/remotes/origin/delbranch", want: commits.originalMaster},
+		{ref: "refs/ggpull/master", want: commits.newMaster},
+		{ref: "refs/ggpull/local", want: commits.originalMaster},
+		{ref: "refs/ggpull/diverge", want: commits.divergeCommitA},
+		{ref: "refs/ggpull/newbranch", want: commits.originalMaster},
+		{ref: "refs/ggpull/delbranch", wantGone: true},
+		{ref: "refs/heads/master", want: commits.originalMaster, wantRemote: "origin", wantMerge: "refs/heads/master"},
+		{ref: "refs/heads/local", want: commits.localCommit, wantRemote: "origin", wantMerge: "refs/heads/local"},
+		{ref: "refs/heads/diverge", want: commits.divergeCommitB, wantRemote: "origin", wantMerge: "refs/heads/diverge"},
+		{ref: "refs/heads/newbranch", want: commits.originalMaster},
+		{ref: "refs/heads/delbranch", want: commits.originalMaster, wantRemote: "origin", wantMerge: "refs/heads/delbranch"},
+		{ref: "refs/tags/first", want: commits.originalMaster},
 	}
-	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.Head(ctx); err != nil {
-		t.Error(err)
-	} else {
-		if r.Commit != commit1 {
-			t.Errorf("HEAD = %s; want %s",
-				prettyCommit(r.Commit, commitNames),
-				prettyCommit(commit1, commitNames))
+	for _, check := range refChecks {
+		if branch := check.ref.Branch(); branch != "" {
+			gotRemote := cfg.Value("branch." + branch + ".remote")
+			gotMerge := cfg.Value("branch." + branch + ".merge")
+			if gotRemote != check.wantRemote || gotMerge != check.wantMerge {
+				t.Errorf("branch %q remote = %q, merge = %q; want remote = %q, merge = %q", branch, gotRemote, gotMerge, check.wantRemote, check.wantMerge)
+			}
 		}
-		if r.Ref != "refs/heads/master" {
-			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref)
+		got, exists := refs[check.ref]
+		if !exists {
+			if !check.wantGone {
+				t.Errorf("%v is missing; want %s", check.ref, prettyCommit(check.want, commits.Names()))
+			}
+			continue
 		}
-	}
-
-	// Verify that FETCH_HEAD has set to the second commit.
-	if r, err := gitB.ParseRev(ctx, "FETCH_HEAD"); err != nil {
-		t.Error(err)
-	} else if r.Commit != commit2 {
-		t.Errorf("FETCH_HEAD = %s; want %s",
-			prettyCommit(r.Commit, commitNames),
-			prettyCommit(commit2, commitNames))
-	}
-
-	// Verify that the tag was mirrored in repository B.
-	if r, err := gitB.ParseRev(ctx, "first"); err != nil {
-		t.Error(err)
-	} else if r.Commit != commit1 {
-		t.Errorf("origin/master = %s; want %s",
-			prettyCommit(r.Commit, commitNames),
-			prettyCommit(commit1, commitNames))
+		if check.wantGone {
+			t.Errorf("%v = %s; should not exist", check.ref, prettyCommit(got, commits.Names()))
+			continue
+		}
+		if got != check.want {
+			names := commits.Names()
+			t.Errorf("%v = %s; want %s", check.ref, prettyCommit(got, names), prettyCommit(check.want, names))
+		}
 	}
 }
 
@@ -224,28 +326,7 @@ func TestPullUpdate(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	// Create repository A with some history and clone it to repository B.
-	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
-		t.Fatal(err)
-	}
-	gitA := env.git.WithDir(env.root.FromSlash("repoA"))
-	rev1, err := gitA.Head(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	commit1 := rev1.Commit
-	if err := env.git.Run(ctx, "clone", "repoA", "repoB"); err != nil {
-		t.Fatal(err)
-	}
-
-	// Make changes in repository A: add a tag and a new commit.
-	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
-		t.Fatal(err)
-	}
-	commit2, err := env.newCommit(ctx, "repoA")
+	commits, err := setupPullTest(ctx, env)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,35 +334,187 @@ func TestPullUpdate(t *testing.T) {
 	// Call gg to pull from A into B.
 	repoBPath := env.root.FromSlash("repoB")
 	if _, err := env.gg(ctx, repoBPath, "pull", "-u"); err != nil {
+		t.Error(err)
+	}
+
+	gitB := env.git.WithDir(repoBPath)
+	refs, err := gitB.ListRefs(ctx)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Verify that HEAD has moved to the second commit.
-	commitNames := map[git.Hash]string{
-		commit1: "shared commit",
-		commit2: "remote commit",
+	refChecks := []struct {
+		ref      git.Ref
+		want     git.Hash
+		wantGone bool
+	}{
+		{ref: git.Head, want: commits.newMaster},
+		{ref: "refs/remotes/origin/master", want: commits.newMaster},
+		{ref: "refs/remotes/origin/local", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/diverge", want: commits.divergeCommitA},
+		{ref: "refs/remotes/origin/newbranch", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/delbranch", wantGone: true},
+		{ref: "refs/ggpull/master", wantGone: true},
+		{ref: "refs/ggpull/local", wantGone: true},
+		{ref: "refs/ggpull/diverge", wantGone: true},
+		{ref: "refs/ggpull/newbranch", wantGone: true},
+		{ref: "refs/ggpull/delbranch", wantGone: true},
+		{ref: "refs/heads/master", want: commits.newMaster},
+		{ref: "refs/heads/local", want: commits.localCommit},
+		{ref: "refs/heads/diverge", want: commits.divergeCommitB},
+		{ref: "refs/heads/newbranch", want: commits.originalMaster},
+		{ref: "refs/heads/delbranch", want: commits.originalMaster},
+		{ref: "refs/tags/first", want: commits.originalMaster},
 	}
-	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.Head(ctx); err != nil {
-		t.Error(err)
-	} else {
-		if r.Commit != commit2 {
-			t.Errorf("HEAD = %s; want %s",
-				prettyCommit(r.Commit, commitNames),
-				prettyCommit(commit1, commitNames))
+	for _, check := range refChecks {
+		got, exists := refs[check.ref]
+		if !exists {
+			if !check.wantGone {
+				t.Errorf("%v is missing; want %s", check.ref, prettyCommit(check.want, commits.Names()))
+			}
+			continue
 		}
-		if r.Ref != "refs/heads/master" {
-			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref)
+		if check.wantGone {
+			t.Errorf("%v = %s; should not exist", check.ref, prettyCommit(got, commits.Names()))
+			continue
 		}
+		if got != check.want {
+			names := commits.Names()
+			t.Errorf("%v = %s; want %s", check.ref, prettyCommit(got, names), prettyCommit(check.want, names))
+		}
+	}
+}
+
+func TestPullRev(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	commits, err := setupPullTest(ctx, env)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	// Verify that the remote tracking branch has moved to the new commit.
-	if r, err := gitB.ParseRev(ctx, "origin/master"); err != nil {
+	// Call gg to pull from A into B.
+	repoBPath := env.root.FromSlash("repoB")
+	if _, err := env.gg(ctx, repoBPath, "pull", "-r", "diverge"); err != nil {
 		t.Error(err)
-	} else if r.Commit != commit2 {
-		t.Errorf("origin/master = %s; want %s",
-			prettyCommit(r.Commit, commitNames),
-			prettyCommit(commit2, commitNames))
+	}
+
+	gitB := env.git.WithDir(repoBPath)
+	refs, err := gitB.ListRefs(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	refChecks := []struct {
+		ref      git.Ref
+		want     git.Hash
+		wantGone bool
+	}{
+		{ref: git.Head, want: commits.originalMaster},
+		{ref: "refs/remotes/origin/master", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/local", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/diverge", want: commits.divergeCommitA},
+		{ref: "refs/remotes/origin/newbranch", wantGone: true},
+		{ref: "refs/remotes/origin/delbranch", want: commits.originalMaster},
+		{ref: "refs/ggpull/master", wantGone: true},
+		{ref: "refs/ggpull/local", wantGone: true},
+		{ref: "refs/ggpull/diverge", wantGone: true},
+		{ref: "refs/ggpull/newbranch", wantGone: true},
+		{ref: "refs/ggpull/delbranch", wantGone: true},
+		{ref: "refs/heads/master", want: commits.originalMaster},
+		{ref: "refs/heads/local", want: commits.localCommit},
+		{ref: "refs/heads/diverge", want: commits.divergeCommitB},
+		{ref: "refs/heads/delbranch", want: commits.originalMaster},
+	}
+	for _, check := range refChecks {
+		got, exists := refs[check.ref]
+		if !exists {
+			if !check.wantGone {
+				t.Errorf("%v is missing; want %s", check.ref, prettyCommit(check.want, commits.Names()))
+			}
+			continue
+		}
+		if check.wantGone {
+			t.Errorf("%v = %s; should not exist", check.ref, prettyCommit(got, commits.Names()))
+			continue
+		}
+		if got != check.want {
+			names := commits.Names()
+			t.Errorf("%v = %s; want %s", check.ref, prettyCommit(got, names), prettyCommit(check.want, names))
+		}
+	}
+}
+
+func TestPullRevTag(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	commits, err := setupPullTest(ctx, env)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to pull from A into B.
+	repoBPath := env.root.FromSlash("repoB")
+	if _, err := env.gg(ctx, repoBPath, "pull", "-r", "first"); err != nil {
+		t.Error(err)
+	}
+
+	gitB := env.git.WithDir(repoBPath)
+	refs, err := gitB.ListRefs(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	refChecks := []struct {
+		ref      git.Ref
+		want     git.Hash
+		wantGone bool
+	}{
+		{ref: git.Head, want: commits.originalMaster},
+		{ref: "refs/remotes/origin/master", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/local", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/diverge", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/newbranch", wantGone: true},
+		{ref: "refs/remotes/origin/delbranch", want: commits.originalMaster},
+		{ref: "refs/ggpull/master", wantGone: true},
+		{ref: "refs/ggpull/local", wantGone: true},
+		{ref: "refs/ggpull/diverge", wantGone: true},
+		{ref: "refs/ggpull/newbranch", wantGone: true},
+		{ref: "refs/ggpull/delbranch", wantGone: true},
+		{ref: "refs/heads/master", want: commits.originalMaster},
+		{ref: "refs/heads/local", want: commits.localCommit},
+		{ref: "refs/heads/diverge", want: commits.divergeCommitB},
+		{ref: "refs/heads/delbranch", want: commits.originalMaster},
+		{ref: "refs/tags/first", want: commits.originalMaster},
+	}
+	for _, check := range refChecks {
+		got, exists := refs[check.ref]
+		if !exists {
+			if !check.wantGone {
+				t.Errorf("%v is missing; want %s", check.ref, prettyCommit(check.want, commits.Names()))
+			}
+			continue
+		}
+		if check.wantGone {
+			t.Errorf("%v = %s; should not exist", check.ref, prettyCommit(got, commits.Names()))
+			continue
+		}
+		if got != check.want {
+			names := commits.Names()
+			t.Errorf("%v = %s; want %s", check.ref, prettyCommit(got, names), prettyCommit(check.want, names))
+		}
 	}
 }
 
