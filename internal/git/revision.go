@@ -307,7 +307,8 @@ func (mut RefMutation) String() string {
 	}
 }
 
-// MutateRefs atomically modifies zero or more refs.
+// MutateRefs atomically modifies zero or more refs. If there are no non-zero
+// mutations, then MutateRefs returns nil without running Git.
 func (g *Git) MutateRefs(ctx context.Context, muts map[Ref]RefMutation) error {
 	input := new(bytes.Buffer)
 	for ref, mut := range muts {
@@ -333,6 +334,9 @@ func (g *Git) MutateRefs(ctx context.Context, muts map[Ref]RefMutation) error {
 		default:
 			panic("unknown command " + mut.command)
 		}
+	}
+	if input.Len() == 0 {
+		return nil
 	}
 
 	c := g.command(ctx, []string{g.exe, "update-ref", "--stdin", "-z"})
