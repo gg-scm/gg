@@ -21,7 +21,7 @@ if [[ $# -gt 1 ]]; then
   exit 64
 fi
 srcroot="$(dirname "$(dirname "${BASH_SOURCE[0]}")")"
-release_version="${1:-$(echo "$GITHUB_REF" | sed -n -e 's/\(^|.*/\)v\([0-9].*\)$/\2/p')}"
+release_version="${1:-$(echo "${GITHUB_REF:-}" | sed -n -e 's/\(^|.*\/\)v\([0-9].*\)$/\2/p')}"
 if [[ -z "$release_version" ]]; then
   echo "misc/release.bash: cannot infer version, please pass explicitly" 1>&2
   exit 1
