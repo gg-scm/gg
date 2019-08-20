@@ -1,5 +1,42 @@
 # Release Notes
 
+## Unreleased
+
+## Features
+
+- Tab completion for bash and zsh. ([#18](https://github.com/zombiezen/gg/issues/18))
+- `gg requestpull` accepts a new `-draft` flag.
+  ([#104](https://github.com/zombiezen/gg/issues/104))
+- `gg pull` now pulls all branches and fast-forwards local ones if possible.
+  When pulling from an unnamed remote repository, `gg pull` will place the
+  branches into a `refs/ggpull/...` namespace.
+  ([#108](https://github.com/zombiezen/gg/issues/108))
+
+## Changes
+
+- `gg log` now logs all revisions by default. Use `gg log -r @` to get the old
+  behavior. ([#86](https://github.com/zombiezen/gg/issues/86))
+- `gg log` now always uses `git log --date-order` under the hood. As always, if
+  you prefer tighter control over the log, use `git log` directly.
+- gg tests are now run by [GitHub Actions][] instead of Travis.
+  [Shout out to Nat Friedman][Nat Friedman tweet] for the invite!
+- `gg branch --delete` is now implemented in terms of `git update-ref` instead
+  of `git branch --delete`.
+
+[GitHub Actions]: https://github.com/features/actions
+[Nat Friedman tweet]: https://twitter.com/natfriedman/status/1162822908411965441
+
+## Bug Fixes
+
+- `gg update` no longer errors if local branch is ahead of remote branch.
+  ([#103](https://github.com/zombiezen/gg/issues/103))
+- `gg rebase --continue` no longer adds untracked files
+  ([#107](https://github.com/zombiezen/gg/issues/107))
+- `gg gerrithook` will now work properly when in run in a subdirectory of the
+  Git repository. ([#105](https://github.com/zombiezen/gg/issues/105))
+- `gg commit -amend` now works on the repository's first commit.
+  ([#106](https://github.com/zombiezen/gg/issues/106))
+
 ## 0.7.1 (2019-02-13)
 
 The release scripts for 0.7.0 failed, so 0.7.1 is the first actual release of
