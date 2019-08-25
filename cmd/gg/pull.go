@@ -34,10 +34,12 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 
 	If no source repository is given and a branch with an upstream branch
 	is currently checked out, then the upstream's remote is used.
-	Otherwise, the remote called "origin" is used.
+	Otherwise, the remote called "origin" is used. If the source repository
+	is not a named remote, then the branches will be saved under
+	`+"`refs/ggpull/`"+`.
 
-	If no revisions are specified, then all the remote's refs will be
-	fetched. If the source is a named remote, then its remote
+	If no revisions are specified, then all the remote's branches and tags
+	will be fetched. If the source is a named remote, then its remote
 	tracking branches will be pruned.`)
 	remoteRefArgs := f.MultiString("r", "`ref`s to pull")
 	update := f.Bool("u", false, "update to new head if new descendants were pulled")
