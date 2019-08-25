@@ -1,0 +1,61 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "go test",
+      "type": "shell",
+      "command": "go test ./...",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": ["$go"]
+    },
+    {
+      "label": "Serve Docs",
+      "type": "shell",
+      "command": "hugo serve --disableFastRender --port=8080",
+      "options": {"cwd": "${workspaceRoot}/docs"},
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "(ERROR|Error:) .*\"([^\"]+):(\\d+):(\\d+)\": (.*)$",
+          "file": 2,
+          "line": 3,
+          "column": 4,
+          "message": 5
+        },
+        "fileLocation": "absolute",
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^Change detected, rebuilding site$",
+          "endsPattern": "^Total in [0-9]+ ms$"
+        }
+      }
+    },
+    {
+      "label": "Serve Docs with Drafts",
+      "type": "shell",
+      "command": "hugo serve -D --disableFastRender --port=8080",
+      "options": {"cwd": "${workspaceRoot}/docs"},
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "(ERROR|Error:) .*\"([^\"]+):(\\d+):(\\d+)\": (.*)$",
+          "file": 2,
+          "line": 3,
+          "column": 4,
+          "message": 5
+        },
+        "fileLocation": "absolute",
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^Change detected, rebuilding site$",
+          "endsPattern": "^Total in [0-9]+ ms$"
+        }
+      }
+    }
+  ]
+}
