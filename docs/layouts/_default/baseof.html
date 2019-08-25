@@ -31,7 +31,12 @@
   <footer id="pagefooter">
     <div id="pagefooter_content">
       <p>{{.Site.Copyright}}</p>
-      <p><a href="https://github.com/zombiezen/gg/edit/master/docs/content/{{.Page.File.Path}}" class="editpagelink">Improve this page</a> on GitHub.</p>
+      {{- with .Page.File }}
+      <p>
+        <a href="https://github.com/zombiezen/gg/edit/master/docs/content/{{.Path}}" class="editpagelink">Improve this page</a>
+        on GitHub.
+      </p>
+      {{- end}}
       <p>gg is not an official Google product. All content released under an <a href="{{.Site.Params.licenseURL | absURL}}" target="_blank">Apache 2.0 License</a>.</p>
     </div>
   </footer>
