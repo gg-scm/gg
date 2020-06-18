@@ -11,6 +11,8 @@
   When pulling from an unnamed remote repository, `gg pull` will place the
   branches into a `refs/ggpull/...` namespace.
   ([#108](https://github.com/zombiezen/gg/issues/108))
+- `gg push` now pushes all branches unless limited with the `-r` flag.
+  ([#100](https://github.com/zombiezen/gg/issues/100))
 
 ## Changes
 
@@ -22,6 +24,7 @@
   [Shout out to Nat Friedman][Nat Friedman tweet] for the invite!
 - `gg branch --delete` is now implemented in terms of `git update-ref` instead
   of `git branch --delete`.
+- The `gg push --create` flag is now `gg push --new-branch` to match Mercurial.
 
 [GitHub Actions]: https://github.com/features/actions
 [Nat Friedman tweet]: https://twitter.com/natfriedman/status/1162822908411965441
