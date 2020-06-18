@@ -1,7 +1,7 @@
 {
 	// See http://go.microsoft.com/fwlink/?LinkId=827846 to learn about workspace recommendations.
 	"recommendations": [
-		"timonwong.shellcheck",
-		"ms-vscode.go"
+		"golang.Go",
+		"timonwong.shellcheck"
 	]
 }
