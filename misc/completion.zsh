@@ -200,11 +200,9 @@ _gg() {
     push)
       _arguments -S : \
         ':command:' \
-        '-create[allow pushing a new ref]' \
-        {-d,-dest}'=[destination ref]' \
         '-f[allow overwriting ref if it is not an ancestor, as long as it matches the remote-tracking branch]' \
-        {-n,-dry-run}'[do everything except send the changes]' \
-        '-r=[source revision]:rev:named_revs' \
+        '-new-branch[allow pushing a new ref]' \
+        '-r=[source refs]:rev:named_revs' \
         ':destination:remotes'
       ;;
     rebase)

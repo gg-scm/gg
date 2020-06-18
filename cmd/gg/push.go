@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
@@ -28,37 +29,27 @@ import (
 const pushSynopsis = "push changes to the specified destination"
 
 func push(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg push [-f] [-n] [-r REV] [-d REF] [--create] [DST]", pushSynopsis+`
+	f := flag.NewFlagSet(true, "gg push [-f] [-r REF [...]] [--new-branch] [DST]", pushSynopsis+`
 
-	When no destination repository is given, push uses the first non-
-	empty configuration value of:
+	`+"`gg push`"+` pushes branches and tags to mirror the local repository in the
+	destination repository. It does not permit diverging commits unless `+"`-f`"+`
+	is passed. If the `+"`-r`"+` is not given, `+"`gg push`"+` will push all
+	branches that exist in both the local and destination repository as well as
+	all tags. The argument to `+"`-r`"+` must name a ref: it cannot be an
+	arbitrary commit.
 
-	1.  `+"`branch.*.pushRemote`"+`, if the source is a branch or is part of only
-	    one branch.
-	2.  `+"`remote.pushDefault`"+`.
-	3.  `+"`branch.*.remote`"+`, if the source is a branch or is part of only one
-	    branch.
-	4.  Otherwise, the remote called `+"`origin`"+` is used.
+	When no destination repository is given, tries to use the remote specified by
+	the configuration value of `+"`remote.pushDefault`"+` or the remoted called
+	`+"`origin`"+` otherwise.
 
-	If `+"`-d`"+` is given and begins with `+"`refs/`"+`, then it specifies the remote
-	ref to update. If the argument passed to `+"`-d`"+` does not begin with
-	`+"`refs/`"+`, it is assumed to be a branch name (`+"`refs/heads/<arg>`"+`).
-	If `+"`-d`"+` is not given and the source is a ref or part of only one local
-	branch, then the same ref name is used. Otherwise, push exits with a
-	failure exit code. This differs from git, which will consult
-	`+"`remote.*.push`"+` and `+"`push.default`"+`. You can imagine this being the most
-	similar to `+"`push.default=current`"+`.
-
-	By default, `+"`gg push`"+` will fail instead of creating a new ref on the
-	remote. If this is desired (e.g. you are creating a new branch), then
-	you can pass `+"`--create`"+` to override this check.`)
-	create := f.Bool("create", false, "allow pushing a new ref")
-	dstRefArg := f.String("d", "", "destination `ref`")
-	f.Alias("d", "dest")
+	By default, `+"`gg push`"+` will fail instead of creating a new ref in the
+	destination repository. If this is desired (e.g. you are creating a new
+	branch), then you can pass `+"`--new-branch`"+` to override this check.
+	`+"`-f`"+` will also skip this check.`)
+	create := f.Bool("new-branch", false, "allow pushing a new ref")
 	force := f.Bool("f", false, "allow overwriting ref if it is not an ancestor, as long as it matches the remote-tracking branch")
-	dryRun := f.Bool("n", false, "do everything except send the changes")
-	f.Alias("n", "dry-run")
-	rev := f.String("r", git.Head.String(), "source `rev`ision")
+	f.Alias("f", "force")
+	refArgs := f.MultiString("r", "source `ref`s")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -68,16 +59,9 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	if f.NArg() > 1 {
 		return usagef("can't pass multiple destinations")
 	}
-	src, err := cc.git.ParseRev(ctx, *rev)
-	if err != nil {
-		return err
-	}
-	srcRef := src.Ref
-	if srcRef == "" {
-		possible, err := branchesContaining(ctx, cc.git, src.Commit.String())
-		if err == nil && len(possible) == 1 {
-			srcRef = possible[0]
-		}
+	refsImplicit := len(*refArgs) == 0
+	if refsImplicit && *force {
+		return usagef("can't pass --force without specifying refs")
 	}
 	dstRepo := f.Arg(0)
 	if dstRepo == "" {
@@ -85,37 +69,79 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 		if err != nil {
 			return err
 		}
-		dstRepo, err = inferPushRepo(cfg, srcRef.Branch())
+		dstRepo, err = inferPushRepo(cfg, "")
 		if err != nil {
 			return err
 		}
 	}
-	var dstRef git.Ref
-	switch {
-	case *dstRefArg == "":
-		if !srcRef.IsValid() {
-			return errors.New("cannot infer destination (source is not a ref). Use -d to specify destination ref.")
-		}
-		dstRef = srcRef
-	case strings.HasPrefix(*dstRefArg, "refs/"):
-		dstRef = git.Ref(*dstRefArg)
-	default:
-		dstRef = git.BranchRef(*dstRefArg)
-	}
-	if !*create {
-		if err := verifyPushRemoteRef(ctx, cc.git, dstRepo, dstRef); err != nil {
+	var refsToPush []git.Ref
+	if refsImplicit {
+		localRefs, err := cc.git.ListRefs(ctx)
+		if err != nil {
 			return err
 		}
+		for ref := range localRefs {
+			if ref.IsBranch() || ref.IsTag() {
+				refsToPush = append(refsToPush, ref)
+			}
+		}
+		sort.Slice(refsToPush, func(i, j int) bool { return refsToPush[i] < refsToPush[j] })
+	} else {
+		for _, arg := range *refArgs {
+			resolved, err := cc.git.ParseRev(ctx, arg)
+			if err != nil {
+				return err
+			}
+			if !resolved.Ref.IsBranch() && !resolved.Ref.IsTag() {
+				return fmt.Errorf("%q is not a branch or tag", arg)
+			}
+			refsToPush = append(refsToPush, resolved.Ref)
+		}
 	}
+
+	if !*force && !*create {
+		remoteRefs, err := cc.git.ListRemoteRefs(ctx, dstRepo)
+		if err != nil {
+			return err
+		}
+		n := 0
+		conflicts := false
+		for _, ref := range refsToPush {
+			if _, exists := remoteRefs[ref]; exists || ref.IsTag() {
+				refsToPush[n] = ref
+				n++
+				continue
+			}
+			if refsImplicit {
+				// If the user ran `gg push`, ignore the ref.
+				continue
+			}
+			conflicts = true
+			fmt.Fprintf(cc.stderr, "gg: push: %q does not exist on remote\n", ref)
+		}
+		if conflicts {
+			return errors.New("push would create refs (if this is what you want, run again with --new-branch)")
+		}
+		refsToPush = refsToPush[:n]
+	}
+
+	if len(refsToPush) == 0 {
+		return errors.New("no refs to push")
+	}
+
 	var pushArgs []string
 	pushArgs = append(pushArgs, "push")
 	if *force {
 		pushArgs = append(pushArgs, "--force-with-lease")
 	}
-	if *dryRun {
-		pushArgs = append(pushArgs, "--dry-run")
+	pushArgs = append(pushArgs, "--", dstRepo)
+	for _, ref := range refsToPush {
+		if tag := ref.Tag(); tag != "" {
+			pushArgs = append(pushArgs, "tag", tag)
+		} else {
+			pushArgs = append(pushArgs, ref.String()+":"+ref.String())
+		}
 	}
-	pushArgs = append(pushArgs, "--", dstRepo, src.Commit.String()+":"+dstRef.String())
 	c := cc.git.Command(ctx, pushArgs...)
 	c.Stdin = cc.stdin
 	c.Stdout = cc.stdout

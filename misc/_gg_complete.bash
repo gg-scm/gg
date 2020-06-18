@@ -136,7 +136,7 @@ _gg_complete() {
         return 0
         ;;
       push)
-        COMPREPLY=( $(compgen -W '-create --create -d -dest --dest -f -n -dry-run --dry-run -r' -- "$curr_word") )
+        COMPREPLY=( $(compgen -W '-f -force --force -new-branch --new-branch -r' -- "$curr_word") )
         return 0
         ;;
       rebase)

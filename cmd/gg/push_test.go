@@ -203,6 +203,9 @@ func TestPush_FailUnknownRef(t *testing.T) {
 	}
 
 	// Create a new commit in repo A.
+	if err := gitA.NewBranch(ctx, "foo", git.BranchOptions{Checkout: true}); err != nil {
+		t.Fatal(err)
+	}
 	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +219,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 
 	// Call gg to push from repo A's master branch to repo B's nonexistent foo branch.
 	// This should return an error.
-	if _, err := env.gg(ctx, repoAPath, "push", "-d", "foo"); err == nil {
+	if _, err := env.gg(ctx, repoAPath, "push", "-r", "foo"); err == nil {
 		t.Error("push of new ref did not return error")
 	} else if isUsage(err) {
 		t.Errorf("push of new ref returned usage error: %v", err)
@@ -279,6 +282,9 @@ func TestPush_CreateRef(t *testing.T) {
 	}
 
 	// Create a new commit in repo A.
+	if err := gitA.NewBranch(ctx, "foo", git.BranchOptions{Checkout: true}); err != nil {
+		t.Fatal(err)
+	}
 	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", dummyContent)); err != nil {
 		t.Fatal(err)
 	}
@@ -291,7 +297,7 @@ func TestPush_CreateRef(t *testing.T) {
 	}
 
 	// Call gg to push the repo A master branch to repo B's foo branch.
-	if _, err := env.gg(ctx, repoAPath, "push", "-d", "foo", "--create"); err != nil {
+	if _, err := env.gg(ctx, repoAPath, "push", "-r", "foo", "--new-branch"); err != nil {
 		t.Error(err)
 	}
 
@@ -369,10 +375,15 @@ func TestPush_RewindFails(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Move master in repo A back to the first commit.
+	commit1 := rev1.Commit
+	if err := gitA.Run(ctx, "reset", "--hard", commit1.String()); err != nil {
+		t.Fatal(err)
+	}
+
 	// Call gg to push initial commit from repo A to repo B's master branch (a rewind).
 	// This should return an error.
-	commit1 := rev1.Commit
-	if _, err := env.gg(ctx, repoAPath, "push", "-d", "master", "-r", commit1.String()); err == nil {
+	if _, err := env.gg(ctx, repoAPath, "push", "-r", "master"); err == nil {
 		t.Error("push of parent rev did not return error")
 	} else if isUsage(err) {
 		t.Errorf("push of parent rev returned usage error: %v", err)
@@ -442,10 +453,15 @@ func TestPush_RewindForce(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Move master in repo A back to the first commit.
+	commit1 := rev1.Commit
+	if err := gitA.Run(ctx, "reset", "--hard", commit1.String()); err != nil {
+		t.Fatal(err)
+	}
+
 	// Call gg to push initial commit from repo A to repo B's master branch (a rewind) with
 	// the -f flag.
-	commit1 := rev1.Commit
-	if _, err := env.gg(ctx, repoAPath, "push", "-f", "-d", "master", "-r", commit1.String()); err != nil {
+	if _, err := env.gg(ctx, repoAPath, "push", "-f", "-r", "master"); err != nil {
 		t.Error(err)
 	}
 
@@ -461,78 +477,6 @@ func TestPush_RewindForce(t *testing.T) {
 		t.Errorf("refs/heads/master = %s; want %s",
 			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
-	}
-}
-
-func TestPush_AncestorInferDst(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	env, err := newTestEnv(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer env.cleanup()
-
-	// Create repository with some junk history.
-	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
-		t.Fatal(err)
-	}
-	repoAPath := env.root.FromSlash("repoA")
-	gitA := env.git.WithDir(repoAPath)
-	rev1, err := gitA.Head(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Push from repo A to repo B.
-	if err := env.git.InitBare(ctx, "repoB"); err != nil {
-		t.Fatal(err)
-	}
-	repoBPath := env.root.FromSlash("repoB")
-	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
-		t.Fatal(err)
-	}
-	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
-		t.Fatal(err)
-	}
-
-	// Create two new commits in repo A.
-	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", "Hello, World!\n")); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
-		t.Fatal(err)
-	}
-	commit2, err := env.newCommit(ctx, "repoA")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := env.root.Apply(filesystem.Write("repoA/foo.txt", "It's...\n")); err != nil {
-		t.Fatal(err)
-	}
-	commit3, err := env.newCommit(ctx, "repoA")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Call gg to push the first new commit from repo A to repo B.
-	if _, err := env.gg(ctx, repoAPath, "push", "-r", commit2.String()); err != nil {
-		t.Error(err)
-	}
-
-	// Verify that repo B's master has moved to the first new commit.
-	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
-		t.Error(err)
-	} else if r.Commit != commit2 {
-		commitNames := map[git.Hash]string{
-			rev1.Commit: "first commit",
-			commit2:     "second commit",
-			commit3:     "third commit",
-		}
-		t.Errorf("remote refs/heads/master = %s; want %s",
-			prettyCommit(r.Commit, commitNames),
-			prettyCommit(commit2, commitNames))
 	}
 }
 
@@ -687,7 +631,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	}
 
 	// Call gg to push from repo A to repo C.
-	if _, err := env.gg(ctx, repoAPath, "push"); err == nil {
+	if _, err := env.gg(ctx, repoAPath, "push", "-r", "newbranch"); err == nil {
 		t.Error("push of new ref did not return error")
 	} else if isUsage(err) {
 		t.Errorf("push of new ref returned usage error: %v", err)

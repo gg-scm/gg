@@ -57,7 +57,7 @@ for determining the default branch for merges and rebases.
 gg branch myfeature
 # hack hack hack
 gg commit -m "Added a feature"
-gg push --create
+gg push --new-branch -r myfeature
 ```
 
 If you're on GitHub, you can use `gg requestpull` (commonly abbreviated to `gg
