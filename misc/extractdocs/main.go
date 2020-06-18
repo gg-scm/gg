@@ -18,6 +18,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"go/ast"
@@ -35,7 +36,6 @@ import (
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/loader"
-	"golang.org/x/xerrors"
 )
 
 const (
@@ -85,7 +85,7 @@ func run(outDir string, names []string, touch bool) error {
 		}
 	}
 	if !success {
-		return xerrors.New("not all pages written")
+		return errors.New("not all pages written")
 	}
 	return nil
 }
@@ -187,7 +187,7 @@ func writePage(path string, c *command, genTime time.Time, touch bool) error {
 	if content, err := ioutil.ReadFile(path); err == nil {
 		frontMatter, err = parseFrontMatter(content)
 		if err != nil {
-			return xerrors.Errorf("write page for %s: %w", c.name, err)
+			return fmt.Errorf("write page for %s: %w", c.name, err)
 		}
 	} else if os.IsNotExist(err) {
 		frontMatter = map[string]interface{}{
@@ -195,7 +195,7 @@ func writePage(path string, c *command, genTime time.Time, touch bool) error {
 			"date":  genTime.Format(hugoDateFormat),
 		}
 	} else {
-		return xerrors.Errorf("write page for %s: %w", c.name, err)
+		return fmt.Errorf("write page for %s: %w", c.name, err)
 	}
 	frontMatter["usage"] = c.usage
 	if touch {
@@ -213,7 +213,7 @@ func writePage(path string, c *command, genTime time.Time, touch bool) error {
 	enc.SetIndent("", "    ")
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(frontMatter); err != nil {
-		return xerrors.Errorf("write page for %s: %w", c.name, err)
+		return fmt.Errorf("write page for %s: %w", c.name, err)
 	}
 	buf.WriteString("\n") // Leave a blank line between front matter and content.
 
@@ -244,7 +244,7 @@ func writePage(path string, c *command, genTime time.Time, touch bool) error {
 		buf.WriteString("</dl>\n")
 	}
 	if err := ioutil.WriteFile(path, buf.Bytes(), 0666); err != nil {
-		return xerrors.Errorf("write page for %s: %w", c.name, err)
+		return fmt.Errorf("write page for %s: %w", c.name, err)
 	}
 	return nil
 }
@@ -254,28 +254,28 @@ func writePage(path string, c *command, genTime time.Time, touch bool) error {
 // Details: https://gohugo.io/content-management/front-matter/
 func parseFrontMatter(content []byte) (map[string]interface{}, error) {
 	if bytes.HasPrefix(content, []byte("---")) {
-		return nil, xerrors.New("found YAML front matter, want JSON")
+		return nil, errors.New("found YAML front matter, want JSON")
 	}
 	if bytes.HasPrefix(content, []byte("+++")) {
-		return nil, xerrors.New("found TOML front matter, want JSON")
+		return nil, errors.New("found TOML front matter, want JSON")
 	}
 	if !bytes.HasPrefix(content, []byte("{")) {
-		return nil, xerrors.New("could not parse front matter")
+		return nil, errors.New("could not parse front matter")
 	}
 	r := bytes.NewReader(content)
 	d := json.NewDecoder(r)
 	var m map[string]interface{}
 	if err := d.Decode(&m); err != nil {
-		return nil, xerrors.Errorf("parse front matter: %w", err)
+		return nil, fmt.Errorf("parse front matter: %w", err)
 	}
 	// Next byte after JSON object must be a newline.
 	mr := io.MultiReader(d.Buffered(), r)
 	var b [1]byte
 	if _, err := io.ReadFull(mr, b[:]); err != nil {
-		return nil, xerrors.Errorf("parse front matter: %w", err)
+		return nil, fmt.Errorf("parse front matter: %w", err)
 	}
 	if b[0] != '\n' {
-		return nil, xerrors.New("could not parse front matter")
+		return nil, errors.New("could not parse front matter")
 	}
 	return m, nil
 }

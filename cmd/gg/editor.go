@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -26,7 +27,6 @@ import (
 	"gg-scm.io/pkg/internal/escape"
 	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/sigterm"
-	"golang.org/x/xerrors"
 )
 
 // editor allows editing text content interactively.
@@ -46,21 +46,21 @@ type editor struct {
 func (e *editor) open(ctx context.Context, basename string, initial []byte) ([]byte, error) {
 	editor, err := e.git.Output(ctx, "var", "GIT_EDITOR")
 	if err != nil {
-		return nil, xerrors.Errorf("open editor: %w", err)
+		return nil, fmt.Errorf("open editor: %w", err)
 	}
 	editor = strings.TrimSuffix(editor, "\n")
 	dir, err := ioutil.TempDir(e.tempRoot, "gg_editor")
 	if err != nil {
-		return nil, xerrors.Errorf("open editor: %w", err)
+		return nil, fmt.Errorf("open editor: %w", err)
 	}
 	defer func() {
 		if err := os.RemoveAll(dir); err != nil {
-			e.log(xerrors.Errorf("clean up editor: %w", err))
+			e.log(fmt.Errorf("clean up editor: %w", err))
 		}
 	}()
 	path := filepath.Join(dir, basename)
 	if err := ioutil.WriteFile(path, initial, 0600); err != nil {
-		return nil, xerrors.Errorf("open editor: %w", err)
+		return nil, fmt.Errorf("open editor: %w", err)
 	}
 	c := exec.Command("/bin/sh", "-c", string(editor)+" "+escape.Shell(path))
 	c.Stdin = e.stdin
@@ -71,11 +71,11 @@ func (e *editor) open(ctx context.Context, basename string, initial []byte) ([]b
 		c.Env = []string{} // force empty
 	}
 	if err := sigterm.Run(ctx, c); err != nil {
-		return nil, xerrors.Errorf("open editor: %w", err)
+		return nil, fmt.Errorf("open editor: %w", err)
 	}
 	edited, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, xerrors.Errorf("open editor: read result: %w", err)
+		return nil, fmt.Errorf("open editor: read result: %w", err)
 	}
 	return edited, nil
 }

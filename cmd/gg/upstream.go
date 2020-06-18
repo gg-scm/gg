@@ -16,11 +16,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/sigterm"
-	"golang.org/x/xerrors"
 )
 
 const upstreamSynopsis = "query or set upstream branch"
@@ -51,7 +51,7 @@ func upstream(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		*branch = rev.Ref.Branch()
 		if *branch == "" {
-			return xerrors.New("no branch currently checked out; please specify branch with -b")
+			return errors.New("no branch currently checked out; please specify branch with -b")
 		}
 	}
 	if f.Arg(0) == "" {

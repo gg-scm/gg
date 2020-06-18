@@ -16,11 +16,11 @@ package git
 
 import (
 	"context"
+	"errors"
 	"os/exec"
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
-	"golang.org/x/xerrors"
 )
 
 func TestCommandError(t *testing.T) {
@@ -42,7 +42,7 @@ func TestCommandError(t *testing.T) {
 	}{
 		{
 			prefix:   "git commit",
-			runError: xerrors.New("could not start because reasons"),
+			runError: errors.New("could not start because reasons"),
 			want:     "git commit: could not start because reasons",
 		},
 		{
@@ -52,13 +52,13 @@ func TestCommandError(t *testing.T) {
 		},
 		{
 			prefix:   "git commit",
-			runError: xerrors.New("could not copy I/O"),
+			runError: errors.New("could not copy I/O"),
 			stderr:   "fatal: everything failed\n",
 			want:     "git commit: could not copy I/O\nfatal: everything failed",
 		},
 		{
 			prefix:   "git commit",
-			runError: xerrors.New("could not copy I/O"),
+			runError: errors.New("could not copy I/O"),
 			stderr:   "fatal: everything failed", // no trailing newline
 			want:     "git commit: could not copy I/O\nfatal: everything failed",
 		},
@@ -70,13 +70,13 @@ func TestCommandError(t *testing.T) {
 		},
 		{
 			prefix:   "git commit",
-			runError: xerrors.New("could not copy I/O"),
+			runError: errors.New("could not copy I/O"),
 			stderr:   "fatal: everything failed\nThis is the work of Voldemort.\n",
 			want:     "git commit: could not copy I/O\nfatal: everything failed\nThis is the work of Voldemort.",
 		},
 		{
 			prefix:   "git commit",
-			runError: xerrors.New("could not copy I/O"),
+			runError: errors.New("could not copy I/O"),
 			stderr:   "fatal: everything failed\nThis is the work of Voldemort.", // no trailing newline
 			want:     "git commit: could not copy I/O\nfatal: everything failed\nThis is the work of Voldemort.",
 		},

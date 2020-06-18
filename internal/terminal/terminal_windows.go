@@ -15,10 +15,10 @@
 package terminal
 
 import (
+	"errors"
 	"io"
 
 	"golang.org/x/sys/windows"
-	"golang.org/x/xerrors"
 )
 
 func isTerminal(fd uintptr) bool {
@@ -28,5 +28,5 @@ func isTerminal(fd uintptr) bool {
 }
 
 func resetTextStyle(w io.Writer) error {
-	return xerrors.New("reset text style not implemented on Windows")
+	return errors.New("reset text style not implemented on Windows")
 }

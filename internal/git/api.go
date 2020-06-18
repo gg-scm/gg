@@ -17,6 +17,7 @@ package git
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,7 +28,6 @@ import (
 	"time"
 
 	"gg-scm.io/pkg/internal/sigterm"
-	"golang.org/x/xerrors"
 )
 
 // WorkTree determines the absolute path of the root of the current
@@ -40,11 +40,11 @@ func (g *Git) WorkTree(ctx context.Context) (string, error) {
 	}
 	line, err := oneLine(out)
 	if err != nil {
-		return "", xerrors.Errorf("%s: %w", errPrefix, err)
+		return "", fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	evaled, err := filepath.EvalSymlinks(line)
 	if err != nil {
-		return "", xerrors.Errorf("%s: %w", errPrefix, err)
+		return "", fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	return evaled, nil
 }
@@ -59,7 +59,7 @@ func (g *Git) prefix(ctx context.Context) (string, error) {
 	}
 	prefix, err = oneLine(prefix)
 	if err != nil {
-		return "", xerrors.Errorf("%s: %w", errPrefix, err)
+		return "", fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	return prefix, nil
 }
@@ -76,7 +76,7 @@ func (g *Git) GitDir(ctx context.Context) (string, error) {
 	}
 	line, err := oneLine(out)
 	if err != nil {
-		return "", xerrors.Errorf("%s: %w", errPrefix, err)
+		return "", fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	var path string
 	if filepath.IsAbs(line) {
@@ -86,7 +86,7 @@ func (g *Git) GitDir(ctx context.Context) (string, error) {
 	}
 	evaled, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return "", xerrors.Errorf("%s: %w", errPrefix, err)
+		return "", fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	return evaled, nil
 }
@@ -119,11 +119,11 @@ func (g *Git) CommonDir(ctx context.Context) (string, error) {
 			commonDir = filepath.Join(dir, commonDir)
 		}
 	} else if !os.IsNotExist(err) {
-		return "", xerrors.Errorf("%s: %w", errPrefix, err)
+		return "", fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	evaled, err := filepath.EvalSymlinks(commonDir)
 	if err != nil {
-		return "", xerrors.Errorf("%s: %w", errPrefix, err)
+		return "", fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	return evaled, nil
 }
@@ -133,14 +133,14 @@ func (g *Git) IsMerging(ctx context.Context) (bool, error) {
 	const errPrefix = "check git merge"
 	gitDir, err := g.GitDir(ctx)
 	if err != nil {
-		return false, xerrors.Errorf("%s: %w", errPrefix, err)
+		return false, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	_, err = os.Stat(filepath.Join(gitDir, "MERGE_HEAD"))
 	if os.IsNotExist(err) {
 		return false, nil
 	}
 	if err != nil {
-		return false, xerrors.Errorf("%s: %w", errPrefix, err)
+		return false, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	return true, nil
 }
@@ -150,10 +150,10 @@ func (g *Git) IsMerging(ctx context.Context) (bool, error) {
 func (g *Git) MergeBase(ctx context.Context, rev1, rev2 string) (Hash, error) {
 	errPrefix := fmt.Sprintf("git merge-base %q %q", rev1, rev2)
 	if err := validateRev(rev1); err != nil {
-		return Hash{}, xerrors.Errorf("%s: %w", errPrefix, err)
+		return Hash{}, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	if err := validateRev(rev2); err != nil {
-		return Hash{}, xerrors.Errorf("%s: %w", errPrefix, err)
+		return Hash{}, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	out, err := g.output(ctx, errPrefix, []string{g.exe, "merge-base", rev1, rev2})
 	if err != nil {
@@ -161,7 +161,7 @@ func (g *Git) MergeBase(ctx context.Context, rev1, rev2 string) (Hash, error) {
 	}
 	h, err := ParseHash(strings.TrimSuffix(out, "\n"))
 	if err != nil {
-		return Hash{}, xerrors.Errorf("%s: %w", errPrefix, err)
+		return Hash{}, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	return h, nil
 }
@@ -171,10 +171,10 @@ func (g *Git) MergeBase(ctx context.Context, rev1, rev2 string) (Hash, error) {
 func (g *Git) IsAncestor(ctx context.Context, rev1, rev2 string) (bool, error) {
 	errPrefix := fmt.Sprintf("git: check %q ancestor of %q", rev1, rev2)
 	if err := validateRev(rev1); err != nil {
-		return false, xerrors.Errorf("%s: %w", errPrefix, err)
+		return false, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	if err := validateRev(rev2); err != nil {
-		return false, xerrors.Errorf("%s: %w", errPrefix, err)
+		return false, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	c := g.command(ctx, []string{g.exe, "merge-base", "--is-ancestor", rev1, rev2})
 	stderr := new(bytes.Buffer)
@@ -193,7 +193,7 @@ func (g *Git) IsAncestor(ctx context.Context, rev1, rev2 string) (bool, error) {
 func (g *Git) ListTree(ctx context.Context, rev string, pathspecs []Pathspec) (map[TopPath]struct{}, error) {
 	errPrefix := fmt.Sprintf("git ls-tree %q", rev)
 	if err := validateRev(rev); err != nil {
-		return nil, xerrors.Errorf("%s: %w", errPrefix, err)
+		return nil, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	args := []string{g.exe, "ls-tree", "-z", "-r", "--name-only"}
 	if len(pathspecs) == 0 {
@@ -214,7 +214,7 @@ func (g *Git) ListTree(ctx context.Context, rev string, pathspecs []Pathspec) (m
 	for len(out) > 0 {
 		i := strings.IndexByte(out, 0)
 		if i == -1 {
-			return paths, xerrors.Errorf("%s: %w", errPrefix, io.ErrUnexpectedEOF)
+			return paths, fmt.Errorf("%s: %w", errPrefix, io.ErrUnexpectedEOF)
 		}
 		paths[TopPath(out[:i])] = struct{}{}
 		out = out[i+1:]
@@ -228,28 +228,28 @@ func (g *Git) ListTree(ctx context.Context, rev string, pathspecs []Pathspec) (m
 func (g *Git) Cat(ctx context.Context, rev string, path TopPath) (io.ReadCloser, error) {
 	errPrefix := fmt.Sprintf("git cat %q @ %q", path, rev)
 	if err := validateRev(rev); err != nil {
-		return nil, xerrors.Errorf("%s: %w", errPrefix, err)
+		return nil, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	if strings.Contains(rev, ":") {
-		return nil, xerrors.Errorf("%s: revision contains ':'", errPrefix)
+		return nil, fmt.Errorf("%s: revision contains ':'", errPrefix)
 	}
 	if path == "" {
-		return nil, xerrors.Errorf("%s: empty path", errPrefix)
+		return nil, fmt.Errorf("%s: empty path", errPrefix)
 	}
 	if strings.HasPrefix(string(path), "./") || strings.HasPrefix(string(path), "../") {
-		return nil, xerrors.Errorf("%s: path is relative", errPrefix)
+		return nil, fmt.Errorf("%s: path is relative", errPrefix)
 	}
 	c := g.command(ctx, []string{g.exe, "cat-file", "blob", rev + ":" + path.String()})
 	stdout, err := c.StdoutPipe()
 	if err != nil {
-		return nil, xerrors.Errorf("%s: %w", errPrefix, err)
+		return nil, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	stderr := new(bytes.Buffer)
 	c.Stderr = &limitWriter{w: stderr, n: 4096}
 	wait, err := sigterm.Start(ctx, c)
 	if err != nil {
 		stdout.Close()
-		return nil, xerrors.Errorf("%s: %w", errPrefix, err)
+		return nil, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 
 	// If Git reports an error, stdout will be empty and stderr will
@@ -299,7 +299,7 @@ func (cr *catReader) Close() error {
 		return commandError("close "+cr.errPrefix, waitErr, cr.stderr.Bytes())
 	}
 	if closeErr != nil {
-		return xerrors.Errorf("close %s: %w", cr.errPrefix, closeErr)
+		return fmt.Errorf("close %s: %w", cr.errPrefix, closeErr)
 	}
 	return nil
 }
@@ -485,14 +485,14 @@ func (g *Git) CommitFiles(ctx context.Context, message string, pathspecs []Paths
 	if len(pathspecs) > 0 {
 		prefix, err := g.prefix(ctx)
 		if err != nil {
-			return xerrors.Errorf("%s: %w", errPrefix, err)
+			return fmt.Errorf("%s: %w", errPrefix, err)
 		}
 		if prefix != "" {
 			// Always run from top of worktree to avoid Git bug detailed in
 			// https://github.com/zombiezen/gg/issues/10
 			workTree, err := g.WorkTree(ctx)
 			if err != nil {
-				return xerrors.Errorf("%s: %w", errPrefix, err)
+				return fmt.Errorf("%s: %w", errPrefix, err)
 			}
 			g = g.WithDir(workTree)
 
@@ -548,7 +548,7 @@ type AmendOptions struct {
 
 func (opts AmendOptions) validate() error {
 	if (opts.Author.Name != "") != (opts.Author.Email != "") {
-		return xerrors.New("author partially filled")
+		return errors.New("author partially filled")
 	}
 	return nil
 }
@@ -581,13 +581,13 @@ func (opts AmendOptions) addToEnv(env []string) []string {
 func (g *Git) Amend(ctx context.Context, opts AmendOptions) error {
 	const errPrefix = "git commit --amend"
 	if err := opts.validate(); err != nil {
-		return xerrors.Errorf("%s: %w", errPrefix, err)
+		return fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	msg := opts.Message
 	if msg == "" {
 		info, err := g.CommitInfo(ctx, "HEAD")
 		if err != nil {
-			return xerrors.Errorf("%s: %w", errPrefix, err)
+			return fmt.Errorf("%s: %w", errPrefix, err)
 		}
 		msg = info.Message
 	}
@@ -615,13 +615,13 @@ func (g *Git) Amend(ctx context.Context, opts AmendOptions) error {
 func (g *Git) AmendAll(ctx context.Context, opts AmendOptions) error {
 	const errPrefix = "git commit --amend --all"
 	if err := opts.validate(); err != nil {
-		return xerrors.Errorf("%s: %w", errPrefix, err)
+		return fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	msg := opts.Message
 	if msg == "" {
 		info, err := g.CommitInfo(ctx, "HEAD")
 		if err != nil {
-			return xerrors.Errorf("%s: %w", errPrefix, err)
+			return fmt.Errorf("%s: %w", errPrefix, err)
 		}
 		msg = info.Message
 	}
@@ -654,27 +654,27 @@ func (g *Git) AmendAll(ctx context.Context, opts AmendOptions) error {
 func (g *Git) AmendFiles(ctx context.Context, pathspecs []Pathspec, opts AmendOptions) error {
 	const errPrefix = "git commit --amend --only"
 	if err := opts.validate(); err != nil {
-		return xerrors.Errorf("%s: %w", errPrefix, err)
+		return fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	msg := opts.Message
 	if msg == "" {
 		info, err := g.CommitInfo(ctx, "HEAD")
 		if err != nil {
-			return xerrors.Errorf("%s: %w", errPrefix, err)
+			return fmt.Errorf("%s: %w", errPrefix, err)
 		}
 		msg = info.Message
 	}
 	if len(pathspecs) > 0 {
 		prefix, err := g.prefix(ctx)
 		if err != nil {
-			return xerrors.Errorf("%s: %w", errPrefix, err)
+			return fmt.Errorf("%s: %w", errPrefix, err)
 		}
 		if prefix != "" {
 			// Always run from top of worktree to avoid Git bug detailed in
 			// https://github.com/zombiezen/gg/issues/10
 			workTree, err := g.WorkTree(ctx)
 			if err != nil {
-				return xerrors.Errorf("%s: %w", errPrefix, err)
+				return fmt.Errorf("%s: %w", errPrefix, err)
 			}
 			g = g.WithDir(workTree)
 
@@ -728,11 +728,11 @@ func (g *Git) AmendFiles(ctx context.Context, pathspecs []Pathspec, opts AmendOp
 func (g *Git) Merge(ctx context.Context, revs []string) error {
 	errPrefix := "git merge"
 	if len(revs) == 0 {
-		return xerrors.New(errPrefix + ": no revisions")
+		return errors.New(errPrefix + ": no revisions")
 	}
 	for _, rev := range revs {
 		if err := validateRev(rev); err != nil {
-			return xerrors.Errorf("%s: %w", errPrefix, err)
+			return fmt.Errorf("%s: %w", errPrefix, err)
 		}
 	}
 	if len(revs) == 1 {
@@ -793,10 +793,10 @@ func (ccb CheckoutConflictBehavior) String() string {
 func (g *Git) CheckoutBranch(ctx context.Context, branch string, opts CheckoutOptions) error {
 	errPrefix := fmt.Sprintf("git checkout %q", branch)
 	if err := validateBranch(branch); err != nil {
-		return xerrors.Errorf("%s: %w", errPrefix, err)
+		return fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	if opts.ConflictBehavior != AbortOnFileChange && opts.ConflictBehavior != MergeLocal && opts.ConflictBehavior != DiscardLocal {
-		return xerrors.Errorf("%s: unknown conflict behavior in options", errPrefix)
+		return fmt.Errorf("%s: unknown conflict behavior in options", errPrefix)
 	}
 	// Verify that the branch exists. `git checkout` will attempt to
 	// create branches if they don't exist if there's a remote tracking
@@ -826,7 +826,7 @@ func (g *Git) CheckoutBranch(ctx context.Context, branch string, opts CheckoutOp
 func (g *Git) CheckoutRev(ctx context.Context, rev string, opts CheckoutOptions) error {
 	errPrefix := fmt.Sprintf("git checkout --detach %q", rev)
 	if err := validateRev(rev); err != nil {
-		return xerrors.Errorf("%s: %w", errPrefix, err)
+		return fmt.Errorf("%s: %w", errPrefix, err)
 	}
 
 	// Run checkout with the revision.
@@ -865,11 +865,11 @@ type BranchOptions struct {
 func (g *Git) NewBranch(ctx context.Context, name string, opts BranchOptions) error {
 	errPrefix := fmt.Sprintf("git branch %q", name)
 	if err := validateBranch(name); err != nil {
-		return xerrors.Errorf("%s: %w", errPrefix, err)
+		return fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	if opts.StartPoint != "" {
 		if err := validateRev(opts.StartPoint); err != nil {
-			return xerrors.Errorf("%s: %w", errPrefix, err)
+			return fmt.Errorf("%s: %w", errPrefix, err)
 		}
 	}
 	args := []string{g.exe}
@@ -916,7 +916,7 @@ func (g *Git) NullTreeHash(ctx context.Context) (Hash, error) {
 	}
 	h, err := ParseHash(strings.TrimSuffix(out, "\n"))
 	if err != nil {
-		return Hash{}, xerrors.Errorf("%s: %w", errPrefix, err)
+		return Hash{}, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	return h, nil
 }
@@ -926,35 +926,35 @@ func (g *Git) NullTreeHash(ctx context.Context) (Hash, error) {
 func commandError(prefix string, runError error, stderr []byte) error {
 	stderr = bytes.TrimSuffix(stderr, []byte{'\n'})
 	if len(stderr) == 0 {
-		return xerrors.Errorf("%s: %w", prefix, runError)
+		return fmt.Errorf("%s: %w", prefix, runError)
 	}
 	if _, isExit := runError.(*exec.ExitError); isExit {
 		if bytes.IndexByte(stderr, '\n') == -1 {
 			// Collapse into single line.
-			return xerrors.Errorf("%s: %s", prefix, stderr)
+			return fmt.Errorf("%s: %s", prefix, stderr)
 		}
-		return xerrors.Errorf("%s:\n%s", prefix, stderr)
+		return fmt.Errorf("%s:\n%s", prefix, stderr)
 	}
 	// TODO(someday): Use %w when https://golang.org/issue/33143 is fixed.
-	return xerrors.Errorf("%s: %v\n%s", prefix, runError, stderr)
+	return fmt.Errorf("%s: %v\n%s", prefix, runError, stderr)
 }
 
 func validateRev(rev string) error {
 	if rev == "" {
-		return xerrors.New("empty revision")
+		return errors.New("empty revision")
 	}
 	if strings.HasPrefix(rev, "-") {
-		return xerrors.New("revision cannot begin with dash")
+		return errors.New("revision cannot begin with dash")
 	}
 	return nil
 }
 
 func validateBranch(branch string) error {
 	if branch == "" {
-		return xerrors.New("empty branch")
+		return errors.New("empty branch")
 	}
 	if strings.HasPrefix(branch, "-") {
-		return xerrors.New("branch cannot begin with dash")
+		return errors.New("branch cannot begin with dash")
 	}
 	return nil
 }

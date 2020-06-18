@@ -18,13 +18,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 
 	"gg-scm.io/pkg/internal/sigterm"
-	"golang.org/x/xerrors"
 )
 
 // CommitInfo stores information about a single commit.
@@ -56,16 +56,16 @@ func (u User) String() string {
 func (g *Git) CommitInfo(ctx context.Context, rev string) (*CommitInfo, error) {
 	errPrefix := fmt.Sprintf("git log %q", rev)
 	if err := validateRev(rev); err != nil {
-		return nil, xerrors.Errorf("%s: %w", errPrefix, err)
+		return nil, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	if strings.HasPrefix(rev, "^") {
-		return nil, xerrors.Errorf("%s: revision cannot be an exclusion", errPrefix)
+		return nil, fmt.Errorf("%s: revision cannot be an exclusion", errPrefix)
 	}
 	if strings.Contains(rev, "..") {
-		return nil, xerrors.Errorf("%s: revision cannot be a range", errPrefix)
+		return nil, fmt.Errorf("%s: revision cannot be a range", errPrefix)
 	}
 	if strings.HasSuffix(rev, "^@") {
-		return nil, xerrors.Errorf("%s: revision cannot use parent shorthand", errPrefix)
+		return nil, fmt.Errorf("%s: revision cannot use parent shorthand", errPrefix)
 	}
 
 	out, err := g.output(ctx, errPrefix, []string{
@@ -82,7 +82,7 @@ func (g *Git) CommitInfo(ctx context.Context, rev string) (*CommitInfo, error) {
 	}
 	info, err := parseCommitInfo(out)
 	if err != nil {
-		return nil, xerrors.Errorf("%s: %w", errPrefix, err)
+		return nil, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	return info, nil
 }
@@ -94,15 +94,15 @@ const (
 
 func parseCommitInfo(out string) (*CommitInfo, error) {
 	if !strings.HasSuffix(out, "\x00") {
-		return nil, xerrors.New("parse commit: invalid format")
+		return nil, errors.New("parse commit: invalid format")
 	}
 	fields := strings.Split(out[:len(out)-1], "\x00")
 	if len(fields) != commitInfoFieldCount {
-		return nil, xerrors.New("parse commit: invalid format")
+		return nil, errors.New("parse commit: invalid format")
 	}
 	hash, err := ParseHash(fields[0])
 	if err != nil {
-		return nil, xerrors.Errorf("parse commit: hash: %w", err)
+		return nil, fmt.Errorf("parse commit: hash: %w", err)
 	}
 
 	var parents []Hash
@@ -111,18 +111,18 @@ func parseCommitInfo(out string) (*CommitInfo, error) {
 		for _, s := range parentStrings {
 			p, err := ParseHash(s)
 			if err != nil {
-				return nil, xerrors.Errorf("parse commit: parents: %w", err)
+				return nil, fmt.Errorf("parse commit: parents: %w", err)
 			}
 			parents = append(parents, p)
 		}
 	}
 	authorTime, err := time.Parse(time.RFC3339, fields[4])
 	if err != nil {
-		return nil, xerrors.Errorf("parse commit: author time: %w", err)
+		return nil, fmt.Errorf("parse commit: author time: %w", err)
 	}
 	commitTime, err := time.Parse(time.RFC3339, fields[7])
 	if err != nil {
-		return nil, xerrors.Errorf("parse commit: commit time: %w", err)
+		return nil, fmt.Errorf("parse commit: commit time: %w", err)
 	}
 	return &CommitInfo{
 		Hash:    hash,
@@ -173,7 +173,7 @@ func (g *Git) Log(ctx context.Context, opts LogOptions) (*Log, error) {
 	const errPrefix = "git log"
 	for _, rev := range opts.Revs {
 		if err := validateRev(rev); err != nil {
-			return nil, xerrors.Errorf("%s: %w", errPrefix, err)
+			return nil, fmt.Errorf("%s: %w", errPrefix, err)
 		}
 	}
 	args := []string{g.exe, "log", "-z", "--pretty=" + commitInfoPrettyFormat}
@@ -194,7 +194,7 @@ func (g *Git) Log(ctx context.Context, opts LogOptions) (*Log, error) {
 	c := g.command(ctx, args)
 	pipe, err := c.StdoutPipe()
 	if err != nil {
-		return nil, xerrors.Errorf("%s: %w", errPrefix, err)
+		return nil, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	stderr := new(bytes.Buffer)
 	c.Stderr = &limitWriter{w: stderr, n: 4096}
@@ -203,7 +203,7 @@ func (g *Git) Log(ctx context.Context, opts LogOptions) (*Log, error) {
 	if err != nil {
 		cancel()
 		pipe.Close()
-		return nil, xerrors.Errorf("%s: %w", errPrefix, err)
+		return nil, fmt.Errorf("%s: %w", errPrefix, err)
 	}
 	r := bufio.NewReaderSize(pipe, 1<<20 /* 1 MiB */)
 	if _, err := r.Peek(1); err != nil && err != io.EOF {

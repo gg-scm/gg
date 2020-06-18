@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,7 +26,6 @@ import (
 	"path/filepath"
 
 	"gg-scm.io/pkg/internal/flag"
-	"golang.org/x/xerrors"
 )
 
 const gerrithookSynopsis = "install or uninstall Gerrit change ID hook"
@@ -71,11 +71,11 @@ func installGerritHook(ctx context.Context, cc *cmdContext, url string, cacheOnl
 	// This is relatively cheap, so if it fails, we want to fail early.
 	cfg, err := cc.git.ReadConfig(ctx)
 	if err != nil {
-		return xerrors.Errorf("install gerrit hook: %w", err)
+		return fmt.Errorf("install gerrit hook: %w", err)
 	}
 	path, err := commitMsgHookPath(ctx, cfg, cc.git)
 	if err != nil {
-		return xerrors.Errorf("install gerrit hook: %w", err)
+		return fmt.Errorf("install gerrit hook: %w", err)
 	}
 
 	// Open script source.
@@ -108,7 +108,7 @@ readCached:
 		// Either cache-only was requested or we were unable to read from the URL.
 		cacheFile, err := cc.xdgDirs.openCache(cacheName)
 		if err != nil {
-			return xerrors.Errorf("install gerrit hook: %w", err)
+			return fmt.Errorf("install gerrit hook: %w", err)
 		}
 		scriptSource = cacheFile
 	}
@@ -117,7 +117,7 @@ readCached:
 	// Back up old hook.
 	dst := filepath.Join(filepath.Dir(path), "commit-msg.old")
 	if err := os.Rename(path, dst); err != nil && !os.IsNotExist(err) {
-		return xerrors.Errorf("install gerrit hook: %w", err)
+		return fmt.Errorf("install gerrit hook: %w", err)
 	}
 	// Write to hook location in repository, caching if we succeed.
 	flags := os.O_CREATE | os.O_EXCL
@@ -128,7 +128,7 @@ readCached:
 	}
 	f, err := os.OpenFile(path, flags, 0777)
 	if err != nil {
-		return xerrors.Errorf("install gerrit hook: %w", err)
+		return fmt.Errorf("install gerrit hook: %w", err)
 	}
 	_, cpErr := io.Copy(f, scriptSource)
 	if cpErr == nil && writeCache {
@@ -158,10 +158,10 @@ readCached:
 closeHook:
 	closeErr := f.Close()
 	if cpErr != nil {
-		return xerrors.Errorf("install gerrit hook: %w", cpErr)
+		return fmt.Errorf("install gerrit hook: %w", cpErr)
 	}
 	if closeErr != nil {
-		return xerrors.Errorf("install gerrit hook: %w", closeErr)
+		return fmt.Errorf("install gerrit hook: %w", closeErr)
 	}
 	return nil
 }
@@ -169,15 +169,15 @@ closeHook:
 func uninstallGerritHook(ctx context.Context, cc *cmdContext) error {
 	cfg, err := cc.git.ReadConfig(ctx)
 	if err != nil {
-		return xerrors.Errorf("install gerrit hook: %w", err)
+		return fmt.Errorf("install gerrit hook: %w", err)
 	}
 	path, err := commitMsgHookPath(ctx, cfg, cc.git)
 	if err != nil {
-		return xerrors.Errorf("uninstall gerrit hook: %w", err)
+		return fmt.Errorf("uninstall gerrit hook: %w", err)
 	}
 	dst := filepath.Join(filepath.Dir(path), "commit-msg.old")
 	if err := os.Rename(path, dst); err != nil && !os.IsNotExist(err) {
-		return xerrors.Errorf("uninstall gerrit hook: %w", err)
+		return fmt.Errorf("uninstall gerrit hook: %w", err)
 	}
 	return nil
 }
@@ -229,7 +229,7 @@ type limitedReader struct {
 
 func (l *limitedReader) Read(p []byte) (n int, err error) {
 	if l.N <= 0 {
-		return 0, xerrors.New("read limit reached")
+		return 0, errors.New("read limit reached")
 	}
 	if int64(len(p)) > l.N {
 		p = p[0:l.N]

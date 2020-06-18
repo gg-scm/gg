@@ -16,12 +16,13 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/sigterm"
-	"golang.org/x/xerrors"
 )
 
 const pullSynopsis = "pull changes from the specified source"
@@ -65,7 +66,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		if repo == "" {
 			if _, ok := remotes["origin"]; !ok {
-				return xerrors.New("no source given and no remote named \"origin\" found")
+				return errors.New("no source given and no remote named \"origin\" found")
 			}
 			repo = "origin"
 		}
@@ -95,7 +96,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 			}
 		}
 		if err := cc.git.MutateRefs(ctx, localMuts); err != nil {
-			return xerrors.Errorf("clearing refs/ggpull: %w", err)
+			return fmt.Errorf("clearing refs/ggpull: %w", err)
 		}
 	}
 
@@ -148,13 +149,13 @@ func buildFetchArgs(repo string, isNamedRemote bool, localRefs, remoteRefs map[g
 			switch ref := git.Ref(arg); {
 			case ref.IsBranch():
 				if _, exists := remoteRefs[ref]; !exists {
-					return nil, nil, xerrors.Errorf("can't find ref %q on remote %q", arg, repo)
+					return nil, nil, fmt.Errorf("can't find ref %q on remote %q", arg, repo)
 				}
 				branches = append(branches, ref)
 				continue
 			case ref.IsTag():
 				if _, exists := remoteRefs[ref]; !exists {
-					return nil, nil, xerrors.Errorf("can't find ref %q on remote %q", arg, repo)
+					return nil, nil, fmt.Errorf("can't find ref %q on remote %q", arg, repo)
 				}
 				tags = append(tags, ref)
 				continue
@@ -169,7 +170,7 @@ func buildFetchArgs(repo string, isNamedRemote bool, localRefs, remoteRefs map[g
 				tags = append(tags, tagRef)
 				continue
 			}
-			return nil, nil, xerrors.Errorf("can't find ref %q on remote %q", arg, repo)
+			return nil, nil, fmt.Errorf("can't find ref %q on remote %q", arg, repo)
 		}
 	}
 	gitArgs = append(gitArgs, "--", repo)
@@ -180,7 +181,7 @@ func buildFetchArgs(repo string, isNamedRemote bool, localRefs, remoteRefs map[g
 		if localHash, hasTag := localRefs[tag]; hasTag {
 			// (Already validated above that ref exists on remote.)
 			if remoteHash := remoteRefs[tag]; localHash != remoteHash {
-				return nil, nil, xerrors.Errorf("tag %q is %v on remote, does not match %v locally", tag.Tag(), remoteHash, localHash)
+				return nil, nil, fmt.Errorf("tag %q is %v on remote, does not match %v locally", tag.Tag(), remoteHash, localHash)
 			}
 			continue
 		}

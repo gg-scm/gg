@@ -23,7 +23,6 @@ import (
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/terminal"
-	"golang.org/x/xerrors"
 )
 
 const branchSynopsis = "list or manage branches"
@@ -73,7 +72,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		// Create or update
 		for _, b := range f.Args() {
 			if strings.HasPrefix(b, "-") {
-				return xerrors.Errorf("invalid branch name %q", b)
+				return fmt.Errorf("invalid branch name %q", b)
 			}
 		}
 		target := git.Head.String()
@@ -114,12 +113,12 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 				Checkout:   i == 0 && *rev == "",
 			})
 			if err != nil {
-				return xerrors.Errorf("branch %q: %w", b, err)
+				return fmt.Errorf("branch %q: %w", b, err)
 			}
 			if len(upstreamArgs) > 0 && !exists {
 				upstreamArgs[len(upstreamArgs)-1] = b
 				if err := cc.git.Run(ctx, upstreamArgs...); err != nil {
-					return xerrors.Errorf("branch %q: %w", b, err)
+					return fmt.Errorf("branch %q: %w", b, err)
 				}
 			}
 		}
@@ -196,7 +195,7 @@ func deleteBranches(ctx context.Context, g *git.Git, branchNames []string, force
 	for _, name := range branchNames {
 		r := git.BranchRef(name)
 		if !r.IsValid() {
-			return xerrors.Errorf("invalid branch name %q", name)
+			return fmt.Errorf("invalid branch name %q", name)
 		}
 		branchRefs = append(branchRefs, r)
 	}
@@ -207,7 +206,7 @@ func deleteBranches(ctx context.Context, g *git.Git, branchNames []string, force
 	if head.Ref.IsValid() {
 		for _, ref := range branchRefs {
 			if head.Ref == ref {
-				return xerrors.Errorf("cannot delete checked-out branch %q", head.Ref.Branch())
+				return fmt.Errorf("cannot delete checked-out branch %q", head.Ref.Branch())
 			}
 		}
 	}
@@ -222,7 +221,7 @@ func deleteBranches(ctx context.Context, g *git.Git, branchNames []string, force
 				return err
 			}
 			if len(others) <= 1 {
-				return xerrors.Errorf("changes in branch %q are not merged into other branches; use --force to delete", thisRef.Branch())
+				return fmt.Errorf("changes in branch %q are not merged into other branches; use --force to delete", thisRef.Branch())
 			}
 		}
 	}

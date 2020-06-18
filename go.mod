@@ -14,11 +14,10 @@
 
 module gg-scm.io/pkg
 
-go 1.12
+go 1.14
 
 require (
 	github.com/google/go-cmp v0.3.0
 	golang.org/x/sys v0.0.0-20180329131831-378d26f46672
 	golang.org/x/tools v0.0.0-20180628163957-1c99e1239a0c
-	golang.org/x/xerrors v0.0.0-20190513163551-3ee3066db522
 )

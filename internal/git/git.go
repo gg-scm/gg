@@ -19,6 +19,8 @@ package git // import "gg-scm.io/pkg/internal/git"
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -27,7 +29,6 @@ import (
 	"sync"
 
 	"gg-scm.io/pkg/internal/sigterm"
-	"golang.org/x/xerrors"
 )
 
 // Git is a context for performing Git version control operations.
@@ -58,25 +59,25 @@ type Options struct {
 // New creates a new Git context.
 func New(path string, wd string, opts Options) (*Git, error) {
 	if !filepath.IsAbs(path) {
-		return nil, xerrors.Errorf("path to git must be absolute (got %q)", path)
+		return nil, fmt.Errorf("path to git must be absolute (got %q)", path)
 	}
 	if wd == "" {
-		return nil, xerrors.New("init git: working directory must not be blank")
+		return nil, errors.New("init git: working directory must not be blank")
 	}
 
 	path = filepath.Clean(path)
 	info, err := os.Stat(path)
 	if err != nil {
-		return nil, xerrors.Errorf("stat git: %w", err)
+		return nil, fmt.Errorf("stat git: %w", err)
 	}
 	m := info.Mode()
 	if m.IsDir() || m&0111 == 0 {
-		return nil, xerrors.Errorf("stat git: not an executable file")
+		return nil, fmt.Errorf("stat git: not an executable file")
 	}
 
 	wd, err = filepath.Abs(wd)
 	if err != nil {
-		return nil, xerrors.Errorf("init git: resolve working directory: %w", err)
+		return nil, fmt.Errorf("init git: resolve working directory: %w", err)
 	}
 
 	g := &Git{
@@ -125,7 +126,7 @@ func (g *Git) getVersion(ctx context.Context) (string, error) {
 		case <-c:
 			g.versionMu.Lock()
 		case <-ctx.Done():
-			return "", xerrors.Errorf("git --version: %w", ctx.Err())
+			return "", fmt.Errorf("git --version: %w", ctx.Err())
 		}
 	}
 	if g.version != "" {
@@ -229,7 +230,7 @@ func oneLine(s string) (string, error) {
 		return "", io.ErrUnexpectedEOF
 	}
 	if i < len(s)-1 {
-		return "", xerrors.New("multiple lines present")
+		return "", errors.New("multiple lines present")
 	}
 	return s[:len(s)-1], nil
 }
@@ -255,7 +256,7 @@ func (lw *limitWriter) Write(p []byte) (int, error) {
 		if err != nil {
 			return n, err
 		}
-		return n, xerrors.New("buffer full")
+		return n, errors.New("buffer full")
 	}
 	n, err := lw.w.Write(p)
 	lw.n -= int64(n)

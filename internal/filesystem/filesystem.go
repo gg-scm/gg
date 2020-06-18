@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/xerrors"
 )
 
 // An Operation describes a single step of a Dir.Apply. The zero value
@@ -200,7 +199,7 @@ func (dir Dir) FromSlash(path string) string {
 
 func (dir Dir) fromSlash(op, path string) (string, error) {
 	if strings.HasPrefix(path, "/") {
-		return "", xerrors.Errorf("filesystem: %s %q: absolute path not permitted", op, path)
+		return "", fmt.Errorf("filesystem: %s %q: absolute path not permitted", op, path)
 	}
 	return filepath.Join(string(dir), filepath.FromSlash(path)), nil
 }

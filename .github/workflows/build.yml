@@ -32,7 +32,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.12
+        go-version: 1.14
     - name: Check out code
       uses: actions/checkout@v1
     - name: Install Git 2.20.1
@@ -67,7 +67,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.12
+        go-version: 1.14
     - name: Check out code
       uses: actions/checkout@v1
     - name: Install Git 2.17.1
@@ -102,7 +102,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.12
+        go-version: 1.14
     - name: Check out code
       uses: actions/checkout@v1
     - name: Install Git 2.11.0
@@ -129,7 +129,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.12
+        go-version: 1.14
     - name: Check out code
       uses: actions/checkout@v1
     - name: Install Git 2.20.1

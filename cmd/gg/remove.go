@@ -16,12 +16,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
-	"golang.org/x/xerrors"
 )
 
 const removeSynopsis = "remove the specified files on the next commit"
@@ -70,7 +70,7 @@ func verifyPresent(ctx context.Context, g *git.Git, args []string) error {
 	}
 	for _, ent := range st {
 		if ent.Code.IsMissing() {
-			return xerrors.Errorf("missing %s", ent.Name)
+			return fmt.Errorf("missing %s", ent.Name)
 		}
 	}
 	return nil
@@ -85,7 +85,7 @@ func repoRelativePath(cc *cmdContext, worktree string, name string) (string, err
 	}
 	prefix := worktree + string(filepath.Separator)
 	if !strings.HasPrefix(a, prefix) {
-		return "", xerrors.Errorf("%s is not under %s", name, worktree)
+		return "", fmt.Errorf("%s is not under %s", name, worktree)
 	}
 	return a[len(prefix):], nil
 }

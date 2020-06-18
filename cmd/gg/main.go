@@ -20,6 +20,7 @@ package main // import "gg-scm.io/pkg/cmd/gg"
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -34,7 +35,6 @@ import (
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
 	"gg-scm.io/pkg/internal/sigterm"
-	"golang.org/x/xerrors"
 )
 
 func main() {
@@ -114,7 +114,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		var err error
 		*gitPath, err = pctx.lookPath("git")
 		if err != nil {
-			return xerrors.Errorf("gg: %w", err)
+			return fmt.Errorf("gg: %w", err)
 		}
 	}
 	opts := git.Options{
@@ -140,7 +140,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 	}
 	git, err := git.New(*gitPath, pctx.dir, opts)
 	if err != nil {
-		return xerrors.Errorf("gg: %w", err)
+		return fmt.Errorf("gg: %w", err)
 	}
 	cc := &cmdContext{
 		dir:     pctx.dir,
@@ -165,13 +165,13 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 	}
 	if *versionFlag {
 		if err := showVersion(ctx, cc); err != nil {
-			return xerrors.Errorf("gg: %w", err)
+			return fmt.Errorf("gg: %w", err)
 		}
 		return nil
 	}
 	err = dispatch(ctx, cc, globalFlags, globalFlags.Arg(0), globalFlags.Args()[1:])
 	if err != nil {
-		return xerrors.Errorf("gg: %w", err)
+		return fmt.Errorf("gg: %w", err)
 	}
 	return nil
 }
@@ -452,11 +452,11 @@ func (x *xdgDirs) configPaths() []string {
 // responsibility to close the file.
 func (x *xdgDirs) openCache(name string) (*os.File, error) {
 	if x.cacheHome == "" {
-		return nil, xerrors.Errorf("open cache %s: no $XDG_CACHE_HOME variable set", name)
+		return nil, fmt.Errorf("open cache %s: no $XDG_CACHE_HOME variable set", name)
 	}
 	f, err := os.Open(filepath.Join(x.cacheHome, "gg", filepath.FromSlash(name)))
 	if err != nil {
-		return nil, xerrors.Errorf("open cache %s: %w", name, err)
+		return nil, fmt.Errorf("open cache %s: %w", name, err)
 	}
 	return f, nil
 }
@@ -467,15 +467,15 @@ func (x *xdgDirs) openCache(name string) (*os.File, error) {
 // close the file.
 func (x *xdgDirs) createCache(name string) (*os.File, error) {
 	if x.cacheHome == "" {
-		return nil, xerrors.Errorf("create cache %s: no $XDG_CACHE_HOME variable set", name)
+		return nil, fmt.Errorf("create cache %s: no $XDG_CACHE_HOME variable set", name)
 	}
 	relpath := filepath.Join(x.cacheHome, "gg", filepath.FromSlash(name))
 	if err := os.MkdirAll(filepath.Dir(relpath), 0777); err != nil {
-		return nil, xerrors.Errorf("create cache %s: %w", name, err)
+		return nil, fmt.Errorf("create cache %s: %w", name, err)
 	}
 	f, err := os.Create(relpath)
 	if err != nil {
-		return nil, xerrors.Errorf("create cache %s: %w", name, err)
+		return nil, fmt.Errorf("create cache %s: %w", name, err)
 	}
 	return f, nil
 }
@@ -492,5 +492,5 @@ func (ue *usageError) Error() string {
 }
 
 func isUsage(e error) bool {
-	return xerrors.As(e, new(*usageError))
+	return errors.As(e, new(*usageError))
 }

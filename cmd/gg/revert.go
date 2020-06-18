@@ -16,12 +16,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
-	"golang.org/x/xerrors"
 )
 
 const revertSynopsis = "restore files to their checkout state"
@@ -133,7 +133,7 @@ func backupForRevert(ctx context.Context, cc *cmdContext, modified []git.Pathspe
 		Pathspecs:      modified,
 	})
 	if err != nil {
-		return xerrors.Errorf("backing up files: %w", err)
+		return fmt.Errorf("backing up files: %w", err)
 	}
 	var names []git.TopPath
 	for _, ent := range st {
@@ -146,12 +146,12 @@ func backupForRevert(ctx context.Context, cc *cmdContext, modified []git.Pathspe
 
 	top, err := cc.git.WorkTree(ctx)
 	if err != nil {
-		return xerrors.Errorf("backing up files: %w", err)
+		return fmt.Errorf("backing up files: %w", err)
 	}
 	for _, name := range names {
 		path := filepath.Join(top, filepath.FromSlash(name.String()))
 		if err := os.Rename(path, path+".orig"); err != nil {
-			return xerrors.Errorf("backing up files: %w", err)
+			return fmt.Errorf("backing up files: %w", err)
 		}
 	}
 	return nil

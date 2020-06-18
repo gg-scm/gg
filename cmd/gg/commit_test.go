@@ -17,6 +17,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -24,7 +25,6 @@ import (
 	"gg-scm.io/pkg/internal/filesystem"
 	"gg-scm.io/pkg/internal/git"
 	"github.com/google/go-cmp/cmp"
-	"golang.org/x/xerrors"
 )
 
 func TestCommit_NoArgs(t *testing.T) {
@@ -1116,7 +1116,7 @@ func objectExists(ctx context.Context, g *git.Git, rev string, path git.TopPath)
 		return err
 	}
 	if _, exists := tree[path]; !exists {
-		return xerrors.Errorf("object %s:%s does not exist", rev, path)
+		return fmt.Errorf("object %s:%s does not exist", rev, path)
 	}
 	return nil
 }

@@ -17,12 +17,12 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
 
 	"gg-scm.io/pkg/internal/git"
-	"golang.org/x/xerrors"
 )
 
 func TestEvolve_FirstChangeSubmitted(t *testing.T) {
@@ -360,31 +360,31 @@ func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file s
 	if err != nil {
 		// First commit
 		if branch != "master" {
-			return git.Hash{}, xerrors.Errorf("make dummy rev: %w", err)
+			return git.Hash{}, fmt.Errorf("make dummy rev: %w", err)
 		}
 	} else if curr.Ref.Branch() != branch {
 		if _, err := g.ParseRev(ctx, "refs/heads/"+branch); err != nil {
 			// Branch doesn't exist, create it.
 			if err := g.NewBranch(ctx, branch, git.BranchOptions{Checkout: true, Track: true}); err != nil {
-				return git.Hash{}, xerrors.Errorf("make dummy rev: %w", err)
+				return git.Hash{}, fmt.Errorf("make dummy rev: %w", err)
 			}
 		} else if err := g.CheckoutBranch(ctx, branch, git.CheckoutOptions{}); err != nil {
-			return git.Hash{}, xerrors.Errorf("make dummy rev: %w", err)
+			return git.Hash{}, fmt.Errorf("make dummy rev: %w", err)
 		}
 	}
 	err = ioutil.WriteFile(filepath.Join(dir, file), []byte("dummy content"), 0666)
 	if err != nil {
-		return git.Hash{}, xerrors.Errorf("make dummy rev: %w", err)
+		return git.Hash{}, fmt.Errorf("make dummy rev: %w", err)
 	}
 	if err := g.Add(ctx, []git.Pathspec{git.LiteralPath(file)}, git.AddOptions{}); err != nil {
-		return git.Hash{}, xerrors.Errorf("make dummy rev: %w", err)
+		return git.Hash{}, fmt.Errorf("make dummy rev: %w", err)
 	}
 	if err := g.Commit(ctx, msg, git.CommitOptions{}); err != nil {
-		return git.Hash{}, xerrors.Errorf("make dummy rev: %w", err)
+		return git.Hash{}, fmt.Errorf("make dummy rev: %w", err)
 	}
 	curr, err = g.Head(ctx)
 	if err != nil {
-		return git.Hash{}, xerrors.Errorf("make dummy rev: %w", err)
+		return git.Hash{}, fmt.Errorf("make dummy rev: %w", err)
 	}
 	return curr.Commit, nil
 }

@@ -17,10 +17,11 @@ package git
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"io"
 
 	"gg-scm.io/pkg/internal/sigterm"
-	"golang.org/x/xerrors"
 )
 
 // Config is a collection of configuration settings.
@@ -40,7 +41,7 @@ func (g *Git) ReadConfig(ctx context.Context) (*Config, error) {
 	}
 	cfg, err := parseConfig(stdout.Bytes())
 	if err != nil {
-		return nil, xerrors.Errorf("read git config: %w", err)
+		return nil, fmt.Errorf("read git config: %w", err)
 	}
 	return cfg, nil
 }
@@ -95,7 +96,7 @@ func (cfg *Config) CommentChar() (string, error) {
 		return "#", nil
 	}
 	if v == "auto" {
-		return "", xerrors.New("git config: core.commentChar=auto not supported")
+		return "", errors.New("git config: core.commentChar=auto not supported")
 	}
 	return v, nil
 }
@@ -111,7 +112,7 @@ func (cfg *Config) Value(name string) string {
 func (cfg *Config) Bool(name string) (bool, error) {
 	v, ok := cfg.findLast(name)
 	if !ok {
-		return false, xerrors.Errorf("config %s: not found", name)
+		return false, fmt.Errorf("config %s: not found", name)
 	}
 	if v == nil {
 		// No equals sign, which implies true.
@@ -119,7 +120,7 @@ func (cfg *Config) Bool(name string) (bool, error) {
 	}
 	b, ok := parseBool(v)
 	if !ok {
-		return false, xerrors.Errorf("config %s: cannot parse %q as a bool", name, v)
+		return false, fmt.Errorf("config %s: cannot parse %q as a bool", name, v)
 	}
 	return b, nil
 }
