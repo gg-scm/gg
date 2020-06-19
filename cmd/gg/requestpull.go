@@ -190,7 +190,7 @@ aliases: pr
 			"# line will be used as the title and must not be empty.\n")
 		fmt.Fprintf(editorInit, "# %s/%s: merge into %s:%s from %s:%s\n",
 			baseOwner, baseRepo, baseOwner, baseBranch, headOwner, branch)
-		newMsg, err := cc.editor.open(ctx, "PR_EDITMSG", editorInit.Bytes())
+		newMsg, err := cc.editor.open(ctx, "PR_EDITMSG.md", editorInit.Bytes())
 		if err != nil {
 			return err
 		}

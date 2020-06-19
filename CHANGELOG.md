@@ -29,6 +29,8 @@
 - The `gg push --create` flag is now `gg push --new-branch` to match Mercurial.
 - gg tests are now run by [GitHub Actions][] instead of Travis.
   [Shout out to Nat Friedman][Nat Friedman tweet] for the invite!
+- When `gg requestpull` opens an editor, the file will have a `.md` extension.
+  ([#113](https://github.com/zombiezen/gg/issues/113))
 
 [GitHub Actions]: https://github.com/features/actions
 [Nat Friedman tweet]: https://twitter.com/natfriedman/status/1162822908411965441
