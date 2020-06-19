@@ -13,6 +13,8 @@
   ([#108](https://github.com/zombiezen/gg/issues/108))
 - `gg push` now pushes all branches unless limited with the `-r` flag.
   ([#100](https://github.com/zombiezen/gg/issues/100))
+- `gg requestpull` will copy the repository's pull request template into the
+  opened editor. ([#110](https://github.com/zombiezen/gg/issues/110))
 
 ## Changes
 

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"mime"
 	"net/http"
@@ -271,7 +272,37 @@ func inferPullRequestMessage(ctx context.Context, g *git.Git, base, head string)
 	if i == 0 {
 		return "", "", errors.New("infer PR message: no divergent commits")
 	}
-	return title, strings.TrimSpace(bodyBuilder.String()), nil
+
+	body = strings.TrimSpace(bodyBuilder.String())
+	if template := readPullRequestTemplate(ctx, g); template != "" {
+		body += "\n\n" + strings.TrimSpace(template)
+	}
+	return title, body, nil
+}
+
+func readPullRequestTemplate(ctx context.Context, g *git.Git) string {
+	potential := []git.TopPath{
+		"pull_request_template.md",
+		"PULL_REQUEST_TEMPLATE/pull_request_template.md",
+		"docs/pull_request_template.md",
+		"docs/PULL_REQUEST_TEMPLATE/pull_request_template.md",
+		".github/pull_request_template.md",
+		".github/PULL_REQUEST_TEMPLATE/pull_request_template.md",
+	}
+	for _, p := range potential {
+		rc, err := g.Cat(ctx, git.Head.String(), p)
+		if err != nil {
+			continue
+		}
+		content := new(strings.Builder)
+		_, err = io.Copy(content, rc)
+		rc.Close()
+		if err != nil {
+			continue
+		}
+		return content.String()
+	}
+	return ""
 }
 
 func parseEditedPullRequestMessage(b []byte) (title, body string, _ error) {
