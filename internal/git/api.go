@@ -962,8 +962,7 @@ func commandError(prefix string, runError error, stderr []byte) error {
 		}
 		return fmt.Errorf("%s:\n%s", prefix, stderr)
 	}
-	// TODO(someday): Use %w when https://golang.org/issue/33143 is fixed.
-	return fmt.Errorf("%s: %v\n%s", prefix, runError, stderr)
+	return fmt.Errorf("%s: %w\n%s", prefix, runError, stderr)
 }
 
 func validateRev(rev string) error {

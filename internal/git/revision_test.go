@@ -503,6 +503,36 @@ func TestListRefs(t *testing.T) {
 	}
 }
 
+func TestListRefs_Empty(t *testing.T) {
+	gitPath, err := findGit()
+	if err != nil {
+		t.Skip("git not found:", err)
+	}
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, gitPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	// Since ListRefs may be used to check state of other commands,
+	// everything here uses raw commands.
+
+	// Create the first main commit.
+	if err := env.g.Init(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call env.g.ListRefs().
+	got, err := env.g.ListRefs(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Errorf("refs = %v; want empty", got)
+	}
+}
+
 func TestMutateRefs(t *testing.T) {
 	gitPath, err := findGit()
 	if err != nil {

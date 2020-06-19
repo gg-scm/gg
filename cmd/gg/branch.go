@@ -152,7 +152,7 @@ func listBranches(ctx context.Context, cc *cmdContext) error {
 	}
 
 	// List branches.
-	head, err := cc.git.Head(ctx)
+	headRef, err := cc.git.HeadRef(ctx)
 	if err != nil {
 		return err
 	}
@@ -175,7 +175,7 @@ func listBranches(ctx context.Context, cc *cmdContext) error {
 	}
 	for _, b := range branches {
 		color, marker := localColor, ' '
-		if head.Ref == git.BranchRef(b) {
+		if headRef == git.BranchRef(b) {
 			color, marker = currentColor, '*'
 		}
 		if _, err := fmt.Fprintf(cc.stdout, "%s%c %s\n", color, marker, b); err != nil {

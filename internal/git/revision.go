@@ -204,6 +204,10 @@ func (g *Git) ListRefs(ctx context.Context) (map[Ref]Hash, error) {
 	const errPrefix = "git show-ref"
 	out, err := g.output(ctx, errPrefix, []string{g.exe, "show-ref", "--dereference", "--head"})
 	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitStatus(exitErr.ProcessState) == 1 && len(out) == 0 {
+			return nil, nil
+		}
 		return nil, err
 	}
 	refs, err := parseRefs(out, false)

@@ -218,3 +218,25 @@ func TestBranch_Delete(t *testing.T) {
 		}
 	})
 }
+
+func TestBranch_ListNewRepo(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.cleanup()
+
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := env.gg(ctx, env.root.String(), "branch")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(out) > 0 {
+		t.Errorf("stdout = %q; want \"\"", out)
+	}
+}
