@@ -168,7 +168,7 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		if err != nil {
 			return err
 		}
-		rebaseArgs := []string{"rebase", "-i", "--onto=" + mergeBase.String(), "--no-fork-point"}
+		rebaseArgs := []string{"rebase", "-i", "--onto=" + mergeBase.String(), "--no-fork-point", "--autosquash"}
 		for _, cmd := range *exec {
 			rebaseArgs = append(rebaseArgs, "--exec="+cmd)
 		}

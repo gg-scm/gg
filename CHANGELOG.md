@@ -31,6 +31,8 @@
   [Shout out to Nat Friedman][Nat Friedman tweet] for the invite!
 - When `gg requestpull` opens an editor, the file will have a `.md` extension.
   ([#113](https://github.com/zombiezen/gg/issues/113))
+- `gg histedit` will now set the `--autosquash` option when running `git rebase`.
+  ([#114](https://github.com/zombiezen/gg/issues/114))
 
 [GitHub Actions]: https://github.com/features/actions
 [Nat Friedman tweet]: https://twitter.com/natfriedman/status/1162822908411965441
