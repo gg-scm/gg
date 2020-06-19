@@ -20,7 +20,7 @@ tracker first. Also, take a look at [DESIGN.md][], which outlines the scope of
 features and the ideas behind the project.
 
 [issues]: https://github.com/zombiezen/gg/issues
-[DESIGN.md]: https://github.com/zombiezen/gg/blob/master/DESIGN.md
+[DESIGN.md]: https://github.com/zombiezen/gg/blob/main/DESIGN.md
 
 ## Building from Source
 

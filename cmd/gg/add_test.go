@@ -151,7 +151,7 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+	if err := env.git.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.git.Merge(ctx, []string{"feature"}); err == nil {
@@ -211,7 +211,7 @@ func TestAdd_Directory(t *testing.T) {
 	if _, err := env.newCommit(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+	if err := env.git.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.git.Merge(ctx, []string{"feature"}); err == nil {

@@ -16,15 +16,17 @@
 
 ## Changes
 
+- The branch name created by `gg init` is now `main`.
+  ([#115](https://github.com/zombiezen/gg/issues/115))
 - `gg log` now logs all revisions by default. Use `gg log -r @` to get the old
   behavior. ([#86](https://github.com/zombiezen/gg/issues/86))
 - `gg log` now always uses `git log --date-order` under the hood. As always, if
   you prefer tighter control over the log, use `git log` directly.
-- gg tests are now run by [GitHub Actions][] instead of Travis.
-  [Shout out to Nat Friedman][Nat Friedman tweet] for the invite!
 - `gg branch --delete` is now implemented in terms of `git update-ref` instead
   of `git branch --delete`.
 - The `gg push --create` flag is now `gg push --new-branch` to match Mercurial.
+- gg tests are now run by [GitHub Actions][] instead of Travis.
+  [Shout out to Nat Friedman][Nat Friedman tweet] for the invite!
 
 [GitHub Actions]: https://github.com/features/actions
 [Nat Friedman tweet]: https://twitter.com/natfriedman/status/1162822908411965441
@@ -184,8 +186,8 @@ There are a few known issues in 0.6:
     ([#22](https://github.com/zombiezen/gg/issues/22) and
     [#41](https://github.com/zombiezen/gg/issues/41))
 -   `push` and `mail` now infer the destination ref for commits that are only
-    present in one branch. For example, a command like `gg push -r master~`
-    will push to `master` on the destination.
+    present in one branch. For example, a command like `gg push -r main~`
+    will push to `main` on the destination.
     ([#31](https://github.com/zombiezen/gg/issues/31))
 -   `rebase --continue` and `histedit --continue` will now
     automatically amend the current commit if changes were made.

@@ -188,11 +188,11 @@ func TestCommit(t *testing.T) {
 		if diff := cmp.Diff(want, got, cmpopts.IgnoreFields(CommitInfo{}, "Hash"), equateTruncatedTime(time.Second)); diff != "" {
 			t.Errorf("CommitInfo(ctx, \"HEAD\") diff (-want +got):\n%s", diff)
 		}
-		// Verify that HEAD is still pointing to master.
+		// Verify that HEAD is still pointing to main.
 		if head, err := env.g.Head(ctx); err != nil {
 			t.Error(err)
-		} else if head.Ref != "refs/heads/master" {
-			t.Errorf("HEAD ref = %s; want refs/heads/master", head.Ref)
+		} else if head.Ref != "refs/heads/main" {
+			t.Errorf("HEAD ref = %s; want refs/heads/main", head.Ref)
 		}
 		// Verify file contents of commit.
 		wantTree := map[TopPath]struct{}{
@@ -264,8 +264,8 @@ func TestCommitFiles(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if r.Ref != "refs/heads/master" {
-			t.Errorf("HEAD ref = %s; want refs/heads/master", r.Ref)
+		if r.Ref != "refs/heads/main" {
+			t.Errorf("HEAD ref = %s; want refs/heads/main", r.Ref)
 		}
 
 		// Verify commit message.
@@ -375,11 +375,11 @@ func TestCommitFiles(t *testing.T) {
 		if diff := cmp.Diff(want, got, cmpopts.IgnoreFields(CommitInfo{}, "Hash"), equateTruncatedTime(time.Second)); diff != "" {
 			t.Errorf("CommitInfo(ctx, \"HEAD\") diff (-want +got):\n%s", diff)
 		}
-		// Verify that HEAD is still pointing to master.
+		// Verify that HEAD is still pointing to main.
 		if head, err := env.g.Head(ctx); err != nil {
 			t.Error(err)
-		} else if head.Ref != "refs/heads/master" {
-			t.Errorf("HEAD ref = %s; want refs/heads/master", head.Ref)
+		} else if head.Ref != "refs/heads/main" {
+			t.Errorf("HEAD ref = %s; want refs/heads/main", head.Ref)
 		}
 
 		// Verify contents of commit.
@@ -576,11 +576,11 @@ func TestCommitAll(t *testing.T) {
 	if diff := cmp.Diff(want, got, cmpopts.IgnoreFields(CommitInfo{}, "Hash"), equateTruncatedTime(time.Second)); diff != "" {
 		t.Errorf("CommitInfo(ctx, \"HEAD\") diff (-want +got):\n%s", diff)
 	}
-	// Verify that HEAD is still pointing to master.
+	// Verify that HEAD is still pointing to main.
 	if head, err := env.g.Head(ctx); err != nil {
 		t.Error(err)
-	} else if head.Ref != "refs/heads/master" {
-		t.Errorf("HEAD ref = %s; want refs/heads/master", head.Ref)
+	} else if head.Ref != "refs/heads/main" {
+		t.Errorf("HEAD ref = %s; want refs/heads/main", head.Ref)
 	}
 
 	// Verify contents of commit.

@@ -23,8 +23,8 @@ import (
 )
 
 type pullTestCommits struct {
-	originalMaster git.Hash
-	newMaster      git.Hash
+	originalMain   git.Hash
+	newMain        git.Hash
 	localCommit    git.Hash
 	divergeCommitA git.Hash
 	divergeCommitB git.Hash
@@ -32,8 +32,8 @@ type pullTestCommits struct {
 
 func (commits pullTestCommits) Names() map[git.Hash]string {
 	return map[git.Hash]string{
-		commits.originalMaster: "original master",
-		commits.newMaster:      "new master",
+		commits.originalMain:   "original main",
+		commits.newMain:        "new main",
 		commits.localCommit:    "commit to local branch",
 		commits.divergeCommitA: "diverge commit in repoA",
 		commits.divergeCommitB: "diverge commit in repoB",
@@ -44,7 +44,7 @@ func (commits pullTestCommits) Names() map[git.Hash]string {
 // repoB, with repoB as a clone of repoA. repoA and repoB are then modified to
 // test a bunch of salient conditions:
 //
-//     - repoB will have a branch "master" that is one commit behind repoA.
+//     - repoB will have a branch "main" that is one commit behind repoA.
 //       This will be the checked out branch.
 //     - repoB will have a branch "local" that is one commit ahead repoA.
 //     - repoB will have a branch "diverge" that is one commit ahead and one
@@ -70,7 +70,7 @@ func setupPullTest(ctx context.Context, env *testEnv) (pullTestCommits, error) {
 	if err != nil {
 		return pullTestCommits{}, err
 	}
-	commits.originalMaster = rev1.Commit
+	commits.originalMain = rev1.Commit
 	if _, err := env.gg(ctx, env.root.String(), "clone", "repoA", "repoB"); err != nil {
 		return pullTestCommits{}, err
 	}
@@ -91,7 +91,7 @@ func setupPullTest(ctx context.Context, env *testEnv) (pullTestCommits, error) {
 	if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
 		return pullTestCommits{}, err
 	}
-	commits.newMaster, err = env.newCommit(ctx, "repoA")
+	commits.newMain, err = env.newCommit(ctx, "repoA")
 	if err != nil {
 		return pullTestCommits{}, err
 	}
@@ -108,8 +108,8 @@ func setupPullTest(ctx context.Context, env *testEnv) (pullTestCommits, error) {
 	if err != nil {
 		return pullTestCommits{}, err
 	}
-	// Ensure repoA's HEAD points to master.
-	if err := gitA.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+	// Ensure repoA's HEAD points to main.
+	if err := gitA.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 		return pullTestCommits{}, err
 	}
 
@@ -141,8 +141,8 @@ func setupPullTest(ctx context.Context, env *testEnv) (pullTestCommits, error) {
 	if err != nil {
 		return pullTestCommits{}, err
 	}
-	// Ensure repoB's HEAD points to master.
-	if err := gitB.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+	// Ensure repoB's HEAD points to main.
+	if err := gitB.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 		return pullTestCommits{}, err
 	}
 
@@ -186,23 +186,23 @@ func TestPull(t *testing.T) {
 		wantRemote string
 		wantMerge  string
 	}{
-		{ref: git.Head, want: commits.originalMaster},
-		{ref: "refs/remotes/origin/master", want: commits.newMaster},
-		{ref: "refs/remotes/origin/local", want: commits.originalMaster},
+		{ref: git.Head, want: commits.originalMain},
+		{ref: "refs/remotes/origin/main", want: commits.newMain},
+		{ref: "refs/remotes/origin/local", want: commits.originalMain},
 		{ref: "refs/remotes/origin/diverge", want: commits.divergeCommitA},
-		{ref: "refs/remotes/origin/newbranch", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/newbranch", want: commits.originalMain},
 		{ref: "refs/remotes/origin/delbranch", wantGone: true},
-		{ref: "refs/ggpull/master", wantGone: true},
+		{ref: "refs/ggpull/main", wantGone: true},
 		{ref: "refs/ggpull/local", wantGone: true},
 		{ref: "refs/ggpull/diverge", wantGone: true},
 		{ref: "refs/ggpull/newbranch", wantGone: true},
 		{ref: "refs/ggpull/delbranch", wantGone: true},
-		{ref: "refs/heads/master", want: commits.originalMaster, wantRemote: "origin", wantMerge: "refs/heads/master"},
+		{ref: "refs/heads/main", want: commits.originalMain, wantRemote: "origin", wantMerge: "refs/heads/main"},
 		{ref: "refs/heads/local", want: commits.localCommit, wantRemote: "origin", wantMerge: "refs/heads/local"},
 		{ref: "refs/heads/diverge", want: commits.divergeCommitB, wantRemote: "origin", wantMerge: "refs/heads/diverge"},
-		{ref: "refs/heads/newbranch", want: commits.originalMaster, wantRemote: "origin", wantMerge: "refs/heads/newbranch"},
-		{ref: "refs/heads/delbranch", want: commits.originalMaster, wantRemote: "origin", wantMerge: "refs/heads/delbranch"},
-		{ref: "refs/tags/first", want: commits.originalMaster},
+		{ref: "refs/heads/newbranch", want: commits.originalMain, wantRemote: "origin", wantMerge: "refs/heads/newbranch"},
+		{ref: "refs/heads/delbranch", want: commits.originalMain, wantRemote: "origin", wantMerge: "refs/heads/delbranch"},
+		{ref: "refs/tags/first", want: commits.originalMain},
 	}
 	for _, check := range refChecks {
 		if branch := check.ref.Branch(); branch != "" {
@@ -273,23 +273,23 @@ func TestPullWithArgument(t *testing.T) {
 		wantRemote string
 		wantMerge  string
 	}{
-		{ref: git.Head, want: commits.originalMaster},
-		{ref: "refs/remotes/origin/master", want: commits.originalMaster},
-		{ref: "refs/remotes/origin/local", want: commits.originalMaster},
-		{ref: "refs/remotes/origin/diverge", want: commits.originalMaster},
+		{ref: git.Head, want: commits.originalMain},
+		{ref: "refs/remotes/origin/main", want: commits.originalMain},
+		{ref: "refs/remotes/origin/local", want: commits.originalMain},
+		{ref: "refs/remotes/origin/diverge", want: commits.originalMain},
 		{ref: "refs/remotes/origin/newbranch", wantGone: true},
-		{ref: "refs/remotes/origin/delbranch", want: commits.originalMaster},
-		{ref: "refs/ggpull/master", want: commits.newMaster},
-		{ref: "refs/ggpull/local", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/delbranch", want: commits.originalMain},
+		{ref: "refs/ggpull/main", want: commits.newMain},
+		{ref: "refs/ggpull/local", want: commits.originalMain},
 		{ref: "refs/ggpull/diverge", want: commits.divergeCommitA},
-		{ref: "refs/ggpull/newbranch", want: commits.originalMaster},
+		{ref: "refs/ggpull/newbranch", want: commits.originalMain},
 		{ref: "refs/ggpull/delbranch", wantGone: true},
-		{ref: "refs/heads/master", want: commits.originalMaster, wantRemote: "origin", wantMerge: "refs/heads/master"},
+		{ref: "refs/heads/main", want: commits.originalMain, wantRemote: "origin", wantMerge: "refs/heads/main"},
 		{ref: "refs/heads/local", want: commits.localCommit, wantRemote: "origin", wantMerge: "refs/heads/local"},
 		{ref: "refs/heads/diverge", want: commits.divergeCommitB, wantRemote: "origin", wantMerge: "refs/heads/diverge"},
-		{ref: "refs/heads/newbranch", want: commits.originalMaster},
-		{ref: "refs/heads/delbranch", want: commits.originalMaster, wantRemote: "origin", wantMerge: "refs/heads/delbranch"},
-		{ref: "refs/tags/first", want: commits.originalMaster},
+		{ref: "refs/heads/newbranch", want: commits.originalMain},
+		{ref: "refs/heads/delbranch", want: commits.originalMain, wantRemote: "origin", wantMerge: "refs/heads/delbranch"},
+		{ref: "refs/tags/first", want: commits.originalMain},
 	}
 	for _, check := range refChecks {
 		if branch := check.ref.Branch(); branch != "" {
@@ -348,23 +348,23 @@ func TestPullUpdate(t *testing.T) {
 		want     git.Hash
 		wantGone bool
 	}{
-		{ref: git.Head, want: commits.newMaster},
-		{ref: "refs/remotes/origin/master", want: commits.newMaster},
-		{ref: "refs/remotes/origin/local", want: commits.originalMaster},
+		{ref: git.Head, want: commits.newMain},
+		{ref: "refs/remotes/origin/main", want: commits.newMain},
+		{ref: "refs/remotes/origin/local", want: commits.originalMain},
 		{ref: "refs/remotes/origin/diverge", want: commits.divergeCommitA},
-		{ref: "refs/remotes/origin/newbranch", want: commits.originalMaster},
+		{ref: "refs/remotes/origin/newbranch", want: commits.originalMain},
 		{ref: "refs/remotes/origin/delbranch", wantGone: true},
-		{ref: "refs/ggpull/master", wantGone: true},
+		{ref: "refs/ggpull/main", wantGone: true},
 		{ref: "refs/ggpull/local", wantGone: true},
 		{ref: "refs/ggpull/diverge", wantGone: true},
 		{ref: "refs/ggpull/newbranch", wantGone: true},
 		{ref: "refs/ggpull/delbranch", wantGone: true},
-		{ref: "refs/heads/master", want: commits.newMaster},
+		{ref: "refs/heads/main", want: commits.newMain},
 		{ref: "refs/heads/local", want: commits.localCommit},
 		{ref: "refs/heads/diverge", want: commits.divergeCommitB},
-		{ref: "refs/heads/newbranch", want: commits.originalMaster},
-		{ref: "refs/heads/delbranch", want: commits.originalMaster},
-		{ref: "refs/tags/first", want: commits.originalMaster},
+		{ref: "refs/heads/newbranch", want: commits.originalMain},
+		{ref: "refs/heads/delbranch", want: commits.originalMain},
+		{ref: "refs/tags/first", want: commits.originalMain},
 	}
 	for _, check := range refChecks {
 		got, exists := refs[check.ref]
@@ -416,21 +416,21 @@ func TestPullRev(t *testing.T) {
 		want     git.Hash
 		wantGone bool
 	}{
-		{ref: git.Head, want: commits.originalMaster},
-		{ref: "refs/remotes/origin/master", want: commits.originalMaster},
-		{ref: "refs/remotes/origin/local", want: commits.originalMaster},
+		{ref: git.Head, want: commits.originalMain},
+		{ref: "refs/remotes/origin/main", want: commits.originalMain},
+		{ref: "refs/remotes/origin/local", want: commits.originalMain},
 		{ref: "refs/remotes/origin/diverge", want: commits.divergeCommitA},
 		{ref: "refs/remotes/origin/newbranch", wantGone: true},
-		{ref: "refs/remotes/origin/delbranch", want: commits.originalMaster},
-		{ref: "refs/ggpull/master", wantGone: true},
+		{ref: "refs/remotes/origin/delbranch", want: commits.originalMain},
+		{ref: "refs/ggpull/main", wantGone: true},
 		{ref: "refs/ggpull/local", wantGone: true},
 		{ref: "refs/ggpull/diverge", wantGone: true},
 		{ref: "refs/ggpull/newbranch", wantGone: true},
 		{ref: "refs/ggpull/delbranch", wantGone: true},
-		{ref: "refs/heads/master", want: commits.originalMaster},
+		{ref: "refs/heads/main", want: commits.originalMain},
 		{ref: "refs/heads/local", want: commits.localCommit},
 		{ref: "refs/heads/diverge", want: commits.divergeCommitB},
-		{ref: "refs/heads/delbranch", want: commits.originalMaster},
+		{ref: "refs/heads/delbranch", want: commits.originalMain},
 	}
 	for _, check := range refChecks {
 		got, exists := refs[check.ref]
@@ -482,22 +482,22 @@ func TestPullRevTag(t *testing.T) {
 		want     git.Hash
 		wantGone bool
 	}{
-		{ref: git.Head, want: commits.originalMaster},
-		{ref: "refs/remotes/origin/master", want: commits.originalMaster},
-		{ref: "refs/remotes/origin/local", want: commits.originalMaster},
-		{ref: "refs/remotes/origin/diverge", want: commits.originalMaster},
+		{ref: git.Head, want: commits.originalMain},
+		{ref: "refs/remotes/origin/main", want: commits.originalMain},
+		{ref: "refs/remotes/origin/local", want: commits.originalMain},
+		{ref: "refs/remotes/origin/diverge", want: commits.originalMain},
 		{ref: "refs/remotes/origin/newbranch", wantGone: true},
-		{ref: "refs/remotes/origin/delbranch", want: commits.originalMaster},
-		{ref: "refs/ggpull/master", wantGone: true},
+		{ref: "refs/remotes/origin/delbranch", want: commits.originalMain},
+		{ref: "refs/ggpull/main", wantGone: true},
 		{ref: "refs/ggpull/local", wantGone: true},
 		{ref: "refs/ggpull/diverge", wantGone: true},
 		{ref: "refs/ggpull/newbranch", wantGone: true},
 		{ref: "refs/ggpull/delbranch", wantGone: true},
-		{ref: "refs/heads/master", want: commits.originalMaster},
+		{ref: "refs/heads/main", want: commits.originalMain},
 		{ref: "refs/heads/local", want: commits.localCommit},
 		{ref: "refs/heads/diverge", want: commits.divergeCommitB},
-		{ref: "refs/heads/delbranch", want: commits.originalMaster},
-		{ref: "refs/tags/first", want: commits.originalMaster},
+		{ref: "refs/heads/delbranch", want: commits.originalMain},
+		{ref: "refs/tags/first", want: commits.originalMain},
 	}
 	for _, check := range refChecks {
 		got, exists := refs[check.ref]
@@ -526,8 +526,8 @@ func TestInferUpstream(t *testing.T) {
 		want        git.Ref
 	}{
 		{localBranch: "", want: "HEAD"},
-		{localBranch: "master", want: "refs/heads/master"},
-		{localBranch: "master", merge: "refs/heads/master", want: "refs/heads/master"},
+		{localBranch: "main", want: "refs/heads/main"},
+		{localBranch: "main", merge: "refs/heads/main", want: "refs/heads/main"},
 		{localBranch: "foo", want: "refs/heads/foo"},
 		{localBranch: "foo", merge: "refs/heads/bar", want: "refs/heads/bar"},
 	}

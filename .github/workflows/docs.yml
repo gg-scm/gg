@@ -16,7 +16,7 @@ name: Docs
 on:
   push:
     branches:
-    - master
+    - main
 jobs:
   hugo:
     name: Hugo

@@ -35,7 +35,7 @@ func TestRebase(t *testing.T) {
 		defer env.cleanup()
 
 		// Create repository with two commits on a branch called "topic" and
-		// a diverging commit on "master".
+		// a diverging commit on "main".
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
@@ -86,7 +86,7 @@ func TestRebase(t *testing.T) {
 			head:           "mainline change",
 		}
 
-		// Call gg with the rebase arguments to move onto master.
+		// Call gg with the rebase arguments to move onto main.
 		ggArgs := []string{"rebase"}
 		if arg := argFunc(head); arg != "" {
 			ggArgs = append(ggArgs, "-base="+arg, "-dst="+arg)
@@ -159,7 +159,7 @@ func TestRebase_Src(t *testing.T) {
 	defer env.cleanup()
 
 	// Create repository with two commits on a branch called "topic" and
-	// a diverging commit on "master".
+	// a diverging commit on "main".
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +210,7 @@ func TestRebase_Src(t *testing.T) {
 		head:           "mainline change",
 	}
 
-	// Call gg to rebase just the second change onto its upstream branch (master).
+	// Call gg to rebase just the second change onto its upstream branch (main).
 	if _, err := env.gg(ctx, env.root.String(), "rebase", "-src="+c2.String()); err != nil {
 		t.Error(err)
 	}
@@ -238,7 +238,7 @@ func TestRebase_Src(t *testing.T) {
 		t.Error("mainline.txt not in rebased change:", err)
 	}
 
-	// Verify that the parent commit is the diverged master commit.
+	// Verify that the parent commit is the diverged main commit.
 	parent, err := env.git.ParseRev(ctx, "HEAD~1")
 	if err != nil {
 		t.Fatal(err)
@@ -294,8 +294,8 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 		c2:             "change 2",
 	}
 
-	// Call gg on master to rebase the second commit onto master.
-	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+	// Call gg on main to rebase the second commit onto main.
+	if err := env.git.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := env.gg(ctx, env.root.String(), "rebase", "-src="+c2.String(), "-dst=HEAD"); err != nil {
@@ -310,8 +310,8 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if _, existedBefore := names[curr.Commit]; existedBefore {
 		t.Fatalf("rebase HEAD = %s; want new commit", prettyCommit(curr.Commit, names))
 	}
-	// Verify that HEAD is on the master branch.
-	if want := git.Ref("refs/heads/master"); curr.Ref != want {
+	// Verify that HEAD is on the main branch.
+	if want := git.Ref("refs/heads/main"); curr.Ref != want {
 		t.Errorf("rebase changed ref to %s; want %s", curr.Ref, want)
 	}
 	// Verify that HEAD contains the file from the second change but not from the first change.
@@ -343,7 +343,7 @@ func TestRebase_Base(t *testing.T) {
 
 	// Create a repository with this commit topology:
 	//
-	// *-----*  master
+	// *-----*  main
 	//  \
 	//   *-*-*  topic
 	//      \
@@ -427,7 +427,7 @@ func TestRebase_Base(t *testing.T) {
 	}
 
 	// Call gg on the topic branch to rebase everything past the merge
-	// point of topic and magic (change 2) onto topic's upstream (master).
+	// point of topic and magic (change 2) onto topic's upstream (main).
 	if err := env.git.CheckoutBranch(ctx, "topic", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
@@ -493,7 +493,7 @@ func TestRebase_ResetUpstream(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		// Create a commit on master.
+		// Create a commit on main.
 		if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
@@ -508,12 +508,12 @@ func TestRebase_ResetUpstream(t *testing.T) {
 		if err := env.git.NewBranch(ctx, "topic", git.BranchOptions{Track: true}); err != nil {
 			t.Fatal(err)
 		}
-		// Move master branch back to the base commit.
+		// Move main branch back to the base commit.
 		// Importantly, this will be recorded in the reflog.
 		if err := env.git.Run(ctx, "reset", "--hard", baseRev.Commit.String()); err != nil {
 			t.Fatal(err)
 		}
-		// Create a new commit on master.
+		// Create a new commit on main.
 		if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
@@ -531,12 +531,12 @@ func TestRebase_ResetUpstream(t *testing.T) {
 		}
 
 		// Call gg on the topic branch to rebase all changes past the merge
-		// point of master and topic (the base revision) on top of the new
-		// master commit.
+		// point of main and topic (the base revision) on top of the new
+		// main commit.
 		if err := env.git.CheckoutBranch(ctx, "topic", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
-		rebaseArgs := []string{"rebase", "-dst=master"}
+		rebaseArgs := []string{"rebase", "-dst=main"}
 		if arg := argFunc(upstream); arg != "" {
 			rebaseArgs = append(rebaseArgs, "-base="+arg)
 		}
@@ -595,7 +595,7 @@ func TestHistedit(t *testing.T) {
 		if err := env.git.NewBranch(ctx, "foo", git.BranchOptions{Track: true}); err != nil {
 			t.Fatal(err)
 		}
-		// Create a commit on master.
+		// Create a commit on main.
 		if err := env.root.Apply(filesystem.Write("upstream.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
@@ -704,7 +704,7 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err := env.git.NewBranch(ctx, "foo", git.BranchOptions{Track: true}); err != nil {
 			t.Fatal(err)
 		}
-		// Create a commit on master.
+		// Create a commit on main.
 		if err := env.root.Apply(filesystem.Write("upstream.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
@@ -875,7 +875,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err := env.git.NewBranch(ctx, "foo", git.BranchOptions{Track: true}); err != nil {
 			t.Fatal(err)
 		}
-		// Create a commit on master.
+		// Create a commit on main.
 		if err := env.root.Apply(filesystem.Write("upstream.txt", dummyContent)); err != nil {
 			t.Fatal(err)
 		}
@@ -1009,7 +1009,7 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 	})
 }
 
-type rebaseArgFunc = func(masterCommit git.Hash) string
+type rebaseArgFunc = func(mainCommit git.Hash) string
 
 func runRebaseArgVariants(t *testing.T, f func(*testing.T, rebaseArgFunc)) {
 	t.Run("NoArg", func(t *testing.T) {
@@ -1019,12 +1019,12 @@ func runRebaseArgVariants(t *testing.T, f func(*testing.T, rebaseArgFunc)) {
 	})
 	t.Run("BranchName", func(t *testing.T) {
 		f(t, func(_ git.Hash) string {
-			return "master"
+			return "main"
 		})
 	})
 	t.Run("CommitHex", func(t *testing.T) {
-		f(t, func(masterCommit git.Hash) string {
-			return masterCommit.String()
+		f(t, func(mainCommit git.Hash) string {
+			return mainCommit.String()
 		})
 	})
 }

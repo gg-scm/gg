@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-
 )
 
 // ListRemoteRefs lists all of the refs in a remote repository.
@@ -84,7 +83,7 @@ func (spec FetchRefspec) Map(remote Ref) Ref {
 }
 
 // A RefPattern is a part of a refspec. It may be either a literal
-// suffix match (e.g. "master" matches "refs/head/master"), or the last
+// suffix match (e.g. "main" matches "refs/head/main"), or the last
 // component may be a wildcard ('*'), which indicates a prefix match.
 type RefPattern string
 

@@ -61,8 +61,8 @@ func TestClone(t *testing.T) {
 		if r.Commit != head {
 			t.Errorf("HEAD = %s; want %s", r.Commit, head)
 		}
-		if r.Ref != "refs/heads/master" {
-			t.Errorf("HEAD refname = %q; want refs/heads/master", r.Ref)
+		if r.Ref != "refs/heads/main" {
+			t.Errorf("HEAD refname = %q; want refs/heads/main", r.Ref)
 		}
 	}
 	if r, err := gitB.ParseRev(ctx, "refs/heads/foo"); err != nil {
@@ -70,10 +70,10 @@ func TestClone(t *testing.T) {
 	} else if r.Commit != head {
 		t.Errorf("refs/heads/foo = %s; want %s", r.Commit, head)
 	}
-	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/main"); err != nil {
 		t.Error(err)
 	} else if r.Commit != head {
-		t.Errorf("refs/remotes/origin/master = %s; want %s", r.Commit, head)
+		t.Errorf("refs/remotes/origin/main = %s; want %s", r.Commit, head)
 	}
 	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/foo"); err != nil {
 		t.Error(err)
@@ -128,15 +128,15 @@ func TestClone_Branch(t *testing.T) {
 			t.Errorf("HEAD refname = %q; want refs/heads/foo", r.Ref)
 		}
 	}
-	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/main"); err != nil {
 		t.Error(err)
 	} else if r.Commit != head {
-		t.Errorf("refs/heads/master = %s; want %s", r.Commit, head)
+		t.Errorf("refs/heads/main = %s; want %s", r.Commit, head)
 	}
-	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/main"); err != nil {
 		t.Error(err)
 	} else if r.Commit != head {
-		t.Errorf("refs/remotes/origin/master = %s; want %s", r.Commit, head)
+		t.Errorf("refs/remotes/origin/main = %s; want %s", r.Commit, head)
 	}
 	if r, err := gitB.ParseRev(ctx, "refs/remotes/origin/foo"); err != nil {
 		t.Error(err)

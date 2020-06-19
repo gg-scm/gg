@@ -36,7 +36,7 @@ func TestCommitInfo(t *testing.T) {
 	// because the dates and users are fixed, so their hashes will always
 	// be the same.
 
-	t.Run("EmptyMaster", func(t *testing.T) {
+	t.Run("EmptyMain", func(t *testing.T) {
 		env, err := newTestEnv(ctx, gitPath)
 		if err != nil {
 			t.Fatal(err)
@@ -46,7 +46,7 @@ func TestCommitInfo(t *testing.T) {
 		if err := env.g.Init(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		_, err = env.g.CommitInfo(ctx, "master")
+		_, err = env.g.CommitInfo(ctx, "main")
 		if err == nil {
 			t.Error("CommitInfo did not return error", err)
 		}
@@ -287,13 +287,13 @@ func TestCommitInfo(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		if err := env.g.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+		if err := env.g.Run(ctx, "checkout", "--quiet", "main"); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.g.Merge(ctx, []string{"diverge"}); err != nil {
 			t.Fatal(err)
 		}
-		const wantMsg = "Merge branch 'diverge' into branch master\n"
+		const wantMsg = "Merge branch 'diverge' into branch main\n"
 		wantAuthorTime := time.Date(2018, time.February, 21, 19, 37, 26, 0, time.FixedZone("UTC-8", -8*60*60))
 		wantCommitTime := time.Date(2018, time.December, 29, 8, 58, 24, 0, time.FixedZone("UTC-8", -8*60*60))
 		{
@@ -317,7 +317,7 @@ func TestCommitInfo(t *testing.T) {
 			t.Fatal("CommitInfo:", err)
 		}
 		want := &CommitInfo{
-			Hash: Hash{0xa7, 0xaf, 0xbf, 0x02, 0x90, 0x27, 0xd6, 0x61, 0xfb, 0x06, 0x3c, 0x9c, 0x49, 0xa5, 0xfa, 0x44, 0x38, 0x53, 0xfa, 0x40},
+			Hash: Hash{0xee, 0x99, 0xeb, 0xf2, 0xb7, 0x58, 0xf5, 0x8a, 0x0e, 0xba, 0xee, 0x43, 0x89, 0x2a, 0xc5, 0x32, 0x0b, 0xed, 0x70, 0x9f},
 			Parents: []Hash{
 				{0xba, 0xd7, 0xc7, 0xc9, 0xa3, 0x69, 0x03, 0x68, 0xae, 0xb2, 0x51, 0x97, 0x7f, 0x84, 0x12, 0xd1, 0xee, 0x55, 0x11, 0x56},
 				{0xac, 0xb6, 0xec, 0xe2, 0xdb, 0xc7, 0x5b, 0x42, 0x4d, 0x7d, 0x39, 0x11, 0x14, 0x48, 0xf8, 0xba, 0xca, 0x7d, 0x84, 0x07},
@@ -418,7 +418,7 @@ func TestLog(t *testing.T) {
 	if err := env.g.Commit(ctx, wantMessage2, commitOpts(wantTime2)); err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.CheckoutBranch(ctx, "master", CheckoutOptions{}); err != nil {
+	if err := env.g.CheckoutBranch(ctx, "main", CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.g.Merge(ctx, []string{"diverge"}); err != nil {

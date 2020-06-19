@@ -107,8 +107,8 @@ func TestBranch_Upstream(t *testing.T) {
 	if remote := cfg.Value("branch.foo.remote"); remote != "origin" {
 		t.Errorf("branch.foo.remote = %q; want \"origin\"", remote)
 	}
-	if mergeBranch := cfg.Value("branch.foo.merge"); mergeBranch != "refs/heads/master" {
-		t.Errorf("branch.foo.remote = %q; want \"refs/heads/master\"", mergeBranch)
+	if mergeBranch := cfg.Value("branch.foo.merge"); mergeBranch != "refs/heads/main" {
+		t.Errorf("branch.foo.remote = %q; want \"refs/heads/main\"", mergeBranch)
 	}
 }
 
@@ -164,7 +164,7 @@ func TestBranch_Delete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+		if err := env.git.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 
@@ -204,7 +204,7 @@ func TestBranch_Delete(t *testing.T) {
 		if _, err := env.newCommit(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+		if err := env.git.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 

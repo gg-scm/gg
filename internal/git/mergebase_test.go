@@ -35,7 +35,7 @@ func TestMergeBase(t *testing.T) {
 
 	// Create a repository with the following commits:
 	//
-	// master -- a
+	// main -- a
 	//       \
 	//        -- b
 	// orphan
@@ -51,7 +51,7 @@ func TestMergeBase(t *testing.T) {
 	if err := env.g.Commit(ctx, "commit 1", CommitOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	master, err := env.g.Head(ctx)
+	main, err := env.g.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestMergeBase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := env.g.NewBranch(ctx, "b", BranchOptions{StartPoint: "master", Checkout: true}); err != nil {
+	if err := env.g.NewBranch(ctx, "b", BranchOptions{StartPoint: "main", Checkout: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", dummyContent+"b\n")); err != nil {
@@ -92,7 +92,7 @@ func TestMergeBase(t *testing.T) {
 		t.Fatal(err)
 	}
 	names := map[Hash]string{
-		master.Commit: "master",
+		main.Commit:   "main",
 		a.Commit:      "a",
 		b.Commit:      "b",
 		orphan.Commit: "orphan",
@@ -104,15 +104,15 @@ func TestMergeBase(t *testing.T) {
 		mergeBase  Hash
 		isAncestor bool
 	}{
-		{"master", "master", master.Commit, true},
-		{"master", "a", master.Commit, true},
-		{"master", "b", master.Commit, true},
-		{"a", "b", master.Commit, false},
-		{"b", "a", master.Commit, false},
-		{"a", "master", master.Commit, false},
-		{"b", "master", master.Commit, false},
-		{"master", "orphan", Hash{}, false},
-		{"orphan", "master", Hash{}, false},
+		{"main", "main", main.Commit, true},
+		{"main", "a", main.Commit, true},
+		{"main", "b", main.Commit, true},
+		{"a", "b", main.Commit, false},
+		{"b", "a", main.Commit, false},
+		{"a", "main", main.Commit, false},
+		{"b", "main", main.Commit, false},
+		{"main", "orphan", Hash{}, false},
+		{"orphan", "main", Hash{}, false},
 	}
 	for _, test := range tests {
 		got, err := env.g.MergeBase(ctx, test.rev1, test.rev2)

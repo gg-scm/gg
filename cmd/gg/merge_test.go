@@ -53,8 +53,8 @@ func TestMerge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Make a non-conflicting change on master.
-	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+	// Make a non-conflicting change on main.
+	if err := env.git.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("bar.txt", dummyContent)); err != nil {
@@ -68,7 +68,7 @@ func TestMerge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Call gg to start merge of feature branch into master branch.
+	// Call gg to start merge of feature branch into main branch.
 	out, err := env.gg(ctx, env.root.String(), "merge", "feature")
 	if len(out) > 0 {
 		t.Logf("merge output:\n%s", out)
@@ -84,7 +84,7 @@ func TestMerge(t *testing.T) {
 	}
 	names := map[git.Hash]string{
 		baseRev.Commit: "initial commit",
-		upstream:       "master commit",
+		upstream:       "main commit",
 		feature:        "branch commit",
 	}
 	if curr.Commit != upstream {
@@ -149,8 +149,8 @@ func TestMerge_Conflict(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Make a conflicting change on master.
-	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+	// Make a conflicting change on main.
+	if err := env.git.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", "boring text\n")); err != nil {
@@ -164,7 +164,7 @@ func TestMerge_Conflict(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Call gg to merge the feature branch into the master branch.
+	// Call gg to merge the feature branch into the main branch.
 	out, err := env.gg(ctx, env.root.String(), "merge", "feature")
 	if len(out) > 0 {
 		t.Logf("merge output:\n%s", out)
@@ -182,7 +182,7 @@ func TestMerge_Conflict(t *testing.T) {
 	}
 	names := map[git.Hash]string{
 		base:     "initial commit",
-		upstream: "master commit",
+		upstream: "main commit",
 		feature:  "branch commit",
 	}
 	if curr.Commit != upstream {

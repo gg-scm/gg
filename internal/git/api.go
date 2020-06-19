@@ -304,11 +304,16 @@ func (cr *catReader) Close() error {
 	return nil
 }
 
-// Init creates a new empty repository at the given path. Any relative
-// paths are interpreted relative to the Git process's working
-// directory. If any of the repository's parent directories don't exist,
-// they will be created.
+// Init ensures a repository exists at the given path. Any relative paths are
+// interpreted relative to the Git process's working directory. If any of the
+// repository's parent directories don't exist, they will be created.
 func (g *Git) Init(ctx context.Context, dir string) error {
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(g.dir, dir)
+	}
+	dirInfo, dirErr := os.Stat(filepath.Join(dir, ".git"))
+	dirExists := dirErr == nil && dirInfo.IsDir()
+
 	c := g.command(ctx, []string{g.exe, "init", "--quiet", "--", dir})
 	buf := new(bytes.Buffer)
 	c.Stdout = &limitWriter{w: buf, n: 4096}
@@ -316,14 +321,25 @@ func (g *Git) Init(ctx context.Context, dir string) error {
 	if err := sigterm.Run(ctx, c); err != nil {
 		return commandError(fmt.Sprintf("git init %q", dir), err, buf.Bytes())
 	}
+
+	if !dirExists {
+		if err := g.WithDir(dir).linkToMain(ctx); err != nil {
+			return fmt.Errorf("git init %q: %w", dir, err)
+		}
+	}
 	return nil
 }
 
-// InitBare creates a new empty, bare repository at the given path. Any
-// relative paths are interpreted relative to the Git process's working
-// directory. If any of the repository's parent directories don't exist,
-// they will be created.
+// InitBare ensures a bare repository exists at the given path. Any relative
+// paths are interpreted relative to the Git process's working directory. If any
+// of the repository's parent directories don't exist, they will be created.
 func (g *Git) InitBare(ctx context.Context, dir string) error {
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(g.dir, dir)
+	}
+	headInfo, headErr := os.Stat(filepath.Join(dir, "HEAD"))
+	headExists := headErr == nil && headInfo.Mode().IsRegular()
+
 	c := g.command(ctx, []string{g.exe, "init", "--quiet", "--bare", "--", dir})
 	buf := new(bytes.Buffer)
 	c.Stdout = &limitWriter{w: buf, n: 4096}
@@ -331,7 +347,18 @@ func (g *Git) InitBare(ctx context.Context, dir string) error {
 	if err := sigterm.Run(ctx, c); err != nil {
 		return commandError(fmt.Sprintf("git init %q", dir), err, buf.Bytes())
 	}
+
+	if !headExists {
+		if err := g.WithDir(dir).linkToMain(ctx); err != nil {
+			return fmt.Errorf("git init %q: %w", dir, err)
+		}
+	}
 	return nil
+}
+
+func (g *Git) linkToMain(ctx context.Context) error {
+	const errPrefix = "git symbolic-ref HEAD refs/heads/main"
+	return g.run(ctx, errPrefix, []string{g.exe, "symbolic-ref", "HEAD", "refs/heads/main"})
 }
 
 // AddOptions specifies the command-line options for `git add`.

@@ -66,7 +66,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Call gg to update master in repository B.
+		// Call gg to update main in repository B.
 		_, err = env.gg(ctx, repoBPath, "update")
 		if err != nil {
 			t.Error(err)
@@ -111,14 +111,14 @@ func TestUpdate_NoArgs(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Create a new commit in repository A on master.
+		// Create a new commit in repository A on main.
 		if err := env.root.Apply(filesystem.Write("repoA/foo.txt", "Apple\n")); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.addFiles(ctx, "repoA/foo.txt"); err != nil {
 			t.Fatal(err)
 		}
-		master2, err := env.newCommit(ctx, "repoA")
+		main2, err := env.newCommit(ctx, "repoA")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -139,11 +139,11 @@ func TestUpdate_NoArgs(t *testing.T) {
 		}
 
 		// Create a new branch in repository B called "feature"
-		// that tracks "refs/remotes/origin/master".
+		// that tracks "refs/remotes/origin/main".
 		repoBPath := env.root.FromSlash("repoB")
 		gitB := env.git.WithDir(repoBPath)
 		err = gitB.NewBranch(ctx, "feature", git.BranchOptions{
-			StartPoint: "refs/remotes/origin/master",
+			StartPoint: "refs/remotes/origin/main",
 			Checkout:   true,
 			Track:      true,
 		})
@@ -169,7 +169,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 		} else if r.Commit != feature2 {
 			names := map[git.Hash]string{
 				base.Commit: "first commit",
-				master2:     "upstream commit",
+				main2:       "upstream commit",
 				feature2:    "push branch commit",
 			}
 			t.Errorf("after update, HEAD = %s; want %s",
@@ -194,7 +194,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 		}
 		defer env.cleanup()
 
-		// Create a repository with two commits, with master behind the "upstream" branch.
+		// Create a repository with two commits, with main behind the "upstream" branch.
 		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
@@ -218,7 +218,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+		if err := env.git.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.git.Run(ctx, "branch", "--quiet", "--set-upstream-to=upstream"); err != nil {
@@ -278,7 +278,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Create a second commit on master in repository A.
+		// Create a second commit on main in repository A.
 		if err := env.root.Apply(filesystem.Write("repoA/foo.txt", "Apple\nBanana\n")); err != nil {
 			t.Fatal(err)
 		}
@@ -339,7 +339,7 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 		}
 		defer env.cleanup()
 
-		// Start a repository with an arbitrary master branch.
+		// Start a repository with an arbitrary main branch.
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
@@ -363,8 +363,8 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Check out master branch.
-		if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+		// Check out main branch.
+		if err := env.git.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 
@@ -444,13 +444,13 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Call gg to switch to master branch.
-		_, err = env.gg(ctx, repoBPath, "update", "master")
+		// Call gg to switch to main branch.
+		_, err = env.gg(ctx, repoBPath, "update", "main")
 		if err != nil {
 			t.Error(err)
 		}
 
-		// Verify that HEAD was moved to master branch.
+		// Verify that HEAD was moved to main branch.
 		if r, err := gitB.Head(ctx); err != nil {
 			t.Fatal(err)
 		} else {
@@ -459,12 +459,12 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 					rev1.Commit: "first commit",
 					h2:          "second commit",
 				}
-				t.Errorf("after update master, HEAD = %s; want %s",
+				t.Errorf("after update main, HEAD = %s; want %s",
 					prettyCommit(r.Commit, names),
 					prettyCommit(h2, names))
 			}
-			if got, want := r.Ref, git.BranchRef("master"); got != want {
-				t.Errorf("after update master, HEAD ref = %s; want %s", got, want)
+			if got, want := r.Ref, git.BranchRef("main"); got != want {
+				t.Errorf("after update main, HEAD ref = %s; want %s", got, want)
 			}
 		}
 
@@ -520,13 +520,13 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Call gg to switch back to master branch.
-		_, err = env.gg(ctx, repoBPath, "update", "master")
+		// Call gg to switch back to main branch.
+		_, err = env.gg(ctx, repoBPath, "update", "main")
 		if err != nil {
 			t.Error(err)
 		}
 
-		// Verify that HEAD was moved to master branch.
+		// Verify that HEAD was moved to main branch.
 		if r, err := gitB.Head(ctx); err != nil {
 			t.Fatal(err)
 		} else {
@@ -535,12 +535,12 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 					rev1.Commit: "first commit",
 					h2:          "second commit",
 				}
-				t.Errorf("after update master, HEAD = %s; want %s",
+				t.Errorf("after update main, HEAD = %s; want %s",
 					prettyCommit(r.Commit, names),
 					prettyCommit(h2, names))
 			}
-			if got, want := r.Ref, git.BranchRef("master"); got != want {
-				t.Errorf("after update master, HEAD ref = %s; want %s", got, want)
+			if got, want := r.Ref, git.BranchRef("main"); got != want {
+				t.Errorf("after update main, HEAD ref = %s; want %s", got, want)
 			}
 		}
 
@@ -648,12 +648,12 @@ func TestUpdate_ToCommit(t *testing.T) {
 				h1: "first commit",
 				h2: "second commit",
 			}
-			t.Errorf("after update master, HEAD = %s; want %s",
+			t.Errorf("after update main, HEAD = %s; want %s",
 				prettyCommit(r.Commit, names),
 				prettyCommit(h1, names))
 		}
 		if got := r.Ref; got != git.Head {
-			t.Errorf("after update master, HEAD ref = %s; want %s", got, git.Head)
+			t.Errorf("after update main, HEAD ref = %s; want %s", got, git.Head)
 		}
 	}
 

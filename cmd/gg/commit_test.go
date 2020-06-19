@@ -89,8 +89,8 @@ func TestCommit_NoArgs(t *testing.T) {
 	if r2.Commit == r1 {
 		t.Fatal("commit did not create a new commit in the working copy")
 	}
-	if ref := r2.Ref; ref != "refs/heads/master" {
-		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
+	if ref := r2.Ref; ref != "refs/heads/main" {
+		t.Errorf("HEAD ref = %q; want refs/heads/main", ref)
 	}
 	if parent, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
 		t.Error(err)
@@ -182,8 +182,8 @@ func TestCommit_Selective(t *testing.T) {
 	if r2.Commit == r1 {
 		t.Fatal("commit did not create a new commit in the working copy")
 	}
-	if ref := r2.Ref; ref != "refs/heads/master" {
-		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
+	if ref := r2.Ref; ref != "refs/heads/main" {
+		t.Errorf("HEAD ref = %q; want refs/heads/main", ref)
 	}
 	if parent, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
 		t.Error(err)
@@ -363,8 +363,8 @@ func TestCommit_Amend(t *testing.T) {
 	if r2.Commit == r1 {
 		t.Fatal("commit --amend did not create a new commit in the working copy")
 	}
-	if ref := r2.Ref; ref != "refs/heads/master" {
-		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
+	if ref := r2.Ref; ref != "refs/heads/main" {
+		t.Errorf("HEAD ref = %q; want refs/heads/main", ref)
 	}
 	if newParent, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
 		t.Error(err)
@@ -465,8 +465,8 @@ func TestCommit_AmendRootCommit(t *testing.T) {
 	if r2.Commit == r1 {
 		t.Fatal("commit --amend did not create a new commit in the working copy")
 	}
-	if ref := r2.Ref; ref != "refs/heads/master" {
-		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
+	if ref := r2.Ref; ref != "refs/heads/main" {
+		t.Errorf("HEAD ref = %q; want refs/heads/main", ref)
 	}
 	if newParent, err := env.git.ParseRev(ctx, "HEAD~"); err == nil {
 		t.Errorf("HEAD~ = %s; want error", prettyCommit(newParent.Commit, changes))
@@ -523,8 +523,8 @@ func TestCommit_NoChanges(t *testing.T) {
 	if r2.Commit != r1.Commit {
 		t.Errorf("commit created new commit %s; wanted to stay on %s", r2.Commit, r1.Commit)
 	}
-	if ref := r2.Ref; ref != "refs/heads/master" {
-		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
+	if ref := r2.Ref; ref != "refs/heads/main" {
+		t.Errorf("HEAD ref = %q; want refs/heads/main", ref)
 	}
 }
 
@@ -584,8 +584,8 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 	if r2.Commit == r1 {
 		t.Fatal("commit --amend did not create a new commit in the working copy")
 	}
-	if ref := r2.Ref; ref != "refs/heads/master" {
-		t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
+	if ref := r2.Ref; ref != "refs/heads/main" {
+		t.Errorf("HEAD ref = %q; want refs/heads/main", ref)
 	}
 	if newParent, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
 		t.Error(err)
@@ -694,8 +694,8 @@ func TestCommit_InSubdir(t *testing.T) {
 			if r2.Commit == r1 {
 				t.Fatal("commit did not create a new commit in the working copy")
 			}
-			if ref := r2.Ref; ref != "refs/heads/master" {
-				t.Errorf("HEAD ref = %q; want refs/heads/master", ref)
+			if ref := r2.Ref; ref != "refs/heads/main" {
+				t.Errorf("HEAD ref = %q; want refs/heads/main", ref)
 			}
 			if parent, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
 				t.Error(err)
@@ -766,8 +766,8 @@ func TestCommit_Merge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create another commit on master.
-	if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+	// Create another commit on main.
+	if err := env.git.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("foo.txt", "boring text\n")); err != nil {
@@ -798,7 +798,7 @@ func TestCommit_Merge(t *testing.T) {
 	}
 
 	// Commit the merge.
-	out, err = env.gg(ctx, env.root.String(), "commit", "-m", "Merged feature into master")
+	out, err = env.gg(ctx, env.root.String(), "commit", "-m", "Merged feature into main")
 	if len(out) > 0 {
 		t.Logf("commit output:\n%s", out)
 	}
@@ -806,7 +806,7 @@ func TestCommit_Merge(t *testing.T) {
 		t.Error("commit:", err)
 	}
 
-	// Verify that a new commit was created with the master commit as the first
+	// Verify that a new commit was created with the main commit as the first
 	// parent and the feature commit as the second parent.
 	curr, err := env.git.Head(ctx)
 	if err != nil {
@@ -814,7 +814,7 @@ func TestCommit_Merge(t *testing.T) {
 	}
 	names := map[git.Hash]string{
 		base: "initial commit",
-		r1:   "master commit",
+		r1:   "main commit",
 		r2:   "branch commit",
 	}
 	if curr.Commit == base || curr.Commit == r1 || curr.Commit == r2 {
@@ -911,12 +911,12 @@ func TestCommitMessageTemplate(t *testing.T) {
 				{Name: "foo/bar.txt", Code: git.DiffStatusModified},
 			},
 			commentChar: "#",
-			branchName:  "master",
+			branchName:  "main",
 			want: "\n" + `
 # Please enter a commit message.
 # Lines starting with '#' will be ignored.
 #
-# branch master
+# branch main
 # modified foo/bar.txt` + "\n",
 		},
 		{
@@ -927,12 +927,12 @@ func TestCommitMessageTemplate(t *testing.T) {
 				{Name: "abc/def.txt", Code: git.DiffStatusAdded},
 			},
 			commentChar: "#",
-			branchName:  "master",
+			branchName:  "main",
 			want: "\n" + `
 # Please enter a commit message.
 # Lines starting with '#' will be ignored.
 #
-# branch master
+# branch main
 # added abc/def.txt
 # modified foo/bar.txt
 # removed uvw/xyz.txt` + "\n",
@@ -958,13 +958,13 @@ func TestCommitMessageTemplate(t *testing.T) {
 			},
 			amend:         true,
 			commentChar:   "#",
-			branchName:    "master",
+			branchName:    "main",
 			headCommitMsg: "Original content\n",
 			want: "Original content\n" + `
 # Please enter a commit message.
 # Lines starting with '#' will be ignored.
 #
-# branch master
+# branch main
 # modified foo/bar.txt` + "\n",
 		},
 		{
@@ -973,13 +973,13 @@ func TestCommitMessageTemplate(t *testing.T) {
 				{Name: "foo/bar.txt", Code: git.DiffStatusModified},
 			},
 			commentChar: "#",
-			branchName:  "master",
-			mergeMsg:    "Merged remote-tracking branch 'refs/remotes/origin/master' into 'master'\n",
-			want: "Merged remote-tracking branch 'refs/remotes/origin/master' into 'master'\n" + `
+			branchName:  "main",
+			mergeMsg:    "Merged remote-tracking branch 'refs/remotes/origin/main' into 'main'\n",
+			want: "Merged remote-tracking branch 'refs/remotes/origin/main' into 'main'\n" + `
 # Please enter a commit message.
 # Lines starting with '#' will be ignored.
 #
-# branch master
+# branch main
 # modified foo/bar.txt` + "\n",
 		},
 	}
@@ -1005,11 +1005,11 @@ func TestCommitMessageTemplate(t *testing.T) {
 					t.Error(err)
 				}
 				defer func() {
-					if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+					if err := env.git.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 						t.Error(err)
 					}
 				}()
-			} else if test.branchName != "master" {
+			} else if test.branchName != "main" {
 				err := env.git.NewBranch(ctx, test.branchName, git.BranchOptions{
 					Checkout:  true,
 					Overwrite: true,
@@ -1018,7 +1018,7 @@ func TestCommitMessageTemplate(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer func() {
-					if err := env.git.CheckoutBranch(ctx, "master", git.CheckoutOptions{}); err != nil {
+					if err := env.git.CheckoutBranch(ctx, "main", git.CheckoutOptions{}); err != nil {
 						t.Error(err)
 					}
 				}()

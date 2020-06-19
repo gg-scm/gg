@@ -77,11 +77,11 @@ func TestIsMerging(t *testing.T) {
 		if err := env.g.Commit(ctx, "commit 2", CommitOptions{}); err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.CheckoutBranch(ctx, "master", CheckoutOptions{}); err != nil {
+		if err := env.g.CheckoutBranch(ctx, "main", CheckoutOptions{}); err != nil {
 			t.Fatal(err)
 		}
 
-		// Merge feature into master.
+		// Merge feature into main.
 		// Use raw commands, as IsMerging is used as part of TestMerge.
 		if err := env.g.Run(ctx, "merge", "--quiet", "--no-commit", "--no-ff", "feature"); err != nil {
 			t.Fatal(err)
@@ -113,7 +113,7 @@ func TestMerge(t *testing.T) {
 
 		// Create a repository with the following commits:
 		//
-		// master -- a
+		// main -- a
 		//       \
 		//        -- b
 		if err := env.g.Init(ctx, "."); err != nil {
@@ -144,7 +144,7 @@ func TestMerge(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.NewBranch(ctx, "b", BranchOptions{StartPoint: "master", Checkout: true}); err != nil {
+		if err := env.g.NewBranch(ctx, "b", BranchOptions{StartPoint: "main", Checkout: true}); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("baz.txt", dummyContent)); err != nil {
@@ -193,7 +193,7 @@ func TestMerge(t *testing.T) {
 
 		// Create a repository with the following commits on foo.txt:
 		//
-		// master -- a
+		// main -- a
 		//       \
 		//        -- b
 		if err := env.g.Init(ctx, "."); err != nil {
@@ -221,7 +221,7 @@ func TestMerge(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := env.g.NewBranch(ctx, "b", BranchOptions{StartPoint: "master", Checkout: true}); err != nil {
+		if err := env.g.NewBranch(ctx, "b", BranchOptions{StartPoint: "main", Checkout: true}); err != nil {
 			t.Fatal(err)
 		}
 		if err := env.root.Apply(filesystem.Write("foo.txt", "content 3\n")); err != nil {
@@ -286,7 +286,7 @@ func TestMerge(t *testing.T) {
 		if err := env.g.Commit(ctx, "initial commit", CommitOptions{}); err != nil {
 			t.Fatal(err)
 		}
-		master, err := env.g.Head(ctx)
+		main, err := env.g.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -296,13 +296,13 @@ func TestMerge(t *testing.T) {
 			t.Error("Merge did not return an error")
 		}
 
-		// Verify that HEAD is still pointing to master.
+		// Verify that HEAD is still pointing to main.
 		head, err := env.g.Head(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if head.Commit != master.Commit || head.Ref != "refs/heads/master" {
-			t.Errorf("HEAD = %v (ref = %s); want %v (ref = refs/heads/master)", head.Commit, head.Ref, master.Commit)
+		if head.Commit != main.Commit || head.Ref != "refs/heads/main" {
+			t.Errorf("HEAD = %v (ref = %s); want %v (ref = refs/heads/main)", head.Commit, head.Ref, main.Commit)
 		}
 		// Verify that we are not merging.
 		if merging, err := env.g.IsMerging(ctx); err != nil {
@@ -319,7 +319,7 @@ func TestMerge(t *testing.T) {
 		defer env.cleanup()
 
 		// Create a repository with two commits, the first on a branch
-		// called "old" tracking master.
+		// called "old" tracking main.
 		if err := env.g.Init(ctx, "."); err != nil {
 			t.Fatal(err)
 		}

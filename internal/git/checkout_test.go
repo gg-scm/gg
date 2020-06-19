@@ -34,12 +34,12 @@ func TestCheckoutBranch(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	// Create a template repository with two branches: master and foo.
+	// Create a template repository with two branches: main and foo.
 	if err := env.g.Init(ctx, "template"); err != nil {
 		t.Fatal(err)
 	}
-	const masterContent = "content A\n"
-	if err := env.root.Apply(filesystem.Write("template/file.txt", masterContent)); err != nil {
+	const mainContent = "content A\n"
+	if err := env.root.Apply(filesystem.Write("template/file.txt", mainContent)); err != nil {
 		t.Fatal(err)
 	}
 	templateGit := env.g.WithDir(env.root.FromSlash("template"))
@@ -49,14 +49,14 @@ func TestCheckoutBranch(t *testing.T) {
 	if err := templateGit.Commit(ctx, dummyContent, CommitOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	master, err := templateGit.Head(ctx)
+	main, err := templateGit.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := templateGit.NewBranch(ctx, "foo", BranchOptions{Checkout: true}); err != nil {
 		t.Fatal(err)
 	}
-	const fooContent = masterContent + "content B\n"
+	const fooContent = mainContent + "content B\n"
 	if err := env.root.Apply(filesystem.Write("template/file.txt", fooContent)); err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestCheckoutBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Use raw command to avoid depending on system-under-test.
-	if err := templateGit.Run(ctx, "checkout", "--quiet", "master"); err != nil {
+	if err := templateGit.Run(ctx, "checkout", "--quiet", "main"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -85,55 +85,55 @@ func TestCheckoutBranch(t *testing.T) {
 	}{
 		{
 			name:         "SameBranch",
-			branch:       "master",
-			localContent: masterContent,
-			wantHead:     *master,
-			wantContent:  masterContent,
+			branch:       "main",
+			localContent: mainContent,
+			wantHead:     *main,
+			wantContent:  mainContent,
 		},
 		{
 			name:         "DifferentBranch",
 			branch:       "foo",
-			localContent: masterContent,
+			localContent: mainContent,
 			wantHead:     *foo,
 			wantContent:  fooContent,
 		},
 		{
 			name:         "DoesNotExist",
 			branch:       "bar",
-			localContent: masterContent,
+			localContent: mainContent,
 			wantErr:      true,
-			wantHead:     *master,
-			wantContent:  masterContent,
+			wantHead:     *main,
+			wantContent:  mainContent,
 		},
 		{
 			name:         "CommitHash",
 			branch:       foo.Commit.String(),
-			localContent: masterContent,
+			localContent: mainContent,
 			wantErr:      true,
-			wantHead:     *master,
-			wantContent:  masterContent,
+			wantHead:     *main,
+			wantContent:  mainContent,
 		},
 		{
 			name:         "Ref",
 			branch:       "refs/heads/foo",
-			localContent: masterContent,
+			localContent: mainContent,
 			wantErr:      true,
-			wantHead:     *master,
-			wantContent:  masterContent,
+			wantHead:     *main,
+			wantContent:  mainContent,
 		},
 		{
 			name:         "LocalModifications",
 			branch:       "foo",
-			localContent: "content C\n" + masterContent,
+			localContent: "content C\n" + mainContent,
 			wantErr:      true,
-			wantHead:     *master,
-			wantContent:  "content C\n" + masterContent,
+			wantHead:     *main,
+			wantContent:  "content C\n" + mainContent,
 		},
 		{
 			name:         "Merge",
 			branch:       "foo",
 			opts:         CheckoutOptions{ConflictBehavior: MergeLocal},
-			localContent: "content C\n" + masterContent,
+			localContent: "content C\n" + mainContent,
 			wantHead:     *foo,
 			wantContent:  "content C\n" + fooContent,
 		},
@@ -203,12 +203,12 @@ func TestCheckoutRev(t *testing.T) {
 	}
 	defer env.cleanup()
 
-	// Create a template repository with two branches: master and foo.
+	// Create a template repository with two branches: main and foo.
 	if err := env.g.Init(ctx, "template"); err != nil {
 		t.Fatal(err)
 	}
-	const masterContent = "content A\n"
-	if err := env.root.Apply(filesystem.Write("template/file.txt", masterContent)); err != nil {
+	const mainContent = "content A\n"
+	if err := env.root.Apply(filesystem.Write("template/file.txt", mainContent)); err != nil {
 		t.Fatal(err)
 	}
 	templateGit := env.g.WithDir(env.root.FromSlash("template"))
@@ -218,14 +218,14 @@ func TestCheckoutRev(t *testing.T) {
 	if err := templateGit.Commit(ctx, dummyContent, CommitOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	master, err := templateGit.Head(ctx)
+	main, err := templateGit.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := templateGit.NewBranch(ctx, "foo", BranchOptions{Checkout: true}); err != nil {
 		t.Fatal(err)
 	}
-	const fooContent = masterContent + "content B\n"
+	const fooContent = mainContent + "content B\n"
 	if err := env.root.Apply(filesystem.Write("template/file.txt", fooContent)); err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +236,7 @@ func TestCheckoutRev(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := templateGit.CheckoutBranch(ctx, "master", CheckoutOptions{}); err != nil {
+	if err := templateGit.CheckoutBranch(ctx, "main", CheckoutOptions{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -253,53 +253,53 @@ func TestCheckoutRev(t *testing.T) {
 	}{
 		{
 			name:         "SameBranch",
-			rev:          "master",
-			localContent: masterContent,
-			wantHead:     Rev{Commit: master.Commit, Ref: "HEAD"},
-			wantContent:  masterContent,
+			rev:          "main",
+			localContent: mainContent,
+			wantHead:     Rev{Commit: main.Commit, Ref: "HEAD"},
+			wantContent:  mainContent,
 		},
 		{
 			name:         "DifferentBranch",
 			rev:          "foo",
-			localContent: masterContent,
+			localContent: mainContent,
 			wantHead:     Rev{Commit: foo.Commit, Ref: "HEAD"},
 			wantContent:  fooContent,
 		},
 		{
 			name:         "DoesNotExist",
 			rev:          "bar",
-			localContent: masterContent,
+			localContent: mainContent,
 			wantErr:      true,
-			wantHead:     *master,
-			wantContent:  masterContent,
+			wantHead:     *main,
+			wantContent:  mainContent,
 		},
 		{
 			name:         "CommitHash",
 			rev:          foo.Commit.String(),
-			localContent: masterContent,
+			localContent: mainContent,
 			wantHead:     Rev{Commit: foo.Commit, Ref: "HEAD"},
 			wantContent:  fooContent,
 		},
 		{
 			name:         "Ref",
 			rev:          "refs/heads/foo",
-			localContent: masterContent,
+			localContent: mainContent,
 			wantHead:     Rev{Commit: foo.Commit, Ref: "HEAD"},
 			wantContent:  fooContent,
 		},
 		{
 			name:         "LocalModifications",
 			rev:          "foo",
-			localContent: "content C\n" + masterContent,
+			localContent: "content C\n" + mainContent,
 			wantErr:      true,
-			wantHead:     *master,
-			wantContent:  "content C\n" + masterContent,
+			wantHead:     *main,
+			wantContent:  "content C\n" + mainContent,
 		},
 		{
 			name:         "Merge",
 			rev:          "foo",
 			opts:         CheckoutOptions{ConflictBehavior: MergeLocal},
-			localContent: "content C\n" + masterContent,
+			localContent: "content C\n" + mainContent,
 			wantHead:     Rev{Commit: foo.Commit, Ref: "HEAD"},
 			wantContent:  "content C\n" + fooContent,
 		},

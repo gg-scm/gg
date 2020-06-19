@@ -11,7 +11,7 @@ Each developer clones to a repository on their own machine and makes their
 changes. When they are ready to share, they push to a branch on the single
 shared repository. If they are using pull requests, each change goes onto a
 distinct [branch][] for review. Otherwise, usually commits go directly to the
-default branch (usually `master`).
+default branch (e.g. `main`).
 
 [models]: https://help.github.com/articles/about-collaborative-development-models/
 [branch]: https://help.github.com/articles/about-branches/
@@ -32,7 +32,7 @@ Replace the URL as needed.
 ## Making Changes Directly to the Default Branch
 
 If you are working by yourself or your team does not use pull requests, you will
-typically make changes directly to the default branch (usually `master`).
+typically make changes directly to the default branch (e.g. `main`).
 
 ```shell
 # hack hack hack
@@ -81,7 +81,7 @@ again.)
 
 ### Syncing Your Work with the Upstream Branch
 
-If the upstream branch (usually `master`) changed, then you can use `gg merge`
+If the upstream branch (e.g. `main`) changed, then you can use `gg merge`
 to merge in commits.
 
 ```shell
@@ -134,5 +134,5 @@ You can use `gg update` to switch to a different branch.
 
 ```shell
 gg update myfeature
-gg update master
+gg update main
 ```

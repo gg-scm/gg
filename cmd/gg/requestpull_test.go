@@ -190,10 +190,10 @@ func TestRequestPull(t *testing.T) {
 			}
 			localDir := env.root.FromSlash("local")
 			localGit := env.git.WithDir(localDir)
-			if err := localGit.NewBranch(ctx, "shared", git.BranchOptions{StartPoint: "origin/master", Track: true}); err != nil {
+			if err := localGit.NewBranch(ctx, "shared", git.BranchOptions{StartPoint: "origin/main", Track: true}); err != nil {
 				t.Fatal(err)
 			}
-			if err := localGit.NewBranch(ctx, "myfork", git.BranchOptions{StartPoint: "origin/master", Track: true}); err != nil {
+			if err := localGit.NewBranch(ctx, "myfork", git.BranchOptions{StartPoint: "origin/main", Track: true}); err != nil {
 				t.Fatal(err)
 			}
 			if err := localGit.Run(ctx, "remote", "add", "forkremote", test.forkURL); err != nil {
@@ -247,7 +247,7 @@ func TestRequestPull(t *testing.T) {
 			if prs[0].owner != "example" || prs[0].repo != "foo" {
 				t.Errorf("Opened on %s/%s; want example/foo", prs[0].owner, prs[0].repo)
 			}
-			if got, want := prs[0].baseRef, "master"; got != want {
+			if got, want := prs[0].baseRef, "main"; got != want {
 				t.Errorf("Base ref = %q; want %q", got, want)
 			}
 			if got, want := prs[0].headOwner, test.headOwner; got != want {
@@ -302,7 +302,7 @@ func TestRequestPull_BodyWithoutTitleUsageError(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = localGit.NewBranch(ctx, "feature", git.BranchOptions{
-		StartPoint: "origin/master",
+		StartPoint: "origin/main",
 		Track:      true,
 		Checkout:   true,
 	})
@@ -372,7 +372,7 @@ func TestRequestPull_Editor(t *testing.T) {
 	if err := localGit.Run(ctx, "remote", "set-url", "origin", "https://github.com/example/foo.git"); err != nil {
 		t.Fatal(err)
 	}
-	if err := localGit.NewBranch(ctx, "feature", git.BranchOptions{StartPoint: "origin/master", Track: true}); err != nil {
+	if err := localGit.NewBranch(ctx, "feature", git.BranchOptions{StartPoint: "origin/main", Track: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("local/blah.txt", dummyContent)); err != nil {
@@ -821,7 +821,7 @@ func TestInferPullRequestMessage(t *testing.T) {
 			if err := env.initRepoWithHistory(ctx, "."); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.git.NewBranch(ctx, "feature", git.BranchOptions{Track: true, StartPoint: "master"}); err != nil {
+			if err := env.git.NewBranch(ctx, "feature", git.BranchOptions{Track: true, StartPoint: "main"}); err != nil {
 				t.Fatal(err)
 			}
 			if err := env.root.Apply(filesystem.Write("mainline.txt", dummyContent)); err != nil {
@@ -849,7 +849,7 @@ func TestInferPullRequestMessage(t *testing.T) {
 				}
 			}
 
-			title, body, err := inferPullRequestMessage(ctx, env.git, "master", "HEAD")
+			title, body, err := inferPullRequestMessage(ctx, env.git, "main", "HEAD")
 			if err != nil {
 				if !test.err {
 					t.Errorf("inferPullRequestMessage(...) = _, _, %v; want _, _, <nil>", err)

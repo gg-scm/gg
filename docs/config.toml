@@ -39,6 +39,6 @@ url = "https://github.com/zombiezen/gg"
 weight = 5
 
 [params]
-licenseURL = "https://github.com/zombiezen/gg/blob/master/LICENSE"
+licenseURL = "https://github.com/zombiezen/gg/blob/main/LICENSE"
 latestRelease = "0.7.1"
 releaseDate = "2019-02-13"

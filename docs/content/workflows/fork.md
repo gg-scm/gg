@@ -69,7 +69,7 @@ again.)
 
 ### Syncing Your Work with the Upstream Branch
 
-If the upstream branch (usually `master`) changed, then you can use `gg merge`
+If the upstream branch (e.g. `main`) changed, then you can use `gg merge`
 to merge in commits.
 
 ```shell
@@ -122,5 +122,5 @@ You can use `gg update` to switch to a different branch.
 
 ```shell
 gg update myfeature
-gg update master
+gg update main
 ```

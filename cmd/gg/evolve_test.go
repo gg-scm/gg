@@ -37,7 +37,7 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root.String(), "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+		base, err := dummyRev(ctx, env.git, env.root.String(), "main", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -49,7 +49,7 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		submit1, err := dummyRev(ctx, env.git, env.root.String(), "master", "submitted.txt", "Submitted first feature change\n\nChange-Id: abcdef")
+		submit1, err := dummyRev(ctx, env.git, env.root.String(), "main", "submitted.txt", "Submitted first feature change\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -117,7 +117,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root.String(), "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+		base, err := dummyRev(ctx, env.git, env.root.String(), "main", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -129,7 +129,7 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		other, err := dummyRev(ctx, env.git, env.root.String(), "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
+		other, err := dummyRev(ctx, env.git, env.root.String(), "main", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -205,7 +205,7 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root.String(), "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+		base, err := dummyRev(ctx, env.git, env.root.String(), "main", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -217,11 +217,11 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		submit1, err := dummyRev(ctx, env.git, env.root.String(), "master", "bar-submitted.txt", "Submitted first feature\n\nChange-Id: abcdef")
+		submit1, err := dummyRev(ctx, env.git, env.root.String(), "main", "bar-submitted.txt", "Submitted first feature\n\nChange-Id: abcdef")
 		if err != nil {
 			t.Fatal(err)
 		}
-		other, err := dummyRev(ctx, env.git, env.root.String(), "master", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
+		other, err := dummyRev(ctx, env.git, env.root.String(), "main", "somestuff.txt", "Somebody else contributed!\n\nChange-Id: mnopqr")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -291,7 +291,7 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		base, err := dummyRev(ctx, env.git, env.root.String(), "master", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
+		base, err := dummyRev(ctx, env.git, env.root.String(), "main", "foo.txt", "Initial import\n\nChange-Id: xyzzy")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -303,7 +303,7 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		submit2, err := dummyRev(ctx, env.git, env.root.String(), "master", "submitted.txt", "Submitted second feature change\n\nChange-Id: ghijkl")
+		submit2, err := dummyRev(ctx, env.git, env.root.String(), "main", "submitted.txt", "Submitted second feature change\n\nChange-Id: ghijkl")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -359,7 +359,7 @@ func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file s
 	curr, err := g.Head(ctx)
 	if err != nil {
 		// First commit
-		if branch != "master" {
+		if branch != "main" {
 			return git.Hash{}, fmt.Errorf("make dummy rev: %w", err)
 		}
 	} else if curr.Ref.Branch() != branch {

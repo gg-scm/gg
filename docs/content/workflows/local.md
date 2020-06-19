@@ -157,10 +157,10 @@ gg checkout -r a199be2
 When you're done looking, you can go back to your latest work using `checkout`.
 
 ```shell
-gg checkout -r master
+gg checkout -r main
 ```
 
-`master` is the name of the default [branch][] that was created when you ran `gg
+`main` is the name of the default [branch][] that was created when you ran `gg
 init`. You can use the name of a branch instead of a commit hash in any gg
 command that takes in a commit to indicate the latest commit on that branch.
 

@@ -46,8 +46,8 @@ func TestNewBranch(t *testing.T) {
 		{
 			name:             "Defaults",
 			branch:           "foo",
-			wantBranchCommit: "master",
-			wantHEAD:         "refs/heads/master",
+			wantBranchCommit: "main",
+			wantHEAD:         "refs/heads/main",
 			wantLocalContent: content2,
 		},
 		{
@@ -57,7 +57,7 @@ func TestNewBranch(t *testing.T) {
 				StartPoint: "existing",
 			},
 			wantBranchCommit: "existing",
-			wantHEAD:         "refs/heads/master",
+			wantHEAD:         "refs/heads/main",
 			wantLocalContent: content2,
 		},
 		{
@@ -66,7 +66,7 @@ func TestNewBranch(t *testing.T) {
 			opts: BranchOptions{
 				Checkout: true,
 			},
-			wantBranchCommit: "master",
+			wantBranchCommit: "main",
 			wantHEAD:         "refs/heads/foo",
 			wantLocalContent: content2,
 		},
@@ -77,7 +77,7 @@ func TestNewBranch(t *testing.T) {
 				StartPoint: "HEAD",
 				Checkout:   true,
 			},
-			wantBranchCommit: "master",
+			wantBranchCommit: "main",
 			wantHEAD:         "refs/heads/foo",
 			wantLocalContent: content2,
 		},
@@ -97,9 +97,9 @@ func TestNewBranch(t *testing.T) {
 			branch:           "existing",
 			wantErr:          true,
 			wantBranchCommit: "existing",
-			wantHEAD:         "refs/heads/master",
+			wantHEAD:         "refs/heads/main",
 			wantLocalContent: content2,
-			wantUpstream:     "refs/heads/master",
+			wantUpstream:     "refs/heads/main",
 		},
 		{
 			name:   "Overwrite",
@@ -107,10 +107,10 @@ func TestNewBranch(t *testing.T) {
 			opts: BranchOptions{
 				Overwrite: true,
 			},
-			wantBranchCommit: "master",
-			wantHEAD:         "refs/heads/master",
+			wantBranchCommit: "main",
+			wantHEAD:         "refs/heads/main",
 			wantLocalContent: content2,
-			wantUpstream:     "refs/heads/master",
+			wantUpstream:     "refs/heads/main",
 		},
 		{
 			name:   "OverwriteCheckout",
@@ -119,10 +119,10 @@ func TestNewBranch(t *testing.T) {
 				Overwrite: true,
 				Checkout:  true,
 			},
-			wantBranchCommit: "master",
+			wantBranchCommit: "main",
 			wantHEAD:         "refs/heads/existing",
 			wantLocalContent: content2,
-			wantUpstream:     "refs/heads/master",
+			wantUpstream:     "refs/heads/main",
 		},
 		{
 			name:   "OverwriteCheckoutNonHEAD",
@@ -132,10 +132,10 @@ func TestNewBranch(t *testing.T) {
 				Overwrite:  true,
 				Checkout:   true,
 			},
-			wantBranchCommit: "master~",
+			wantBranchCommit: "main~",
 			wantHEAD:         "refs/heads/existing",
 			wantLocalContent: content1,
-			wantUpstream:     "refs/heads/master",
+			wantUpstream:     "refs/heads/main",
 		},
 		{
 			name:   "TrackEmptyStartPoint",
@@ -143,10 +143,10 @@ func TestNewBranch(t *testing.T) {
 			opts: BranchOptions{
 				Track: true,
 			},
-			wantBranchCommit: "master",
-			wantHEAD:         "refs/heads/master",
+			wantBranchCommit: "main",
+			wantHEAD:         "refs/heads/main",
 			wantLocalContent: content2,
-			wantUpstream:     "refs/heads/master",
+			wantUpstream:     "refs/heads/main",
 		},
 		{
 			name:   "Track",
@@ -156,7 +156,7 @@ func TestNewBranch(t *testing.T) {
 				Track:      true,
 			},
 			wantBranchCommit: "existing",
-			wantHEAD:         "refs/heads/master",
+			wantHEAD:         "refs/heads/main",
 			wantLocalContent: content2,
 			wantUpstream:     "refs/heads/existing",
 		},
@@ -167,10 +167,10 @@ func TestNewBranch(t *testing.T) {
 				Checkout: true,
 				Track:    true,
 			},
-			wantBranchCommit: "master",
+			wantBranchCommit: "main",
 			wantHEAD:         "refs/heads/foo",
 			wantLocalContent: content2,
-			wantUpstream:     "refs/heads/master",
+			wantUpstream:     "refs/heads/main",
 		},
 		{
 			name:   "CheckoutTrack",
@@ -196,7 +196,7 @@ func TestNewBranch(t *testing.T) {
 			}
 			defer env.cleanup()
 
-			// Create a repository with three commits: master points to the
+			// Create a repository with three commits: main points to the
 			// second and existing points to the third.
 			if err := env.g.Init(ctx, "."); err != nil {
 				t.Fatal(err)
@@ -228,7 +228,7 @@ func TestNewBranch(t *testing.T) {
 			if err := env.g.Run(ctx, "checkout", "--quiet", "-b", "existing"); err != nil {
 				t.Fatal(err)
 			}
-			if err := env.g.Run(ctx, "branch", "--set-upstream-to=master"); err != nil {
+			if err := env.g.Run(ctx, "branch", "--set-upstream-to=main"); err != nil {
 				t.Fatal(err)
 			}
 			if err := env.root.Apply(filesystem.Write("file.txt", content3)); err != nil {
@@ -241,7 +241,7 @@ func TestNewBranch(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := env.g.CheckoutBranch(ctx, "master", CheckoutOptions{}); err != nil {
+			if err := env.g.CheckoutBranch(ctx, "main", CheckoutOptions{}); err != nil {
 				t.Fatal(err)
 			}
 			// Store expected commit before system-under-test modifies.
@@ -264,7 +264,7 @@ func TestNewBranch(t *testing.T) {
 			} else if r.Commit != wantBranchRev.Commit {
 				names := map[Hash]string{
 					commit1.Commit: "commit 1",
-					commit2.Commit: "master/commit 2",
+					commit2.Commit: "main/commit 2",
 					commit3.Commit: "existing/commit 3",
 				}
 				t.Errorf("%v = %v; want %v", branchRef, prettyCommit(r.Commit, names), prettyCommit(wantBranchRev.Commit, names))

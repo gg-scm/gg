@@ -60,7 +60,7 @@ func TestIdentify(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if want := head.Commit.String() + " master\n"; string(got) != want {
+		if want := head.Commit.String() + " main\n"; string(got) != want {
 			t.Errorf("identify output = %q; want %q", got, want)
 		}
 	})
@@ -85,7 +85,7 @@ func TestIdentify(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if want := head.Commit.String() + " master\n"; string(got) != want {
+		if want := head.Commit.String() + " main\n"; string(got) != want {
 			t.Errorf("identify output = %q; want %q", got, want)
 		}
 	})
@@ -113,7 +113,7 @@ func TestIdentify(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if want := head.Commit.String() + "+ master\n"; string(got) != want {
+		if want := head.Commit.String() + "+ main\n"; string(got) != want {
 			t.Errorf("identify output = %q; want %q", got, want)
 		}
 	})
@@ -203,7 +203,7 @@ func TestIdentify(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if want := head.Commit.String() + " master foo\n"; string(got) != want {
+		if want := head.Commit.String() + " main foo\n"; string(got) != want {
 			t.Errorf("identify output = %q; want %q", got, want)
 		}
 	})
@@ -228,7 +228,7 @@ func TestIdentify(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if want := head.Commit.String() + " master foo\n"; string(got) != want {
+		if want := head.Commit.String() + " main foo\n"; string(got) != want {
 			t.Errorf("identify output = %q; want %q", got, want)
 		}
 	})
@@ -253,7 +253,7 @@ func TestIdentify(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if want := head.Commit.String() + " master foo\n"; string(got) != want {
+		if want := head.Commit.String() + " main foo\n"; string(got) != want {
 			t.Errorf("identify output = %q; want %q", got, want)
 		}
 	})

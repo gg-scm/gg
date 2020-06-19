@@ -52,8 +52,8 @@ func TestFetchRefspecMap(t *testing.T) {
 	}{
 		{
 			spec:   "+refs/heads/*:refs/remotes/origin/*",
-			local:  "refs/heads/master",
-			remote: "refs/remotes/origin/master",
+			local:  "refs/heads/main",
+			remote: "refs/remotes/origin/main",
 		},
 		{
 			spec:   "+refs/heads/*:refs/remotes/origin/*",
@@ -62,16 +62,16 @@ func TestFetchRefspecMap(t *testing.T) {
 		},
 		{
 			spec:   "+refs/heads/*:refs/special-remote",
-			local:  "refs/heads/master",
+			local:  "refs/heads/main",
 			remote: "refs/special-remote",
 		},
 		{
-			spec:   "+master:refs/special-remote",
-			local:  "refs/heads/master",
+			spec:   "+main:refs/special-remote",
+			local:  "refs/heads/main",
 			remote: "refs/special-remote",
 		},
 		{
-			spec:   "+master:refs/special-remote",
+			spec:   "+main:refs/special-remote",
 			local:  "refs/heads/feature",
 			remote: "",
 		},
@@ -93,10 +93,10 @@ func TestRefPatternPrefix(t *testing.T) {
 		{pat: "*", ok: true, prefix: ""},
 		{pat: "/*", ok: false, prefix: ""},
 		{pat: "er", ok: false},
-		{pat: "master", ok: false},
-		{pat: "/master", ok: false},
-		{pat: "heads/master", ok: false},
-		{pat: "refs/heads/master", ok: false},
+		{pat: "main", ok: false},
+		{pat: "/main", ok: false},
+		{pat: "heads/main", ok: false},
+		{pat: "refs/heads/main", ok: false},
 		{pat: "refs", ok: false},
 		{pat: "refs/qa*", ok: false},
 		{pat: "refs/*", ok: true, prefix: "refs/"},
@@ -117,16 +117,16 @@ func TestRefPatternMatches(t *testing.T) {
 		suffix string
 		ok     bool
 	}{
-		{pat: "", ref: "refs/heads/master", ok: false},
-		{pat: "*", ref: "refs/heads/master", ok: true, suffix: "refs/heads/master"},
-		{pat: "er", ref: "refs/heads/master", ok: false},
-		{pat: "master", ref: "refs/heads/master", ok: true},
-		{pat: "/master", ref: "refs/heads/master", ok: false},
-		{pat: "heads/master", ref: "refs/heads/master", ok: true},
-		{pat: "refs/heads/master", ref: "refs/heads/master", ok: true},
-		{pat: "refs", ref: "refs/heads/master", ok: false},
-		{pat: "refs/heads/*", ref: "refs/heads/master", ok: true, suffix: "master"},
-		{pat: "refs/*", ref: "refs/heads/master", ok: true, suffix: "heads/master"},
+		{pat: "", ref: "refs/heads/main", ok: false},
+		{pat: "*", ref: "refs/heads/main", ok: true, suffix: "refs/heads/main"},
+		{pat: "er", ref: "refs/heads/main", ok: false},
+		{pat: "main", ref: "refs/heads/main", ok: true},
+		{pat: "/main", ref: "refs/heads/main", ok: false},
+		{pat: "heads/main", ref: "refs/heads/main", ok: true},
+		{pat: "refs/heads/main", ref: "refs/heads/main", ok: true},
+		{pat: "refs", ref: "refs/heads/main", ok: false},
+		{pat: "refs/heads/*", ref: "refs/heads/main", ok: true, suffix: "main"},
+		{pat: "refs/*", ref: "refs/heads/main", ok: true, suffix: "heads/main"},
 	}
 	for _, test := range tests {
 		suffix, ok := test.pat.Match(test.ref)

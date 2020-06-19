@@ -118,5 +118,5 @@ You can use `gg update` to switch to a different branch.
 
 ```shell
 gg update myfeature
-gg update master
+gg update main
 ```

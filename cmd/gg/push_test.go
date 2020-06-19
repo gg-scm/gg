@@ -52,7 +52,7 @@ func TestPush(t *testing.T) {
 	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "main"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -75,14 +75,14 @@ func TestPush(t *testing.T) {
 
 	// Verify that repo B has the new commit.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/main"); err != nil {
 		t.Error(err)
 	} else if r.Commit != commit2 {
 		names := map[git.Hash]string{
 			rev1.Commit: "shared commit",
 			commit2:     "local commit",
 		}
-		t.Errorf("refs/heads/master = %s; want %s",
+		t.Errorf("refs/heads/main = %s; want %s",
 			prettyCommit(r.Commit, names),
 			prettyCommit(commit2, names))
 	}
@@ -116,7 +116,7 @@ func TestPush_Arg(t *testing.T) {
 	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "main"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -144,27 +144,27 @@ func TestPush_Arg(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Ensure that repo C's master branch has moved to the new commit.
+	// Ensure that repo C's main branch has moved to the new commit.
 	commit1 := rev1.Commit
 	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
 	}
 	gitC := env.git.WithDir(repoCPath)
-	if r, err := gitC.ParseRev(ctx, "refs/heads/master"); err != nil {
+	if r, err := gitC.ParseRev(ctx, "refs/heads/main"); err != nil {
 		t.Error(err)
 	} else if r.Commit != commit2 {
-		t.Errorf("named remote refs/heads/master = %s; want %s",
+		t.Errorf("named remote refs/heads/main = %s; want %s",
 			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
 	}
 
-	// Verify that repo B's master branch has stayed the same.
+	// Verify that repo B's main branch has stayed the same.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/main"); err != nil {
 		t.Error(err)
 	} else if r.Commit != commit1 {
-		t.Errorf("origin refs/heads/master = %s; want %s",
+		t.Errorf("origin refs/heads/main = %s; want %s",
 			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
 	}
@@ -198,7 +198,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "main"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -217,7 +217,7 @@ func TestPush_FailUnknownRef(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Call gg to push from repo A's master branch to repo B's nonexistent foo branch.
+	// Call gg to push from repo A's main branch to repo B's nonexistent foo branch.
 	// This should return an error.
 	if _, err := env.gg(ctx, repoAPath, "push", "-r", "foo"); err == nil {
 		t.Error("push of new ref did not return error")
@@ -225,17 +225,17 @@ func TestPush_FailUnknownRef(t *testing.T) {
 		t.Errorf("push of new ref returned usage error: %v", err)
 	}
 
-	// Verify that repo B's master branch has not changed.
+	// Verify that repo B's main branch has not changed.
 	commit1 := rev1.Commit
 	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/main"); err != nil {
 		t.Error(err)
 	} else if r.Commit != commit1 {
-		t.Errorf("refs/heads/master = %s; want %s",
+		t.Errorf("refs/heads/main = %s; want %s",
 			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
 	}
@@ -277,7 +277,7 @@ func TestPush_CreateRef(t *testing.T) {
 	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "main"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -296,7 +296,7 @@ func TestPush_CreateRef(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Call gg to push the repo A master branch to repo B's foo branch.
+	// Call gg to push the repo A main branch to repo B's foo branch.
 	if _, err := env.gg(ctx, repoAPath, "push", "-r", "foo", "--new-branch"); err != nil {
 		t.Error(err)
 	}
@@ -316,11 +316,11 @@ func TestPush_CreateRef(t *testing.T) {
 			prettyCommit(commit2, commitNames))
 	}
 
-	// Verify that repo B's master branch has not changed.
-	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
+	// Verify that repo B's main branch has not changed.
+	if r, err := gitB.ParseRev(ctx, "refs/heads/main"); err != nil {
 		t.Error(err)
 	} else if r.Commit != commit1 {
-		t.Errorf("refs/heads/master = %s; want %s",
+		t.Errorf("refs/heads/main = %s; want %s",
 			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
 	}
@@ -354,7 +354,7 @@ func TestPush_RewindFails(t *testing.T) {
 	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "main"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -371,34 +371,34 @@ func TestPush_RewindFails(t *testing.T) {
 	}
 
 	// Push second commit to repo B.
-	if err := gitA.Run(ctx, "push", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "origin", "main"); err != nil {
 		t.Fatal(err)
 	}
 
-	// Move master in repo A back to the first commit.
+	// Move main in repo A back to the first commit.
 	commit1 := rev1.Commit
 	if err := gitA.Run(ctx, "reset", "--hard", commit1.String()); err != nil {
 		t.Fatal(err)
 	}
 
-	// Call gg to push initial commit from repo A to repo B's master branch (a rewind).
+	// Call gg to push initial commit from repo A to repo B's main branch (a rewind).
 	// This should return an error.
-	if _, err := env.gg(ctx, repoAPath, "push", "-r", "master"); err == nil {
+	if _, err := env.gg(ctx, repoAPath, "push", "-r", "main"); err == nil {
 		t.Error("push of parent rev did not return error")
 	} else if isUsage(err) {
 		t.Errorf("push of parent rev returned usage error: %v", err)
 	}
 
-	// Verify that repo B's master branch has not changed.
+	// Verify that repo B's main branch has not changed.
 	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/main"); err != nil {
 		t.Error(err)
 	} else if r.Commit != commit2 {
-		t.Errorf("refs/heads/master = %s; want %s",
+		t.Errorf("refs/heads/main = %s; want %s",
 			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
 	}
@@ -432,7 +432,7 @@ func TestPush_RewindForce(t *testing.T) {
 	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "main"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -449,32 +449,32 @@ func TestPush_RewindForce(t *testing.T) {
 	}
 
 	// Push second commit to repo B.
-	if err := gitA.Run(ctx, "push", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "origin", "main"); err != nil {
 		t.Fatal(err)
 	}
 
-	// Move master in repo A back to the first commit.
+	// Move main in repo A back to the first commit.
 	commit1 := rev1.Commit
 	if err := gitA.Run(ctx, "reset", "--hard", commit1.String()); err != nil {
 		t.Fatal(err)
 	}
 
-	// Call gg to push initial commit from repo A to repo B's master branch (a rewind) with
+	// Call gg to push initial commit from repo A to repo B's main branch (a rewind) with
 	// the -f flag.
-	if _, err := env.gg(ctx, repoAPath, "push", "-f", "-r", "master"); err != nil {
+	if _, err := env.gg(ctx, repoAPath, "push", "-f", "-r", "main"); err != nil {
 		t.Error(err)
 	}
 
-	// Verify that repo B's master branch has moved to the new commit.
+	// Verify that repo B's main branch has moved to the new commit.
 	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.ParseRev(ctx, "refs/heads/master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "refs/heads/main"); err != nil {
 		t.Error(err)
 	} else if r.Commit != commit1 {
-		t.Errorf("refs/heads/master = %s; want %s",
+		t.Errorf("refs/heads/main = %s; want %s",
 			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
 	}
@@ -508,7 +508,7 @@ func TestPush_DistinctPushURL(t *testing.T) {
 	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "main"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -538,27 +538,27 @@ func TestPush_DistinctPushURL(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Verify that repo C's master branch has moved to the new commit.
+	// Verify that repo C's main branch has moved to the new commit.
 	commit1 := rev1.Commit
 	commitNames := map[git.Hash]string{
 		commit1: "shared commit",
 		commit2: "local commit",
 	}
 	gitC := env.git.WithDir(repoCPath)
-	if r, err := gitC.ParseRev(ctx, "master"); err != nil {
+	if r, err := gitC.ParseRev(ctx, "main"); err != nil {
 		t.Error("In push repo:", err)
 	} else if r.Commit != commit2 {
-		t.Errorf("master in push repo = %s; want %s",
+		t.Errorf("main in push repo = %s; want %s",
 			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit2, commitNames))
 	}
 
-	// Verify that repo B's master branch has not changed.
+	// Verify that repo B's main branch has not changed.
 	gitB := env.git.WithDir(repoBPath)
-	if r, err := gitB.ParseRev(ctx, "master"); err != nil {
+	if r, err := gitB.ParseRev(ctx, "main"); err != nil {
 		t.Error("In fetch repo:", err)
 	} else if r.Commit != commit1 {
-		t.Errorf("master in fetch repo = %s; want %s",
+		t.Errorf("main in fetch repo = %s; want %s",
 			prettyCommit(r.Commit, commitNames),
 			prettyCommit(commit1, commitNames))
 	}
@@ -596,7 +596,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "main"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -623,7 +623,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	}
 	repoCPath := env.root.FromSlash("repoC")
 	gitC := env.git.WithDir(repoCPath)
-	if err := gitC.NewBranch(ctx, "newbranch", git.BranchOptions{StartPoint: "master"}); err != nil {
+	if err := gitC.NewBranch(ctx, "newbranch", git.BranchOptions{StartPoint: "main"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := gitA.Run(ctx, "remote", "set-url", "--push", "origin", repoCPath); err != nil {
@@ -689,7 +689,7 @@ func TestPush_NoCreatePushURLMissingBranch(t *testing.T) {
 	if err := gitA.Run(ctx, "remote", "add", "origin", repoBPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "master"); err != nil {
+	if err := gitA.Run(ctx, "push", "--set-upstream", "origin", "main"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -716,7 +716,7 @@ func TestPush_NoCreatePushURLMissingBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitB := env.git.WithDir(repoBPath)
-	if err := gitB.NewBranch(ctx, "newbranch", git.BranchOptions{StartPoint: "master"}); err != nil {
+	if err := gitB.NewBranch(ctx, "newbranch", git.BranchOptions{StartPoint: "main"}); err != nil {
 		t.Fatal(err)
 	}
 	repoCPath := env.root.FromSlash("repoC")
@@ -763,36 +763,36 @@ func TestGerritPushRef(t *testing.T) {
 		wantOpts map[string][]string
 	}{
 		{
-			branch:   "master",
-			wantRef:  "refs/for/master",
+			branch:   "main",
+			wantRef:  "refs/for/main",
 			wantOpts: map[string][]string{"no-publish-comments": nil},
 		},
 		{
-			branch: "master",
+			branch: "main",
 			opts: &gerritOptions{
 				publishComments: true,
 			},
-			wantRef:  "refs/for/master",
+			wantRef:  "refs/for/main",
 			wantOpts: map[string][]string{"publish-comments": nil},
 		},
 		{
-			branch: "master",
+			branch: "main",
 			opts: &gerritOptions{
-				message: "This is a rebase on master!",
+				message: "This is a rebase on main!",
 			},
-			wantRef: "refs/for/master",
+			wantRef: "refs/for/main",
 			wantOpts: map[string][]string{
-				"m":                   {"This is a rebase on master!"},
+				"m":                   {"This is a rebase on main!"},
 				"no-publish-comments": nil,
 			},
 		},
 		{
-			branch: "master",
+			branch: "main",
 			opts: &gerritOptions{
 				reviewers: []string{"a@a.com", "c@r.com"},
 				cc:        []string{"b@o.com", "d@zombo.com"},
 			},
-			wantRef: "refs/for/master",
+			wantRef: "refs/for/main",
 			wantOpts: map[string][]string{
 				"r":                   {"a@a.com", "c@r.com"},
 				"cc":                  {"b@o.com", "d@zombo.com"},
@@ -800,12 +800,12 @@ func TestGerritPushRef(t *testing.T) {
 			},
 		},
 		{
-			branch: "master",
+			branch: "main",
 			opts: &gerritOptions{
 				reviewers: []string{"a@a.com,c@r.com"},
 				cc:        []string{"b@o.com,d@zombo.com"},
 			},
-			wantRef: "refs/for/master",
+			wantRef: "refs/for/main",
 			wantOpts: map[string][]string{
 				"r":                   {"a@a.com", "c@r.com"},
 				"cc":                  {"b@o.com", "d@zombo.com"},
@@ -813,14 +813,14 @@ func TestGerritPushRef(t *testing.T) {
 			},
 		},
 		{
-			branch: "master",
+			branch: "main",
 			opts: &gerritOptions{
 				notify:    "NONE",
 				notifyTo:  []string{"a@a.com"},
 				notifyCC:  []string{"b@b.com"},
 				notifyBCC: []string{"c@c.com"},
 			},
-			wantRef: "refs/for/master",
+			wantRef: "refs/for/main",
 			wantOpts: map[string][]string{
 				"notify":              {"NONE"},
 				"notify-to":           {"a@a.com"},
@@ -851,12 +851,12 @@ func TestParseGerritRef(t *testing.T) {
 		opts map[string][]string
 	}{
 		{
-			ref:  "refs/for/master",
-			base: "refs/for/master",
+			ref:  "refs/for/main",
+			base: "refs/for/main",
 		},
 		{
-			ref:  "refs/for/master%no-publish-comments",
-			base: "refs/for/master",
+			ref:  "refs/for/main%no-publish-comments",
+			base: "refs/for/main",
 			opts: map[string][]string{"no-publish-comments": nil},
 		},
 		{
@@ -865,33 +865,33 @@ func TestParseGerritRef(t *testing.T) {
 			opts: map[string][]string{"topic": {"driver/i42"}},
 		},
 		{
-			ref:  "refs/for/master%notify=NONE,notify-to=a@a.com",
-			base: "refs/for/master",
+			ref:  "refs/for/main%notify=NONE,notify-to=a@a.com",
+			base: "refs/for/main",
 			opts: map[string][]string{"notify": {"NONE"}, "notify-to": {"a@a.com"}},
 		},
 		{
-			ref:  "refs/for/master%m=This_is_a_rebase_on_master%21",
-			base: "refs/for/master",
-			opts: map[string][]string{"m": {"This is a rebase on master!"}},
+			ref:  "refs/for/main%m=This_is_a_rebase_on_main%21",
+			base: "refs/for/main",
+			opts: map[string][]string{"m": {"This is a rebase on main!"}},
 		},
 		{
-			ref:  "refs/for/master%m=This+is+a+rebase+on+master%21",
-			base: "refs/for/master",
-			opts: map[string][]string{"m": {"This is a rebase on master!"}},
+			ref:  "refs/for/main%m=This+is+a+rebase+on+main%21",
+			base: "refs/for/main",
+			opts: map[string][]string{"m": {"This is a rebase on main!"}},
 		},
 		{
-			ref:  "refs/for/master%l=Code-Review+1,l=Verified+1",
-			base: "refs/for/master",
+			ref:  "refs/for/main%l=Code-Review+1,l=Verified+1",
+			base: "refs/for/main",
 			opts: map[string][]string{"l": {"Code-Review+1", "Verified+1"}},
 		},
 		{
-			ref:  "refs/for/master%r=a@a.com,cc=b@o.com",
-			base: "refs/for/master",
+			ref:  "refs/for/main%r=a@a.com,cc=b@o.com",
+			base: "refs/for/main",
 			opts: map[string][]string{"r": {"a@a.com"}, "cc": {"b@o.com"}},
 		},
 		{
-			ref:  "refs/for/master%r=a@a.com,cc=b@o.com,r=c@r.com",
-			base: "refs/for/master",
+			ref:  "refs/for/main%r=a@a.com,cc=b@o.com,r=c@r.com",
+			base: "refs/for/main",
 			opts: map[string][]string{"r": {"a@a.com", "c@r.com"}, "cc": {"b@o.com"}},
 		},
 	}

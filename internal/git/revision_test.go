@@ -112,7 +112,7 @@ func TestRef(t *testing.T) {
 			ref:     "-",
 			invalid: true,
 		},
-		{ref: "master"},
+		{ref: "main"},
 		{ref: "HEAD"},
 		{ref: "FETCH_HEAD"},
 		{ref: "ORIG_HEAD"},
@@ -120,16 +120,16 @@ func TestRef(t *testing.T) {
 		{ref: "CHERRY_PICK_HEAD"},
 		{ref: "FOO"},
 		{
-			ref:     "-refs/heads/master",
+			ref:     "-refs/heads/main",
 			invalid: true,
 		},
 		{
-			ref:      "refs/heads/master",
+			ref:      "refs/heads/main",
 			isBranch: true,
-			branch:   "master",
+			branch:   "main",
 		},
 		{
-			ref:     "refs/heads//master",
+			ref:     "refs/heads//main",
 			invalid: true,
 		},
 		{
@@ -146,7 +146,7 @@ func TestRef(t *testing.T) {
 			invalid: true,
 		},
 		{
-			ref:     "refs/heads/master:bar",
+			ref:     "refs/heads/main:bar",
 			invalid: true,
 		},
 		{
@@ -166,7 +166,7 @@ func TestRef(t *testing.T) {
 			isTag: true,
 			tag:   "v1.2.3",
 		},
-		{ref: "refs/for/master"},
+		{ref: "refs/for/main"},
 	}
 	for _, test := range tests {
 		if got := test.ref.String(); got != string(test.ref) {
@@ -206,7 +206,7 @@ func TestHeadRef(t *testing.T) {
 		if err := env.g.Init(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
-		const want = Ref("refs/heads/master")
+		const want = Ref("refs/heads/main")
 		got, err := env.g.HeadRef(ctx)
 		if got != want || err != nil {
 			t.Errorf("HeadRef(ctx) = %q, %v; want %q, <nil>", got, err, want)
@@ -230,7 +230,7 @@ func TestHeadRef(t *testing.T) {
 		if err := env.g.Run(ctx, "commit", "-m", "first commit"); err != nil {
 			t.Fatal(err)
 		}
-		const want = Ref("refs/heads/master")
+		const want = Ref("refs/heads/main")
 		got, err := env.g.HeadRef(ctx)
 		if got != want || err != nil {
 			t.Errorf("HeadRef(ctx) = %q, %v; want %q, <nil>", got, err, want)
@@ -351,7 +351,7 @@ func TestParseRev(t *testing.T) {
 		{
 			refspec: "HEAD",
 			commit:  commit2,
-			ref:     "refs/heads/master",
+			ref:     "refs/heads/main",
 		},
 		{
 			refspec: "FETCH_HEAD",
@@ -359,9 +359,9 @@ func TestParseRev(t *testing.T) {
 			ref:     "FETCH_HEAD",
 		},
 		{
-			refspec: "master",
+			refspec: "main",
 			commit:  commit2,
-			ref:     "refs/heads/master",
+			ref:     "refs/heads/main",
 		},
 		{
 			refspec: commit1.String(),
@@ -418,7 +418,7 @@ func TestListRefs(t *testing.T) {
 	// Since ListRefs may be used to check state of other commands,
 	// everything here uses raw commands.
 
-	// Create the first master commit.
+	// Create the first main commit.
 	if err := env.g.Init(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -431,7 +431,7 @@ func TestListRefs(t *testing.T) {
 	if err := env.g.Run(ctx, "commit", "-m", "first commit"); err != nil {
 		t.Fatal(err)
 	}
-	revMaster, err := env.g.Head(ctx)
+	revMain, err := env.g.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -453,7 +453,7 @@ func TestListRefs(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Create a two new commits on branch def.
-	if err := env.g.Run(ctx, "checkout", "--quiet", "-b", "def", "master"); err != nil {
+	if err := env.g.Run(ctx, "checkout", "--quiet", "-b", "def", "main"); err != nil {
 		t.Fatal(err)
 	}
 	if err := env.root.Apply(filesystem.Write("baz.txt", dummyContent)); err != nil {
@@ -492,11 +492,11 @@ func TestListRefs(t *testing.T) {
 
 	// Verify that refs match what we expect.
 	want := map[Ref]Hash{
-		"HEAD":              revDEF2.Commit,
-		"refs/heads/master": revMaster.Commit,
-		"refs/heads/abc":    revABC.Commit,
-		"refs/heads/def":    revDEF2.Commit,
-		"refs/tags/ghi":     revDEF1.Commit,
+		"HEAD":            revDEF2.Commit,
+		"refs/heads/main": revMain.Commit,
+		"refs/heads/abc":  revABC.Commit,
+		"refs/heads/def":  revDEF2.Commit,
+		"refs/tags/ghi":   revDEF1.Commit,
 	}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("refs (-want +got):\n%s", diff)
@@ -511,7 +511,7 @@ func TestMutateRefs(t *testing.T) {
 	ctx := context.Background()
 
 	setupRepo := func(ctx context.Context, env *testEnv) error {
-		// Create the first master commit.
+		// Create the first main commit.
 		if err := env.g.Init(ctx, "."); err != nil {
 			return err
 		}
