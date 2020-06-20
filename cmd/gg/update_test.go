@@ -32,7 +32,6 @@ func TestUpdate_NoArgs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		// Create a repository A and clone it to repository B.
 		if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -97,7 +96,6 @@ func TestUpdate_NoArgs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		// Create a repository A and clone it to repository B.
 		if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -192,7 +190,6 @@ func TestUpdate_NoArgs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		// Create a repository with two commits, with main behind the "upstream" branch.
 		if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -258,7 +255,6 @@ func TestUpdate_NoArgs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		// Create a repository A with a commit and clone it to repository B.
 		if err := env.initEmptyRepo(ctx, "repoA"); err != nil {
@@ -337,7 +333,6 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		// Start a repository with an arbitrary main branch.
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
@@ -404,7 +399,6 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		// Create a repository A and clone it to repository B.
 		if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -482,7 +476,6 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		// Create a repository A and clone it to repository B.
 		if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -556,7 +549,6 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		// Create a repository A and clone it to repository B.
 		if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -609,7 +601,6 @@ func TestUpdate_ToCommit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with two commits.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -672,7 +663,6 @@ func TestUpdate_Unclean(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with two commits.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -747,7 +737,6 @@ func TestUpdate_Clean(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with two commits.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {

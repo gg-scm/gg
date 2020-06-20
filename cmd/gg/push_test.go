@@ -31,7 +31,6 @@ func TestPush(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create repository with some junk history.
 	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -95,7 +94,6 @@ func TestPush_Arg(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create repository with some junk history.
 	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -177,7 +175,6 @@ func TestPush_FailUnknownRef(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create repository with some junk history.
 	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -256,7 +253,6 @@ func TestPush_CreateRef(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create repository with some junk history.
 	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -333,7 +329,6 @@ func TestPush_RewindFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create repository with some junk history.
 	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -411,7 +406,6 @@ func TestPush_RewindForce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create repository with some junk history.
 	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -487,7 +481,6 @@ func TestPush_DistinctPushURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create repository with some junk history.
 	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -575,7 +568,6 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create repository with some junk history.
 	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {
@@ -668,7 +660,6 @@ func TestPush_NoCreatePushURLMissingBranch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create repository with some junk history.
 	if err := env.initRepoWithHistory(ctx, "repoA"); err != nil {

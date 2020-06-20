@@ -156,7 +156,6 @@ func TestPull(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	commits, err := setupPullTest(ctx, env)
 	if err != nil {
@@ -237,7 +236,6 @@ func TestPullWithArgument(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	commits, err := setupPullTest(ctx, env)
 	if err != nil {
@@ -324,7 +322,6 @@ func TestPullUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	commits, err := setupPullTest(ctx, env)
 	if err != nil {
@@ -392,7 +389,6 @@ func TestPullRev(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	commits, err := setupPullTest(ctx, env)
 	if err != nil {
@@ -458,7 +454,6 @@ func TestPullRevTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	commits, err := setupPullTest(ctx, env)
 	if err != nil {
@@ -536,7 +531,6 @@ func TestInferUpstream(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}

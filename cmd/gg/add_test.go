@@ -30,7 +30,6 @@ func TestAdd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +56,6 @@ func TestAdd_DoesNotStageModified(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +94,6 @@ func TestAdd_WholeRepo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +120,6 @@ func TestAdd_ResolveUnmerged(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +179,6 @@ func TestAdd_Directory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -261,7 +256,6 @@ func TestAdd_IgnoredFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -308,7 +302,6 @@ func TestAdd_IgnoredFileInDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}

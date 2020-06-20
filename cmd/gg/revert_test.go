@@ -55,7 +55,6 @@ func TestRevert(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer env.cleanup()
 
 			// Create a working copy where both staged.txt and unstaged.txt
 			// have local modifications but only staged.txt has been "git add"ed.
@@ -156,7 +155,6 @@ func TestRevert_AddedFile(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer env.cleanup()
 
 			// Create a repository with foo.txt "git add -N"ed.
 			if err := env.initRepoWithHistory(ctx, "."); err != nil {
@@ -219,7 +217,6 @@ func TestRevert_AddedFileBeforeFirstCommit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with foo.txt "git add -N"ed.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -275,7 +272,6 @@ func TestRevert_All(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a working copy where both staged.txt and unstaged.txt
 	// have local modifications but only staged.txt has been "git add"ed.
@@ -342,7 +338,6 @@ func TestRevert_Rev(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository that has two commits of foo.txt.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -413,7 +408,6 @@ func TestRevert_Missing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository and commit foo.txt.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -461,7 +455,6 @@ func TestRevert_NoBackup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with a committed foo.txt.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -522,7 +515,6 @@ func TestRevert_LocalRename(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer env.cleanup()
 
 			// Create a repository with a committed foo.txt.
 			if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -612,7 +604,6 @@ func TestRevert_UnknownFile(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
@@ -635,7 +626,6 @@ func TestRevert_UnknownFile(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)

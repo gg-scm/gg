@@ -36,7 +36,6 @@ func TestGerritHook(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 		if err := env.git.Init(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
@@ -58,7 +57,6 @@ func TestGerritHook(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 		if err := env.git.Init(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
@@ -89,7 +87,6 @@ func TestGerritHook(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 		if err := env.git.Init(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
@@ -121,7 +118,6 @@ func TestGerritHook(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 		if err := env.git.Init(ctx, "."); err != nil {
 			t.Fatal(err)
 		}

@@ -188,6 +188,14 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 		os.RemoveAll(topDir)
 		return nil, err
 	}
+	tb.Cleanup(func() {
+		if tb.Failed() && env.stderr.Len() > 0 {
+			tb.Log("stderr:", env.stderr.String())
+		}
+		if err := os.RemoveAll(string(env.topDir)); err != nil {
+			tb.Error("cleanup:", err)
+		}
+	})
 	return env, nil
 }
 
@@ -236,15 +244,6 @@ func (env *testEnv) editorCmd(content []byte) (string, error) {
 	}
 	dst := env.topDir.FromSlash(fname)
 	return fmt.Sprintf("%s %s", cpPath, escape.Shell(dst)), nil
-}
-
-func (env *testEnv) cleanup() {
-	if env.tb.Failed() && env.stderr.Len() > 0 {
-		env.tb.Log("stderr:", env.stderr.String())
-	}
-	if err := os.RemoveAll(string(env.topDir)); err != nil {
-		env.tb.Error("cleanup:", err)
-	}
 }
 
 func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte, error) {

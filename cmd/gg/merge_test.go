@@ -29,7 +29,6 @@ func TestMerge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +119,6 @@ func TestMerge_Conflict(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}

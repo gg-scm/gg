@@ -27,7 +27,6 @@ func TestInit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	if _, err := env.gg(ctx, env.root.String(), "init"); err != nil {
 		t.Error(err)
@@ -49,7 +48,6 @@ func TestInit_Arg(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	if _, err := env.gg(ctx, env.root.String(), "init", "repo"); err != nil {
 		t.Error(err)

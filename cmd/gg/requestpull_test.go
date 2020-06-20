@@ -161,7 +161,6 @@ func TestRequestPull(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer env.cleanup()
 			const authToken = "xyzzy12345"
 			if err := env.writeGitHubAuth([]byte(authToken + "\n")); err != nil {
 				t.Fatal(err)
@@ -285,7 +284,6 @@ func TestRequestPull_BodyWithoutTitleUsageError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	const authToken = "xyzzy12345"
 	if err := env.writeGitHubAuth([]byte(authToken + "\n")); err != nil {
 		t.Fatal(err)
@@ -356,7 +354,6 @@ func TestRequestPull_Editor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	const authToken = "xyzzy12345"
 	if err := env.writeGitHubAuth([]byte(authToken + "\n")); err != nil {
 		t.Fatal(err)
@@ -817,7 +814,6 @@ func TestInferPullRequestMessage(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer env.cleanup()
 			if err := env.initRepoWithHistory(ctx, "."); err != nil {
 				t.Fatal(err)
 			}

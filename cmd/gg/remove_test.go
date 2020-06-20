@@ -30,7 +30,6 @@ func TestRemove(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with a committed foo.txt file.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -77,7 +76,6 @@ func TestRemove_AddedFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with an uncommitted foo.txt.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -123,7 +121,6 @@ func TestRemove_AddedForce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with an uncommitted foo.txt.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -164,7 +161,6 @@ func TestRemove_ModifiedFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with a committed foo.txt file.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -217,7 +213,6 @@ func TestRemove_ModifiedForce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with a committed foo.txt file.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -268,7 +263,6 @@ func TestRemove_MissingFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with a committed foo.txt file.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -314,7 +308,6 @@ func TestRemove_MissingAfter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with a committed foo.txt file.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -359,7 +352,6 @@ func TestRemove_Recursive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with a committed foo/bar.txt file.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -406,7 +398,6 @@ func TestRemove_RecursiveMissingFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with a committed foo/bar.txt file.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
@@ -453,7 +444,6 @@ func TestRemove_RecursiveMissingAfter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with a committed foo/bar.txt file.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {

@@ -29,7 +29,6 @@ func TestBranch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
@@ -71,7 +70,6 @@ func TestBranch_Upstream(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	if err := env.initRepoWithHistory(ctx, "repo1"); err != nil {
 		t.Fatal(err)
@@ -122,7 +120,6 @@ func TestBranch_Delete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
@@ -146,7 +143,6 @@ func TestBranch_Delete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
@@ -187,7 +183,6 @@ func TestBranch_Delete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
@@ -226,7 +221,6 @@ func TestBranch_ListNewRepo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)

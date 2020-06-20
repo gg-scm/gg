@@ -33,7 +33,6 @@ func TestEvolve_FirstChangeSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
@@ -113,7 +112,6 @@ func TestEvolve_Unrelated(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
@@ -201,7 +199,6 @@ func TestEvolve_UnrelatedOnTopOfSubmitted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}
@@ -287,7 +284,6 @@ func TestEvolve_AbortIfReordersLocal(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 		if err := env.initEmptyRepo(ctx, "."); err != nil {
 			t.Fatal(err)
 		}

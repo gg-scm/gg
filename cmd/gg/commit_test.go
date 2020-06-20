@@ -34,7 +34,6 @@ func TestCommit_NoArgs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +127,6 @@ func TestCommit_Selective(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +219,6 @@ func TestCommit_SelectiveWrongFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -257,7 +254,6 @@ func TestCommit_PartialWrongFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -293,7 +289,6 @@ func TestCommit_Amend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -406,7 +401,6 @@ func TestCommit_AmendRootCommit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -502,7 +496,6 @@ func TestCommit_NoChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -535,7 +528,6 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -637,7 +629,6 @@ func TestCommit_InSubdir(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer env.cleanup()
 			if err := env.initEmptyRepo(ctx, "."); err != nil {
 				t.Fatal(err)
 			}
@@ -737,7 +728,6 @@ func TestCommit_Merge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -849,7 +839,6 @@ func TestCommit_DirectoryWithUntracked(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -891,7 +880,6 @@ func TestCommitMessageTemplate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	tests := []struct {
 		name string

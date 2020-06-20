@@ -31,7 +31,6 @@ func TestClone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "repoA"); err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +93,6 @@ func TestClone_Branch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "repoA"); err != nil {
 		t.Fatal(err)
 	}

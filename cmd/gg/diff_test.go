@@ -29,7 +29,6 @@ func TestDiff(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +71,6 @@ func TestDiff_NoChange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +104,6 @@ func TestDiff_AfterInit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +125,6 @@ func TestDiff_BeforeFirstCommit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}

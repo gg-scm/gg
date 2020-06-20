@@ -29,7 +29,6 @@ func TestEditor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 	const want = "I edited it!\n"
 	cmd, err := env.editorCmd([]byte(want))
 	if err != nil {

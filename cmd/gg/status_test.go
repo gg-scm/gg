@@ -33,7 +33,6 @@ func TestStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
@@ -102,7 +101,6 @@ func TestStatus_RenamedLocally(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a new repository with committed foo.txt.
 	if err := env.initEmptyRepo(ctx, "."); err != nil {

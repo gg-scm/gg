@@ -32,7 +32,6 @@ func TestRebase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		// Create repository with two commits on a branch called "topic" and
 		// a diverging commit on "main".
@@ -156,7 +155,6 @@ func TestRebase_Src(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create repository with two commits on a branch called "topic" and
 	// a diverging commit on "main".
@@ -255,7 +253,6 @@ func TestRebase_SrcUnrelated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create repository with two commits on a branch called "topic".
 	if err := env.initRepoWithHistory(ctx, "."); err != nil {
@@ -339,7 +336,6 @@ func TestRebase_Base(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer env.cleanup()
 
 	// Create a repository with this commit topology:
 	//
@@ -484,7 +480,6 @@ func TestRebase_ResetUpstream(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
@@ -582,7 +577,6 @@ func TestHistedit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
@@ -691,7 +685,6 @@ func TestHistedit_ContinueWithModifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
@@ -862,7 +855,6 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer env.cleanup()
 
 		if err := env.initRepoWithHistory(ctx, "."); err != nil {
 			t.Fatal(err)
