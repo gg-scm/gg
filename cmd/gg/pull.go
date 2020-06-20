@@ -244,11 +244,11 @@ func reconcileBranches(ctx context.Context, g *git.Git, headBranch, remoteName s
 }
 
 func currentBranch(ctx context.Context, cc *cmdContext) string {
-	r, err := cc.git.Head(ctx)
+	ref, err := cc.git.HeadRef(ctx)
 	if err != nil {
 		return ""
 	}
-	return r.Ref.Branch()
+	return ref.Branch()
 }
 
 // inferUpstream returns the default remote ref to pull from.

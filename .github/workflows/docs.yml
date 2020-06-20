@@ -40,11 +40,15 @@ jobs:
         git add .
     - name: Create GitHub Pages commit
       run: |
-        git -c user.name='GitHub Actions' -c user.email='no-reply@zombiezen.com' commit -m 'Deploy gg-scm.io'
+        git \
+          -C docs/public \
+          -c user.name='GitHub Actions' \
+          -c user.email='no-reply@zombiezen.com' \
+          commit -m 'Deploy gg-scm.io'
       continue-on-error: true
     - name: Push to GitHub Pages
       run: |
-        cd docs/public && git push \
+        git -C docs/public push \
           "https://x-access-token:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY" \
           HEAD:gh-pages
       env:
