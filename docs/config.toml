@@ -2,7 +2,7 @@ baseURL = "https://gg-scm.io/"
 languageCode = "en-us"
 title = "gg"
 disableKinds = ["taxonomy", "taxonomyTerm"]
-copyright = "Copyright © 2018–2019 Google LLC"
+copyright = "Copyright © 2018–2020 The gg Authors"
 
 [permalinks]
 commands = "/cmd/:filename/"
