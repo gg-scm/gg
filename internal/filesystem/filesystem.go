@@ -23,7 +23,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
 )
 
 // An Operation describes a single step of a Dir.Apply. The zero value
@@ -52,10 +51,16 @@ func Remove(name string) Operation {
 	return Operation{code: opRemove, name: name}
 }
 
-// Rename returns a new rename operation. The name is a slash-separated
-// path relative to the Dir.
+// Rename returns a new rename operation. old and new are slash-separated
+// paths relative to the Dir.
 func Rename(old, new string) Operation {
-	return Operation{code: opRename, name: old, arg: new}
+	return Operation{code: opRename, name: new, arg: old}
+}
+
+// Symlink returns a new symlink operation. new is a slash-separated
+// path relative to the Dir. old is a slash-separated path relative to new.
+func Symlink(old, new string) Operation {
+	return Operation{code: opSymlink, name: new, arg: old}
 }
 
 // String returns a readable description of an operation like "remove foo/bar".
@@ -66,7 +71,9 @@ func (o Operation) String() string {
 	case opWrite:
 		return fmt.Sprintf("write %q to %q", o.arg, o.name)
 	case opRename:
-		return fmt.Sprintf("rename %q to %q", o.name, o.arg)
+		return fmt.Sprintf("rename %q to %q", o.arg, o.name)
+	case opSymlink:
+		return fmt.Sprintf("symlink %q as %q", o.arg, o.name)
 	default:
 		return fmt.Sprintf("%s %q", o.code, o.name)
 	}
@@ -80,6 +87,7 @@ const (
 	opMkdir
 	opRemove
 	opRename
+	opSymlink
 )
 
 // String returns the human-readable name of code.
@@ -95,6 +103,8 @@ func (code opCode) String() string {
 		return "remove"
 	case opRename:
 		return "rename"
+	case opSymlink:
+		return "symlink"
 	default:
 		return fmt.Sprintf("opCode(%d)", int(code))
 	}
@@ -136,11 +146,15 @@ func (dir Dir) Apply(ops ...Operation) error {
 				return err
 			}
 		case opRename:
-			newPath, err := dir.fromSlash(o.code.String(), o.arg)
+			oldPath, err := dir.fromSlash(o.code.String(), o.arg)
 			if err != nil {
 				return err
 			}
-			if err := os.Rename(p, newPath); err != nil {
+			if err := os.Rename(oldPath, p); err != nil {
+				return err
+			}
+		case opSymlink:
+			if err := os.Symlink(filepath.FromSlash(o.arg), p); err != nil {
 				return err
 			}
 		default:

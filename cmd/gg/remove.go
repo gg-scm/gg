@@ -17,8 +17,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
@@ -74,18 +72,4 @@ func verifyPresent(ctx context.Context, g *git.Git, args []string) error {
 		}
 	}
 	return nil
-}
-
-// repoRelativePath converts a working tree file reference to a path
-// relative to the repository root.
-func repoRelativePath(cc *cmdContext, worktree string, name string) (string, error) {
-	a, err := filepath.EvalSymlinks(cc.abs(name))
-	if err != nil {
-		return "", err
-	}
-	prefix := worktree + string(filepath.Separator)
-	if !strings.HasPrefix(a, prefix) {
-		return "", fmt.Errorf("%s is not under %s", name, worktree)
-	}
-	return a[len(prefix):], nil
 }

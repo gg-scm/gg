@@ -16,7 +16,11 @@ package main
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
@@ -595,5 +599,102 @@ func TestRevert_LocalRename(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRevert_UnknownFile(t *testing.T) {
+	t.Parallel()
+	t.Run("EmptyRepo", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+
+		if err := env.initEmptyRepo(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := env.gg(ctx, ".", "revert", "bar.txt"); err == nil {
+			t.Error("gg did not return an error")
+		} else if isUsage(err) {
+			t.Fatal(err)
+		} else if got := err.Error(); !strings.Contains(got, "bar.txt") {
+			t.Errorf("error = %q; want to contain \"bar.txt\"", got)
+		}
+	})
+
+	t.Run("RepoWithHistory", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		env, err := newTestEnv(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer env.cleanup()
+
+		if err := env.initRepoWithHistory(ctx, "."); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := env.gg(ctx, ".", "revert", "bar.txt"); err == nil {
+			t.Error("gg did not return an error")
+		} else if isUsage(err) {
+			t.Fatal(err)
+		} else if got := err.Error(); !strings.Contains(got, "bar.txt") {
+			t.Errorf("error = %q; want to contain \"bar.txt\"", got)
+		}
+	})
+}
+
+func TestEvalSymlinksSloppy(t *testing.T) {
+	t.Parallel()
+	dir, err := ioutil.TempDir("", "gg_evaltest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	origDir := dir
+	t.Cleanup(func() { os.RemoveAll(origDir) })
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = filesystem.Dir(dir).Apply(
+		filesystem.Mkdir("foo"),
+		filesystem.Symlink("foo", "bar"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type testCase struct {
+		path string
+		want string
+	}
+	tests := []testCase{
+		{path: dir, want: dir},
+		{path: filepath.Join(dir, "bar"), want: filepath.Join(dir, "bar")},
+		{path: filepath.Join(dir, "bar/baz.txt"), want: filepath.Join(dir, "foo/baz.txt")},
+	}
+	if runtime.GOOS == "windows" {
+		tests = append(tests,
+			testCase{path: `C:\`, want: `C:\`},
+			testCase{path: `C:\foo.txt`, want: `C:\foo.txt`},
+		)
+	} else {
+		tests = append(tests,
+			testCase{path: "/", want: "/"},
+			testCase{path: "/foo.txt", want: "/foo.txt"},
+		)
+	}
+	for _, test := range tests {
+		got, err := evalSymlinksSloppy(test.path)
+		if got != test.want || err != nil {
+			t.Errorf("evalSymlinksSloppy(%q) = %q, %v; want %q, <nil>", test.path, got, err, test.want)
+		}
 	}
 }

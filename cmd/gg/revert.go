@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gg-scm.io/pkg/internal/flag"
 	"gg-scm.io/pkg/internal/git"
@@ -59,6 +60,38 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 			return cc.git.Run(ctx, rmArgs...)
 		}
 		return err
+	}
+
+	// Check whether files are known to Git or exist in the working tree.
+	var unknowns []int
+	for i, arg := range f.Args() {
+		if _, err := os.Stat(cc.abs(arg)); err != nil {
+			unknowns = append(unknowns, i)
+		}
+	}
+	if len(unknowns) > 0 {
+		unknownPathspecs := make([]git.Pathspec, 0, len(unknowns))
+		for _, i := range unknowns {
+			unknownPathspecs = append(unknownPathspecs, git.LiteralPath(f.Arg(i)))
+		}
+		workRoot, err := cc.git.WorkTree(ctx)
+		if err != nil {
+			return err
+		}
+		tree, err := cc.git.ListTree(ctx, revObj.Commit.String(), unknownPathspecs)
+		if err != nil {
+			return err
+		}
+		for _, i := range unknowns {
+			arg := f.Arg(i)
+			argPath, err := worktreeRelativePath(cc, workRoot, arg)
+			if err != nil {
+				return err
+			}
+			if _, ok := tree[argPath]; !ok {
+				return fmt.Errorf("%q is not known to gg", arg)
+			}
+		}
 	}
 
 	// Find the list of files that have changed between the revision and
@@ -157,11 +190,39 @@ func backupForRevert(ctx context.Context, cc *cmdContext, modified []git.Pathspe
 	return nil
 }
 
-// appendLiteralPaths converts the arguments into literal pathspecs
-// for Git.
-func appendLiteralPaths(dst []git.Pathspec, files []string) []git.Pathspec {
-	for _, f := range files {
-		dst = append(dst, git.LiteralPath(f))
+// worktreeRelativePath converts a working tree file reference to a top path.
+// TODO(soon): Move this into internal/git.
+func worktreeRelativePath(cc *cmdContext, worktree string, name string) (git.TopPath, error) {
+	a, err := evalSymlinksSloppy(cc.abs(name))
+	if err != nil {
+		return "", err
 	}
-	return dst
+	prefix := worktree + string(filepath.Separator)
+	if !strings.HasPrefix(a, prefix) {
+		return "", fmt.Errorf("%s is not under %s", name, worktree)
+	}
+	return git.TopPath(filepath.ToSlash(a[len(prefix):])), nil
+}
+
+// evalSymlinksSloppy is like filepath.EvalSymlinks, but permits the file itself
+// to be a symlink or not exist.
+func evalSymlinksSloppy(path string) (string, error) {
+	orig := path
+	suffix := filepath.Base(path)
+	path = filepath.Dir(path)
+	for {
+		resolved, err := filepath.EvalSymlinks(path)
+		if err == nil {
+			return filepath.Join(resolved, suffix), nil
+		}
+		if !os.IsNotExist(err) {
+			return "", fmt.Errorf("eval symlinks for %q: %w", orig, err)
+		}
+		next := filepath.Dir(path)
+		if next == "" || strings.HasSuffix(next, string(filepath.Separator)) {
+			return "", fmt.Errorf("eval symlinks for %q: %w", orig, err)
+		}
+		suffix = filepath.Join(filepath.Base(path), suffix)
+		path = next
+	}
 }

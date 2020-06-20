@@ -47,6 +47,8 @@
   Git repository. ([#105](https://github.com/zombiezen/gg/issues/105))
 - `gg commit -amend` now works on the repository's first commit.
   ([#106](https://github.com/zombiezen/gg/issues/106))
+- `gg revert` will show an error message if it is given a file that doesn't
+  exist. ([#58](https://github.com/zombiezen/gg/issues/58))
 
 ## 0.7.1 (2019-02-13)
 
