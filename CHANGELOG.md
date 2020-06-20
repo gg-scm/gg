@@ -4,15 +4,15 @@
 
 ## Features
 
-- Tab completion for bash and zsh. ([#18](https://github.com/zombiezen/gg/issues/18))
-- `gg requestpull` accepts a new `-draft` flag.
-  ([#104](https://github.com/zombiezen/gg/issues/104))
 - `gg pull` now pulls all branches and fast-forwards local ones if possible.
   When pulling from an unnamed remote repository, `gg pull` will place the
   branches into a `refs/ggpull/...` namespace.
   ([#108](https://github.com/zombiezen/gg/issues/108))
 - `gg push` now pushes all branches unless limited with the `-r` flag.
   ([#100](https://github.com/zombiezen/gg/issues/100))
+- Tab completion for bash and zsh. ([#18](https://github.com/zombiezen/gg/issues/18))
+- `gg requestpull` accepts a new `-draft` flag.
+  ([#104](https://github.com/zombiezen/gg/issues/104))
 - `gg requestpull` will copy the repository's pull request template into the
   opened editor. ([#110](https://github.com/zombiezen/gg/issues/110))
 
@@ -49,6 +49,7 @@
   ([#106](https://github.com/zombiezen/gg/issues/106))
 - `gg revert` will show an error message if it is given a file that doesn't
   exist. ([#58](https://github.com/zombiezen/gg/issues/58))
+- `gg branch` will no longer fail on an empty repository.
 
 ## 0.7.1 (2019-02-13)
 
