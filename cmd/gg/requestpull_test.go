@@ -542,8 +542,6 @@ type fakeGitHubPullRequestAPI struct {
 	prs []fakePullRequest
 }
 
-const testDraftAccept = "application/vnd.github.shadow-cat-preview+json"
-
 func (api *fakeGitHubPullRequestAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Host == "api.github.com" {
 		if got, want := r.Header.Get("Authorization"), "token "+api.permittedToken; got != want {

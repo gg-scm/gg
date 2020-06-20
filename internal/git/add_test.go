@@ -304,9 +304,6 @@ func TestStageTracked(t *testing.T) {
 		addContent  = "And now...\n"
 		modifiedOld = "The Larch\n"
 		modifiedNew = "The Chestnut\n"
-		// deletedContent must be different from addContent to avoid rename
-		// detection.
-		deletedContent = "Something completely different\n"
 	)
 	err = env.root.Apply(
 		filesystem.Write("modified.txt", modifiedOld),

@@ -22,8 +22,6 @@ import (
 	"gg-scm.io/pkg/internal/git"
 )
 
-const cloneFileMsg = "Hello, World!\n"
-
 func TestClone(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

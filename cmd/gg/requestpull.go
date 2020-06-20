@@ -393,6 +393,9 @@ func createPullRequest(ctx context.Context, client *http.Client, params pullRequ
 		reqBody["draft"] = true
 	}
 	reqBodyJSON, err := json.Marshal(reqBody)
+	if err != nil {
+		return 0, "", fmt.Errorf("create pull request: %w", err)
+	}
 	req.Body = ioutil.NopCloser(bytes.NewReader(reqBodyJSON))
 
 	resp, err := client.Do(req.WithContext(ctx))
@@ -448,6 +451,9 @@ func addPullRequestReviewers(ctx context.Context, client *http.Client, params pu
 		"reviewers": params.users,
 	}
 	reqBodyJSON, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("add pull request reviewers: %w", err)
+	}
 	req.Body = ioutil.NopCloser(bytes.NewReader(reqBodyJSON))
 	req.Header.Set("Content-Length", fmt.Sprint(len(reqBodyJSON)))
 

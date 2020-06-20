@@ -242,13 +242,3 @@ func (l *limitedReader) Read(p []byte) (n int, err error) {
 func (l *limitedReader) Close() error {
 	return l.R.Close()
 }
-
-type nopWriteCloser struct{}
-
-func (nopWriteCloser) Write(p []byte) (int, error) {
-	return len(p), nil
-}
-
-func (nopWriteCloser) Close() error {
-	return nil
-}

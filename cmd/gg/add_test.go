@@ -216,6 +216,9 @@ func TestAdd_Directory(t *testing.T) {
 		filesystem.Write("foo/bar.txt", "I resolved it!\n"),
 		filesystem.Write("foo/newfile.txt", "Another file!\n"),
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if _, err := env.gg(ctx, env.root.String(), "add", "foo"); err != nil {
 		t.Error("gg:", err)

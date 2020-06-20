@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"testing"
 
 	"gg-scm.io/pkg/internal/filesystem"
@@ -286,12 +285,6 @@ func hasGGStatusLine(lines []ggStatusLine, name string) bool {
 
 type errorer interface {
 	Errorf(format string, args ...interface{})
-}
-
-type panicErrorer struct{}
-
-func (panicErrorer) Errorf(format string, args ...interface{}) {
-	panic(fmt.Sprintf(format, args...))
 }
 
 type recordErrorer bool

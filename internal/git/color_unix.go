@@ -19,7 +19,6 @@ package git
 import (
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 )
@@ -277,21 +276,4 @@ func (cfg *Config) ColorBool(name string, isTerm bool) (bool, error) {
 		return false, fmt.Errorf("config %s: cannot parse %q as a bool", name, v)
 	}
 	return color && isTerm, nil
-}
-
-type limitedReader struct {
-	R io.Reader // underlying reader
-	N int64     // max bytes remaining
-}
-
-func (l *limitedReader) Read(p []byte) (n int, err error) {
-	if l.N <= 0 {
-		return 0, errors.New("read limit reached")
-	}
-	if int64(len(p)) > l.N {
-		p = p[0:l.N]
-	}
-	n, err = l.R.Read(p)
-	l.N -= int64(n)
-	return
 }

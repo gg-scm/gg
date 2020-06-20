@@ -313,24 +313,10 @@ func escapeGerritMessage(sb *strings.Builder, msg string) {
 			sb.WriteByte('+')
 		default:
 			sb.WriteByte('%')
-			sb.WriteByte(hexDigit(b >> 4))
-			sb.WriteByte(hexDigit(b & 0xf))
+			sb.WriteByte(hexDigit[b>>4])
+			sb.WriteByte(hexDigit[b&0xf])
 		}
 	}
-}
-
-// verifyPushRemoteRef returns nil if the given ref exists in the
-// remote repository. remote may either be a URL or the name of a
-// remote, in which case the remote's fetch URL will be queried.
-func verifyPushRemoteRef(ctx context.Context, g *git.Git, remote string, ref git.Ref) error {
-	refs, err := g.ListRemoteRefs(ctx, remote)
-	if err != nil {
-		return fmt.Errorf("verify remote ref %s: %w", ref, err)
-	}
-	if _, present := refs[ref]; !present {
-		return fmt.Errorf("remote %s does not have ref %s", remote, ref)
-	}
-	return nil
 }
 
 func inferPushRepo(cfg *git.Config, branch string) (string, error) {
@@ -372,22 +358,4 @@ func isClean(ctx context.Context, g *git.Git) (bool, error) {
 	return true, nil
 }
 
-func isHex(s string) bool {
-	for _, c := range s {
-		if !(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F') {
-			return false
-		}
-	}
-	return true
-}
-
-func hexDigit(n byte) byte {
-	switch {
-	case n < 0xa:
-		return '0' + n
-	case n < 0xf:
-		return 'a' + (n - 0xa)
-	default:
-		panic("argument too large")
-	}
-}
+const hexDigit = "0123456789abcdef"

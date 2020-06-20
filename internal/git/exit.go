@@ -31,8 +31,3 @@ func exitStatus(state *os.ProcessState) int {
 	}
 	return ws.ExitStatus()
 }
-
-func wasSignaled(state *os.ProcessState) bool {
-	ws, ok := state.Sys().(syscall.WaitStatus)
-	return ok && ws.Signaled()
-}
