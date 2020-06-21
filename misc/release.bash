@@ -35,9 +35,9 @@ if [[ "$release_version" == "dev" ]]; then
     echo "misc/release.bash: must set GITHUB_SHA for dev" 1>&2
     exit 1
   fi
-  release_name="gg-${GITHUB_SHA:-}-${release_os}_${release_arch}"
+  release_name="gg_${GITHUB_SHA:-}_${release_os}_${release_arch}"
 else
-  release_name="gg-${release_version}-${release_os}_${release_arch}"
+  release_name="gg_${release_version}_${release_os}_${release_arch}"
 fi
 
 echo "Creating ${release_name}.tar.gz..." 1>&2
