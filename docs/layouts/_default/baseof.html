@@ -12,14 +12,14 @@
   {{ template "_internal/google_analytics_async.html" . }}
 
   <meta property="og:url" content="{{.Permalink}}">
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="summary_large_image">
   {{- with $.Site.Author}}{{with .name}}
   <meta name="author" content="{{.}}">
   {{- end}}{{end}}
   <meta property="og:title" content="{{.Title}} - {{.Site.Title}}">
   <meta name="twitter:title" content="{{.Title}} - {{.Site.Title}}">
   <meta property="og:image" content="{{ "/social-preview.png" | relURL }}">
-  <meta name="twitter:image" content="{{ "/social-preview.png" | relURL }}">
+  <meta name="twitter:image:src" content="{{ "/social-preview.png" | relURL }}">
 </head>
 <body id="page">
   <div id="top">
