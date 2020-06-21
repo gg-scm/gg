@@ -15,9 +15,15 @@
 name: Build
 on: push
 jobs:
-  latest_git:
-    name: Latest Git
+  linux:
+    name: Linux
     runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        git:
+        - "2.27.0"  # latest
+        - "2.25.1"  # Ubuntu LTS focal
+        - "2.20.1"  # Debian buster
     steps:
     - name: Install Git dependencies
       run: |
@@ -35,78 +41,8 @@ jobs:
         go-version: 1.14
     - name: Check out code
       uses: actions/checkout@v1
-    - name: Install Git 2.20.1
-      run: misc/build-git.bash ~/git 2.20.1
-    - name: Download dependencies
-      run: go mod download
-      env:
-        GO111MODULE: on
-    - name: Run tests
-      run: |
-        PATH="$HOME/git/bin-wrappers:$PATH" \
-          go test \
-            -mod=readonly \
-            -v \
-            ./...
-      env:
-        GO111MODULE: on
-  ubuntu_lts_git:
-    name: Ubuntu LTS Git
-    runs-on: ubuntu-18.04
-    steps:
-    - name: Install Git dependencies
-      run: |
-        sudo apt-get update &&
-        sudo apt-get install -y --no-install-recommends \
-          gettext \
-          libcurl4-gnutls-dev \
-          libexpat1-dev \
-          libssl-dev \
-          libz-dev \
-          xz-utils
-    - name: Set up Go
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.14
-    - name: Check out code
-      uses: actions/checkout@v1
-    - name: Install Git 2.17.1
-      run: misc/build-git.bash ~/git 2.17.1
-    - name: Download dependencies
-      run: go mod download
-      env:
-        GO111MODULE: on
-    - name: Run tests
-      run: |
-        PATH="$HOME/git/bin-wrappers:$PATH" \
-          go test \
-            -mod=readonly \
-            -v \
-            ./...
-      env:
-        GO111MODULE: on
-  debian_stable_git:
-    name: Debian Stable Git
-    runs-on: ubuntu-18.04
-    steps:
-    - name: Install Git dependencies
-      run: |
-        sudo apt-get update &&
-        sudo apt-get install -y --no-install-recommends \
-          gettext \
-          libcurl4-gnutls-dev \
-          libexpat1-dev \
-          libssl-dev \
-          libz-dev \
-          xz-utils
-    - name: Set up Go
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.14
-    - name: Check out code
-      uses: actions/checkout@v1
-    - name: Install Git 2.11.0
-      run: misc/build-git.bash ~/git 2.11.0
+    - name: Install Git
+      run: misc/build-git.bash ~/git ${{ matrix.git }}
     - name: Download dependencies
       run: go mod download
       env:
@@ -122,7 +58,7 @@ jobs:
         GO111MODULE: on
   mac:
     name: macOS
-    runs-on: macOS-10.14
+    runs-on: macOS-latest
     steps:
     - name: Install xz
       run: brew update && brew install xz
@@ -132,8 +68,8 @@ jobs:
         go-version: 1.14
     - name: Check out code
       uses: actions/checkout@v1
-    - name: Install Git 2.20.1
-      run: misc/build-git.bash ~/git 2.20.1
+    - name: Install Git
+      run: misc/build-git.bash ~/git 2.27.0
     - name: Download dependencies
       run: go mod download
       env:
