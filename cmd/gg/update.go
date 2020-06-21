@@ -65,7 +65,8 @@ aliases: up, checkout, co
 		if branch == "" {
 			return errors.New("can't update with no branch checked out; run 'gg update BRANCH'")
 		}
-		return updateToBranch(ctx, cc.git, cfg, branch, behavior)
+		target := targetForUpdate(cfg, branch)
+		return updateToBranch(ctx, cc.git, branch, target, behavior)
 	case f.NArg() == 0 && *rev != "":
 		var err error
 		r, err = cc.git.ParseRev(ctx, *rev)
@@ -91,21 +92,21 @@ aliases: up, checkout, co
 	if err != nil {
 		return err
 	}
-	return updateToBranch(ctx, cc.git, cfg, b, behavior)
+	target := targetForUpdate(cfg, b)
+	return updateToBranch(ctx, cc.git, b, target, behavior)
 }
 
 // updateToBranch switches to another branch and fast-forwards it.
 // If branch is the empty string, then updateToBranch does nothing.
 // behavior must be one of MergeLocal or DiscardLocal or updateToBranch
 // returns an error.
-func updateToBranch(ctx context.Context, g *git.Git, cfg *git.Config, branch string, behavior git.CheckoutConflictBehavior) error {
+func updateToBranch(ctx context.Context, g *git.Git, branch string, target git.Ref, behavior git.CheckoutConflictBehavior) error {
 	if behavior != git.MergeLocal && behavior != git.DiscardLocal {
 		return fmt.Errorf("updateToBranch takes MergeLocal or DiscardLocal as behaviors (got %v)", behavior)
 	}
 	if branch == "" {
 		return nil
 	}
-	target := targetForUpdate(cfg, branch)
 	if target == "" {
 		// No fast-forward target, so just do a simple checkout.
 		return g.CheckoutBranch(ctx, branch, git.CheckoutOptions{ConflictBehavior: behavior})

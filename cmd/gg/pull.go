@@ -30,14 +30,13 @@ const pullSynopsis = "pull changes from the specified source"
 func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg pull [-u] [-r REV [...]] [SOURCE]", pullSynopsis+`
 
-	Local branches with the same name as a remote branch will be
-	fast-forwarded if possible.
+	If no source repository is given, the remote called `+"`origin`"+` is used.
+	If the source repository is not a named remote, then the branches will be
+	saved under `+"`refs/ggpull/`"+`.
 
-	If no source repository is given and a branch with an upstream branch
-	is currently checked out, then the upstream's remote is used.
-	Otherwise, the remote called "origin" is used. If the source repository
-	is not a named remote, then the branches will be saved under
-	`+"`refs/ggpull/`"+`.
+	Local branches with the same name as a remote branch will be
+	fast-forwarded if possible. The currently checked out branch will not be
+	fast-forwarded unless `+"`-u`"+` is passed.
 
 	If no revisions are specified, then all the remote's branches and tags
 	will be fetched. If the source is a named remote, then its remote
@@ -61,15 +60,10 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	headBranch := currentBranch(ctx, cc)
 	repo := f.Arg(0)
 	if repo == "" {
-		if headBranch != "" {
-			repo = cfg.Value("branch." + headBranch + ".remote")
+		if _, ok := remotes["origin"]; !ok {
+			return errors.New("no source given and no remote named \"origin\" found")
 		}
-		if repo == "" {
-			if _, ok := remotes["origin"]; !ok {
-				return errors.New("no source given and no remote named \"origin\" found")
-			}
-			repo = "origin"
-		}
+		repo = "origin"
 	}
 	allLocalRefs, err := cc.git.ListRefsVerbatim(ctx)
 	if err != nil {
@@ -114,9 +108,20 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	if err := reconcileBranches(ctx, cc.git, headBranch, remoteName, allLocalRefs, allRemoteRefs, branches); err != nil {
 		return err
 	}
-	if *update {
-		// TODO(soon): Update to the fetched remote branch, not the local upstream.
-		if err := updateToBranch(ctx, cc.git, cfg, headBranch, git.MergeLocal); err != nil {
+	if *update && headBranch != "" {
+		var target git.Ref
+		if isNamedRemote {
+			headRef := git.BranchRef(headBranch)
+			for _, spec := range remotes[repo].Fetch {
+				target = spec.Map(headRef)
+				if target != "" {
+					break
+				}
+			}
+		} else {
+			target = git.Ref("refs/ggpull/" + headBranch)
+		}
+		if err := updateToBranch(ctx, cc.git, headBranch, target, git.MergeLocal); err != nil {
 			return err
 		}
 	}
