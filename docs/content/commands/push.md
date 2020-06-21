@@ -2,51 +2,39 @@
     "cmd_aliases": [],
     "cmd_class": "basic",
     "date": "2018-07-06 22:13:11-07:00",
-    "lastmod": "2018-07-06 22:36:13-07:00",
+    "lastmod": "2020-06-21 12:23:51-07:00",
     "title": "gg push",
-    "usage": "gg push [-f] [-n] [-r REV] [-d REF] [--create] [DST]"
+    "usage": "gg push [-f] [-r REF [...]] [--new-branch] [DST]"
 }
 
 push changes to the specified destination
 
 <!--more-->
 
-When no destination repository is given, push uses the first non-
-empty configuration value of:
+`gg push` pushes branches and tags to mirror the local repository in the
+destination repository. It does not permit diverging commits unless `-f`
+is passed. If the `-r` is not given, `gg push` will push all
+branches that exist in both the local and destination repository as well as
+all tags. The argument to `-r` must name a ref: it cannot be an
+arbitrary commit.
 
-1.  `branch.*.pushRemote`, if the source is a branch or is part of only
-    one branch.
-2.  `remote.pushDefault`.
-3.  `branch.*.remote`, if the source is a branch or is part of only one
-    branch.
-4.  Otherwise, the remote called `origin` is used.
+When no destination repository is given, tries to use the remote specified by
+the configuration value of `remote.pushDefault` or the remoted called
+`origin` otherwise.
 
-If `-d` is given and begins with `refs/`, then it specifies the remote
-ref to update. If the argument passed to `-d` does not begin with
-`refs/`, it is assumed to be a branch name (`refs/heads/<arg>`).
-If `-d` is not given and the source is a ref or part of only one local
-branch, then the same ref name is used. Otherwise, push exits with a
-failure exit code. This differs from git, which will consult
-`remote.*.push` and `push.default`. You can imagine this being the most
-similar to `push.default=current`.
-
-By default, `gg push` will fail instead of creating a new ref on the
-remote. If this is desired (e.g. you are creating a new branch), then
-you can pass `--create` to override this check.
+By default, `gg push` will fail instead of creating a new ref in the
+destination repository. If this is desired (e.g. you are creating a new
+branch), then you can pass `--new-branch` to override this check.
+`-f` will also skip this check.
 
 ## Options
 
 <dl class="flag_list">
-	<dt>-create</dt>
+	<dt>-new-branch</dt>
 	<dd>allow pushing a new ref</dd>
-	<dt>-d ref</dt>
-	<dt>-dest ref</dt>
-	<dd>destination ref</dd>
 	<dt>-f</dt>
+	<dt>-force</dt>
 	<dd>allow overwriting ref if it is not an ancestor, as long as it matches the remote-tracking branch</dd>
-	<dt>-n</dt>
-	<dt>-dry-run</dt>
-	<dd>do everything except send the changes</dd>
-	<dt>-r rev</dt>
-	<dd>source revision</dd>
+	<dt>-r ref</dt>
+	<dd>source refs</dd>
 </dl>

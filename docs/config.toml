@@ -8,6 +8,9 @@ copyright = "Copyright © 2018–2020 The gg Authors"
 commands = "/cmd/:filename/"
 workflows = "/workflow/:filename/"
 
+[markup.goldmark.renderer]
+unsafe = true
+
 [[menu.main]]
 identifier = "home"
 name = "Home"
