@@ -1,10 +1,14 @@
 # Release Notes
 
-## Unreleased
+## 1.0.0 (2020-06-21)
 
-gg 1.0 now only supports Git 2.20.1 and above.
+1.0 is the first stable release of gg, developed over years of daily use in a
+variety of workflows. With tab completion and command semantics much closer to
+Mercurial, the UX of gg has never been better.
 
-## Features
+gg 1.0 supports Git 2.20.1 and above.
+
+### Features
 
 - `gg pull` now pulls all branches and fast-forwards local ones if possible.
   When pulling from an unnamed remote repository, `gg pull` will place the
@@ -18,7 +22,7 @@ gg 1.0 now only supports Git 2.20.1 and above.
 - `gg requestpull` will copy the repository's pull request template into the
   opened editor. ([#110](https://github.com/zombiezen/gg/issues/110))
 
-## Changes
+### Changes
 
 - The branch name created by `gg init` is now `main`.
   ([#115](https://github.com/zombiezen/gg/issues/115))
@@ -39,7 +43,7 @@ gg 1.0 now only supports Git 2.20.1 and above.
 [GitHub Actions]: https://github.com/features/actions
 [Nat Friedman tweet]: https://twitter.com/natfriedman/status/1162822908411965441
 
-## Bug Fixes
+### Bug Fixes
 
 - `gg update` no longer errors if local branch is ahead of remote branch.
   ([#103](https://github.com/zombiezen/gg/issues/103))
