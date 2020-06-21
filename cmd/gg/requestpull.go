@@ -469,6 +469,19 @@ func addPullRequestReviewers(ctx context.Context, client *http.Client, params pu
 	return nil
 }
 
+// inferUpstream returns the default remote ref to pull from.
+// localBranch may be empty.
+func inferUpstream(cfg *git.Config, localBranch string) git.Ref {
+	if localBranch == "" {
+		return git.Head
+	}
+	merge := cfg.Value("branch." + localBranch + ".merge")
+	if merge != "" {
+		return git.Ref(merge)
+	}
+	return git.BranchRef(localBranch)
+}
+
 // draftPRAPIAccept is the media type that GitHub uses to enable the draft PR
 // feature.
 const draftPRAPIAccept = "application/vnd.github.shadow-cat-preview+json"

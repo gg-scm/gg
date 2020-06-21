@@ -250,16 +250,3 @@ func currentBranch(ctx context.Context, cc *cmdContext) string {
 	}
 	return ref.Branch()
 }
-
-// inferUpstream returns the default remote ref to pull from.
-// localBranch may be empty.
-func inferUpstream(cfg *git.Config, localBranch string) git.Ref {
-	if localBranch == "" {
-		return git.Head
-	}
-	merge := cfg.Value("branch." + localBranch + ".merge")
-	if merge != "" {
-		return git.Ref(merge)
-	}
-	return git.BranchRef(localBranch)
-}
