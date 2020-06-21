@@ -57,14 +57,15 @@ jobs:
       env:
         GO111MODULE: on
     - name: Build binary
-      run: misc/release.bash dev
+      run: misc/build.bash gg
       env:
         GO111MODULE: on
       if: matrix.git == '2.27.0'
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
-        path: "gg*.tar.gz"
+        name: Linux binary
+        path: gg
       if: matrix.git == '2.27.0'
   mac:
     name: macOS
@@ -94,10 +95,11 @@ jobs:
       env:
         GO111MODULE: on
     - name: Build binary
-      run: misc/release.bash dev
+      run: misc/build.bash gg
       env:
         GO111MODULE: on
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
-        path: "gg*.tar.gz"
+        name: macOS binary
+        path: gg
