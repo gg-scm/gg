@@ -13,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
 
 set -euo pipefail
 
@@ -32,5 +34,5 @@ fi
 buildtime="$(date -u '+%Y-%m-%dT%TZ')"
 cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")"
 commit="${GITHUB_SHA:-$(commitinfo)}"
-version="${2:-$(echo "${GITHUB_REF:-}" | sed -n -e 's/\(^|.*\/\)v\([0-9].*\)$/\2/p')}"
+version="${2:-}"
 go build -o "$1" -ldflags="-X main.versionInfo=${version} -X main.buildCommit=${commit} -X main.buildTime=${buildtime}" gg-scm.io/pkg/cmd/gg

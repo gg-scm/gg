@@ -13,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
 
 set -euo pipefail
 
@@ -28,7 +30,15 @@ if [[ -z "$release_version" ]]; then
 fi
 release_os="$(go env GOOS)"
 release_arch="$(go env GOARCH)"
-release_name="gg-${release_version}-${release_os}_${release_arch}"
+if [[ "$release_version" == "dev" ]]; then
+  if [[ -z "${GITHUB_SHA:-}" ]]; then
+    echo "misc/release.bash: must set GITHUB_SHA for dev" 1>&2
+    exit 1
+  fi
+  release_name="gg-${GITHUB_SHA:-}-${release_os}_${release_arch}"
+else
+  release_name="gg-${release_version}-${release_os}_${release_arch}"
+fi
 
 echo "Creating ${release_name}.tar.gz..." 1>&2
 stagedir="$(mktemp -d 2>/dev/null || mktemp -d -t gg_release)"
@@ -36,5 +46,9 @@ trap 'rm -rf $stagedir' EXIT
 distroot="$stagedir/$release_name"
 mkdir "$distroot"
 cp "$srcroot/README.md" "$srcroot/CHANGELOG.md" "$srcroot/LICENSE" "$distroot/"
-"$srcroot/misc/build.bash" "$distroot/gg" "$release_version"
+if [[ "$release_version" == "dev" ]]; then
+  "$srcroot/misc/build.bash" "$distroot/gg"
+else
+  "$srcroot/misc/build.bash" "$distroot/gg" "$release_version"
+fi
 tar -zcf - -C "$stagedir" "$release_name" > "${release_name}.tar.gz"
