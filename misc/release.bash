@@ -18,12 +18,16 @@
 
 set -euo pipefail
 
+parse_tag_ref() {
+  python -c 'import re, sys; x = sys.stdin.readline().strip(); x = x[x.rindex("/")+1:] if x.rfind("/") != -1 else x; print x if re.match(r"v[0-9]", x) else ""'
+}
+
 if [[ $# -gt 1 ]]; then
   echo "usage: misc/release.bash [VERSION]" 1>&2
   exit 64
 fi
 srcroot="$(dirname "$(dirname "${BASH_SOURCE[0]}")")"
-release_version="${1:-$(echo "${GITHUB_REF:-}" | sed -n -e 's/\(^\|.*\/\)v\([0-9].*\)$/\2/p')}"
+release_version="${1:-$(echo "${GITHUB_REF:-}" | parse_tag_ref)}"
 if [[ -z "$release_version" ]]; then
   echo "misc/release.bash: cannot infer version, please pass explicitly" 1>&2
   exit 1
