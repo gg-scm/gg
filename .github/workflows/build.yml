@@ -57,9 +57,10 @@ jobs:
       env:
         GO111MODULE: on
     - name: Build binary
-      run: misc/release.sh dev
+      run: misc/release.bash dev
       env:
         GO111MODULE: on
+      if: matrix.git == '2.27.0'
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
@@ -93,7 +94,7 @@ jobs:
       env:
         GO111MODULE: on
     - name: Build binary
-      run: misc/release.sh dev
+      run: misc/release.bash dev
       env:
         GO111MODULE: on
     - name: Upload binary
