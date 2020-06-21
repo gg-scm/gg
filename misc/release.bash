@@ -52,4 +52,4 @@ else
   "$srcroot/misc/build.bash" "$distroot/gg" "$release_version"
 fi
 tar -zcf - -C "$stagedir" "$release_name" > "${release_name}.tar.gz"
-echo ":::set-output name=file::${release_name}.tar.gz"
+echo "::set-output name=file::${release_name}.tar.gz"
