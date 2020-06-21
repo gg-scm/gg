@@ -64,7 +64,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         path: "gg*.tar.gz"
-      if: matrix.git == "2.27.0"
+      if: matrix.git == '2.27.0'
   mac:
     name: macOS
     runs-on: macOS-latest
