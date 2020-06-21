@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+gg 1.0 now only supports Git 2.20.1 and above.
+
 ## Features
 
 - `gg pull` now pulls all branches and fast-forwards local ones if possible.
