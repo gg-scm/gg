@@ -19,9 +19,12 @@ on:
   release:
     types: [published]
 jobs:
-  linux:
-    name: Linux
-    runs-on: ubuntu-18.04
+  release:
+    name: Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macOS-latest]
     steps:
     - name: Set up Go
       uses: actions/setup-go@v1
@@ -37,39 +40,13 @@ jobs:
       run: misc/release.bash
       env:
         GO111MODULE: on
+      id: package
     - name: Upload binary
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./gg_${{ github.event.release.tag_name }}_linux_amd64.tar.gz
-        asset_name: gg_${{ github.event.release.tag_name }}_linux_amd64.tar.gz
-        asset_content_type: application/gzip
-  mac:
-    name: macOS
-    runs-on: macOS-latest
-    steps:
-    - name: Set up Go
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.14
-    - name: Check out code
-      uses: actions/checkout@v1
-    - name: Download dependencies
-      run: go mod download
-      env:
-        GO111MODULE: on
-    - name: Package release
-      run: misc/release.bash
-      env:
-        GO111MODULE: on
-    - name: Upload binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./gg_${{ github.event.release.tag_name }}_darwin_amd64.tar.gz
-        asset_name: gg_${{ github.event.release.tag_name }}_darwin_amd64.tar.gz
+        asset_path: ./${{ steps.package.outputs.file }}
+        asset_name: ${{ steps.package.outputs.file }}
         asset_content_type: application/gzip
