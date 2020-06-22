@@ -1,5 +1,13 @@
 # Release Notes
 
+## 1.0.1 (2020-06-22)
+
+1.0.1 is a small bugfix release to 1.0.0.
+
+### Bug Fixes
+
+- `gg push --new-branch` fails if not given a `-r` flag.
+
 ## 1.0.0 (2020-06-21)
 
 1.0 is the first stable release of gg, developed over years of daily use in a

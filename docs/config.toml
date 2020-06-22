@@ -43,5 +43,5 @@ weight = 5
 
 [params]
 licenseURL = "https://github.com/zombiezen/gg/blob/main/LICENSE"
-latestRelease = "1.0.0"
-releaseDate = "2020-06-21"
+latestRelease = "1.0.1"
+releaseDate = "2020-06-22"

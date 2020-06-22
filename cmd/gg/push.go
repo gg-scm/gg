@@ -60,8 +60,8 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("can't pass multiple destinations")
 	}
 	refsImplicit := len(*refArgs) == 0
-	if refsImplicit && *force {
-		return usagef("can't pass --force without specifying refs")
+	if refsImplicit && (*force || *create) {
+		return usagef("can't pass --force or --new-branch without specifying refs")
 	}
 	dstRepo := f.Arg(0)
 	if dstRepo == "" {
