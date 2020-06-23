@@ -43,10 +43,15 @@
       <p>{{.Site.Copyright}}</p>
       {{- with .Page.File }}
       <p>
+        Something wrong?
         <a href="https://github.com/zombiezen/gg/edit/main/docs/content/{{.Path}}" class="editpagelink">Improve this page</a>
         on GitHub.
       </p>
       {{- end}}
+      <p>
+        Find gg useful?
+        Consider <a href="https://github.com/sponsors/zombiezen" target="_blank"></a>sponsoring @zombiezen</a>.
+      </p>
       <p>gg is not an official Google product. All content released under an <a href="{{.Site.Params.licenseURL | absURL}}" target="_blank">Apache 2.0 License</a>.</p>
     </div>
   </footer>
