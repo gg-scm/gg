@@ -23,9 +23,7 @@ easier to use for both novices and advanced users alike.
   any hooks or custom patches to Git that your project may use. You can see the
   exact Git commands gg runs by passing in `--show-git`.
 
-If you find gg useful, consider [sponsoring @zombiezen][]:
-
-<iframe src="https://github.com/sponsors/zombiezen/button" title="Sponsor zombiezen" height="35" width="107" style="border: 0;"></iframe>
+If you find gg useful, consider [sponsoring @zombiezen][].
 
 [Git]: https://git-scm.com/
 [Mercurial]: https://www.mercurial-scm.org/
