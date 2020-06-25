@@ -26,4 +26,14 @@ document.addEventListener('DOMContentLoaded', function() {
   outbound('.downloadlink', 'Download');
   outbound('.githublink', 'GitHub');
   outbound('.editpagelink', 'Edit Page');
+
+  var q = document.querySelectorAll('.download_button');
+  for (var i = 0; i < q.length; i++) {
+    q[i].addEventListener('click', function(e) {
+      if (window.ga) {
+        ga('send', 'event', 'Outbound Link', 'click', 'Download', 1, {transport: 'beacon'});
+      }
+      window.location.href = e.target.dataset.href;
+    });
+  }
 });

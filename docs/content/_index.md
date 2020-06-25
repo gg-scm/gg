@@ -8,6 +8,11 @@ gg is an alternative command-line interface for [Git][] heavily inspired by
 [Mercurial][]. It's designed for less typing in common workflows and make Git
 easier to use for both novices and advanced users alike.
 
+[Git]: https://git-scm.com/
+[Mercurial]: https://www.mercurial-scm.org/
+
+<!--more-->
+
 -  **Abbreviations.** `git commit -a` takes 13 characters to type. [`gg ci`][]
    takes 5 to do the same thing (don't worry, you can still type `gg commit`).
 -  **Built for GitHub and Gerrit.** gg has built-in support for [creating pull
@@ -26,8 +31,8 @@ easier to use for both novices and advanced users alike.
   any hooks or custom patches to Git that your project may use. You can see the
   exact Git commands gg runs by passing in `--show-git`.
 
-[Git]: https://git-scm.com/
-[Mercurial]: https://www.mercurial-scm.org/
+{{< downloadbutton >}}
+
 [creating Gerrit changesets]: {{< relref "workflows/gerrit.md" >}}
 [creating pull requests]: {{< relref "workflows/shared.md" >}}
 [`gg ci`]: {{< relref "commands/commit.md" >}}

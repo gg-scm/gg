@@ -118,6 +118,23 @@ html, body {
   max-width: 1000px;
 }
 
+/* Home */
+
+.download_button {
+  appearance: none;
+  background: #dd750f;
+  border: 1px solid #884605;
+  border-radius: 3px;
+  color: white;
+  font-size: 150%;
+  margin: 0;
+  padding: 0.5rem 1rem;
+}
+
+.download_button:focus {
+  outline: #0e0588 solid medium;
+}
+
 /* Commands index */
 
 .command_list {
