@@ -1,3 +1,3 @@
 ---
-title: gg-scm.io/pkg
+title: Packages
 ---
