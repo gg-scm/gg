@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"testing"
 
-	"gg-scm.io/pkg/internal/filesystem"
+	"gg-scm.io/tool/internal/filesystem"
 )
 
 func TestGerritHook(t *testing.T) {

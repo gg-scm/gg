@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"gg-scm.io/pkg/internal/filesystem"
+	"gg-scm.io/tool/internal/filesystem"
 )
 
 func TestCat(t *testing.T) {

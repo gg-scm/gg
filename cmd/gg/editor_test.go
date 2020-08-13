@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"testing"
 
-	"gg-scm.io/pkg/internal/escape"
+	"gg-scm.io/tool/internal/escape"
 )
 
 func TestEditor(t *testing.T) {

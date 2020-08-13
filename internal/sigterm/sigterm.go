@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package sigterm provides graceful termination signal utilities.
-package sigterm // import "gg-scm.io/pkg/internal/sigterm"
+package sigterm // import "gg-scm.io/tool/internal/sigterm"
 
 import (
 	"context"

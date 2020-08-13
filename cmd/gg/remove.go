@@ -18,8 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/git"
+	"gg-scm.io/tool/internal/flag"
 )
 
 const removeSynopsis = "remove the specified files on the next commit"

@@ -20,9 +20,9 @@ import (
 	"sort"
 	"strings"
 
-	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/git"
-	"gg-scm.io/pkg/internal/terminal"
+	"gg-scm.io/pkg/git"
+	"gg-scm.io/tool/internal/flag"
+	"gg-scm.io/tool/internal/terminal"
 )
 
 const branchSynopsis = "list or manage branches"

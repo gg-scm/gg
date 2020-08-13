@@ -17,7 +17,7 @@ package flag_test
 import (
 	"fmt"
 
-	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/tool/internal/flag"
 )
 
 func Example() {

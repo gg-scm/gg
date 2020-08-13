@@ -29,8 +29,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/git"
+	"gg-scm.io/tool/internal/flag"
 )
 
 const requestPullSynopsis = "create a GitHub pull request"

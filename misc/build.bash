@@ -35,4 +35,4 @@ buildtime="$(date -u '+%Y-%m-%dT%TZ')"
 cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")"
 commit="${GITHUB_SHA:-$(commitinfo)}"
 version="${2:-}"
-go build -o "$1" -ldflags="-X main.versionInfo=${version} -X main.buildCommit=${commit} -X main.buildTime=${buildtime}" gg-scm.io/pkg/cmd/gg
+go build -o "$1" -ldflags="-X main.versionInfo=${version} -X main.buildCommit=${commit} -X main.buildTime=${buildtime}" gg-scm.io/tool/cmd/gg

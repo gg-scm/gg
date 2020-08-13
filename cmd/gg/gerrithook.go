@@ -25,7 +25,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/tool/internal/flag"
 )
 
 const gerrithookSynopsis = "install or uninstall Gerrit change ID hook"

@@ -15,7 +15,7 @@
 // gg is Git like Mercurial.
 //
 // Learn more at https://gg-scm.io/
-package main // import "gg-scm.io/pkg/cmd/gg"
+package main
 
 import (
 	"bytes"
@@ -32,9 +32,9 @@ import (
 	"runtime"
 	"strings"
 
-	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/git"
-	"gg-scm.io/pkg/internal/sigterm"
+	"gg-scm.io/pkg/git"
+	"gg-scm.io/tool/internal/flag"
+	"gg-scm.io/tool/internal/sigterm"
 )
 
 func main() {

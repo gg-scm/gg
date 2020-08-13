@@ -19,8 +19,8 @@ import (
 	"context"
 	"sort"
 
-	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/git"
+	"gg-scm.io/tool/internal/flag"
 )
 
 const identifySynopsis = "identify the working directory or specified revision"

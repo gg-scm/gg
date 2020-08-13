@@ -22,8 +22,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"gg-scm.io/pkg/internal/filesystem"
-	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/git"
+	"gg-scm.io/tool/internal/filesystem"
 	"github.com/google/go-cmp/cmp"
 )
 

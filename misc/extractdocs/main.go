@@ -39,8 +39,8 @@ import (
 )
 
 const (
-	cmdImportPath  = "gg-scm.io/pkg/cmd/gg"
-	flagImportPath = "gg-scm.io/pkg/internal/flag"
+	cmdImportPath  = "gg-scm.io/tool/cmd/gg"
+	flagImportPath = "gg-scm.io/tool/internal/flag"
 )
 
 func main() {

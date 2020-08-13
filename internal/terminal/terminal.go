@@ -14,7 +14,7 @@
 
 // Package terminal provides functions for querying and manipulating an
 // interactive terminal.
-package terminal // import "gg-scm.io/pkg/internal/terminal"
+package terminal // import "gg-scm.io/tool/internal/terminal"
 
 import (
 	"io"

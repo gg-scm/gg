@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"strings"
 
-	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/git"
-	"gg-scm.io/pkg/internal/sigterm"
+	"gg-scm.io/pkg/git"
+	"gg-scm.io/tool/internal/flag"
+	"gg-scm.io/tool/internal/sigterm"
 )
 
 const evolveSynopsis = "sync with Gerrit changes in upstream"

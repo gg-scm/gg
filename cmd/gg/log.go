@@ -18,8 +18,8 @@ import (
 	"context"
 	"strings"
 
-	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/sigterm"
+	"gg-scm.io/tool/internal/flag"
+	"gg-scm.io/tool/internal/sigterm"
 )
 
 const logSynopsis = "show revision history of entire repository or files"

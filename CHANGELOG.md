@@ -1,5 +1,13 @@
 # Release Notes
 
+## Unreleased
+
+### Changes
+
+-  `gg-scm.io/pkg/internal/git` is now available as `gg-scm.io/pkg/git`. To
+   support this change, this repository's import path has changed from
+   `gg-scm.io/pkg` to `gg-scm.io/tool`.
+
 ## 1.0.1 (2020-06-22)
 
 1.0.1 is a small bugfix release to 1.0.0.
@@ -102,7 +110,7 @@ of Git.
 ### Bug Fixes
 
 -  As mentioned in the introduction, most interactions with the Git subprocess
-   go through a [high-level API](https://godoc.org/gg-scm.io/pkg/internal/git)
+   go through a [high-level API](https://pkg.go.dev/gg-scm.io/pkg/git)
    now to reduce escaping issues. This should make gg more architecturally
    robust.
 -  Previous versions of gg would never send `SIGTERM` correctly to its Git

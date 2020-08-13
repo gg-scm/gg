@@ -17,7 +17,7 @@ package main
 import (
 	"context"
 
-	"gg-scm.io/pkg/internal/flag"
+	"gg-scm.io/tool/internal/flag"
 )
 
 const mergeSynopsis = "merge another revision into working directory"

@@ -19,8 +19,8 @@ import (
 	"errors"
 	"fmt"
 
-	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/sigterm"
+	"gg-scm.io/tool/internal/flag"
+	"gg-scm.io/tool/internal/sigterm"
 )
 
 const upstreamSynopsis = "query or set upstream branch"

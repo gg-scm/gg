@@ -1,3 +1,5 @@
+gg-scm.io/pkg/git v0.1.0 h1:vHuF+N8AdetLu7pogpEnxRqLrgpm5Tz2gZzwgm3ZUcc=
+gg-scm.io/pkg/git v0.1.0/go.mod h1:sjr2w1P0YOu6j4zPeeMA4/brkaBZyGyN+ROlcWMiTO0=
 github.com/google/go-cmp v0.3.0 h1:crn/baboCvb5fXaQ0IJ1SGTsTVrWpDsCWC8EGETZijY=
 github.com/google/go-cmp v0.3.0/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
 golang.org/x/sys v0.0.0-20180329131831-378d26f46672 h1:P+cuqFpXzcxn8UtAwY33SZdbHLKsmjveBNV9V+RoYgQ=

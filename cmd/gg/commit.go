@@ -25,8 +25,8 @@ import (
 	"strings"
 	"unicode"
 
-	"gg-scm.io/pkg/internal/flag"
-	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/git"
+	"gg-scm.io/tool/internal/flag"
 )
 
 const commitSynopsis = "commit the specified files or all outstanding changes"

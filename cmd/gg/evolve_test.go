@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"gg-scm.io/pkg/internal/git"
+	"gg-scm.io/pkg/git"
 )
 
 func TestEvolve_FirstChangeSubmitted(t *testing.T) {

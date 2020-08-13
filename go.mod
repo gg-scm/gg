@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module gg-scm.io/pkg
+module gg-scm.io/tool
 
 go 1.14
 
 require (
+	gg-scm.io/pkg/git v0.1.0
 	github.com/google/go-cmp v0.3.0
 	golang.org/x/sys v0.0.0-20180329131831-378d26f46672
 	golang.org/x/tools v0.0.0-20180628163957-1c99e1239a0c

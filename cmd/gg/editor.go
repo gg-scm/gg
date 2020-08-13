@@ -24,9 +24,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gg-scm.io/pkg/internal/escape"
-	"gg-scm.io/pkg/internal/git"
-	"gg-scm.io/pkg/internal/sigterm"
+	"gg-scm.io/pkg/git"
+	"gg-scm.io/tool/internal/escape"
+	"gg-scm.io/tool/internal/sigterm"
 )
 
 // editor allows editing text content interactively.
