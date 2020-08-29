@@ -1,22 +1,32 @@
-# Release Notes
+# gg Release Notes
 
-## Unreleased
+The format is based on [Keep a Changelog][], and this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### Changes
+[Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
+
+## [Unreleased][]
+
+[Unreleased]: https://github.com/zombiezen/gg/compare/v1.0.1...HEAD
+
+### Changed
 
 -  `gg-scm.io/pkg/internal/git` is now available as `gg-scm.io/pkg/git`. To
    support this change, this repository's import path has changed from
    `gg-scm.io/pkg` to `gg-scm.io/tool`.
+-  CHANGELOG.md now uses the [Keep a Changelog][] format.
 
-## 1.0.1 (2020-06-22)
+## [1.0.1][] - 2020-06-22
 
 1.0.1 is a small bugfix release to 1.0.0.
 
-### Bug Fixes
+[1.0.1]: https://github.com/zombiezen/gg/releases/tag/v1.0.1
+
+### Fixed
 
 - `gg push --new-branch` fails if not given a `-r` flag.
 
-## 1.0.0 (2020-06-21)
+## [1.0.0][] - 2020-06-21
 
 1.0 is the first stable release of gg, developed over years of daily use in a
 variety of workflows. With tab completion and command semantics much closer to
@@ -24,7 +34,9 @@ Mercurial, the UX of gg has never been better.
 
 gg 1.0 supports Git 2.20.1 and above.
 
-### Features
+[1.0.0]: https://github.com/zombiezen/gg/releases/tag/v1.0.0
+
+### Added
 
 - `gg pull` now pulls all branches and fast-forwards local ones if possible.
   When pulling from an unnamed remote repository, `gg pull` will place the
@@ -38,7 +50,7 @@ gg 1.0 supports Git 2.20.1 and above.
 - `gg requestpull` will copy the repository's pull request template into the
   opened editor. ([#110](https://github.com/zombiezen/gg/issues/110))
 
-### Changes
+### Changed
 
 - The branch name created by `gg init` is now `main`.
   ([#115](https://github.com/zombiezen/gg/issues/115))
@@ -59,7 +71,7 @@ gg 1.0 supports Git 2.20.1 and above.
 [GitHub Actions]: https://github.com/features/actions
 [Nat Friedman tweet]: https://twitter.com/natfriedman/status/1162822908411965441
 
-### Bug Fixes
+### Fixed
 
 - `gg update` no longer errors if local branch is ahead of remote branch.
   ([#103](https://github.com/zombiezen/gg/issues/103))
@@ -73,12 +85,14 @@ gg 1.0 supports Git 2.20.1 and above.
   exist. ([#58](https://github.com/zombiezen/gg/issues/58))
 - `gg branch` will no longer fail on an empty repository.
 
-## 0.7.1 (2019-02-13)
+## [0.7.1][] - 2019-02-13
 
 The release scripts for 0.7.0 failed, so 0.7.1 is the first actual release of
 0.7.
 
-## 0.7.0 (2019-02-13)
+[0.7.1]: https://github.com/zombiezen/gg/releases/tag/v0.7.1
+
+## [0.7.0][] - 2019-02-13
 
 0.7 is a huge technical milestone for gg: most interactions with Git are now
 going through a comprehensively tested Go library instead of constructing
@@ -88,7 +102,9 @@ area for bugs.
 gg 0.7 drops support for Git 2.7.4: 2.11.0 is now the earliest supported version
 of Git.
 
-### Features
+[0.7.0]: https://github.com/zombiezen/gg/releases/tag/v0.7.0
+
+### Added
 
 -  New command: [`identify`](https://gg-scm.io/cmd/identify/) to get the current
    commit hash. ([#94](https://github.com/zombiezen/gg/issues/94))
@@ -107,7 +123,7 @@ of Git.
 -  `gerrithook` now caches the hook script it downloads.
    ([#61](https://github.com/zombiezen/gg/issues/61))
 
-### Bug Fixes
+### Fixed
 
 -  As mentioned in the introduction, most interactions with the Git subprocess
    go through a [high-level API](https://pkg.go.dev/gg-scm.io/pkg/git)
@@ -141,18 +157,22 @@ One of the known issues in 0.6 is still present in 0.7:
     ([#58](https://github.com/zombiezen/gg/issues/58)). This may be confusing,
     but does not negatively affect your data.
 
-## 0.6.1 (2018-08-22)
+## [0.6.1][] - 2018-08-22
 
-### Bug Fixes
+[0.6.1]: https://github.com/zombiezen/gg/releases/tag/v0.6.1
+
+### Fixed
 
 -   `gg --version` no longer crashes ([#71](https://github.com/zombiezen/gg/issues/71))
 -   `gg clone` does not try to clone to `/` ([#70](https://github.com/zombiezen/gg/issues/70))
 -   `gg status` no longer crashes when encountering a renamed file on Git 2.11.
     ([#60](https://github.com/zombiezen/gg/issues/60))
 
-## 0.6.0 (2018-07-17)
+## [0.6.0][] - 2018-07-17
 
-### Features
+[0.6.1]: https://github.com/zombiezen/gg/releases/tag/v0.6.1
+
+### Added
 
 -   New website with docs! Take a look at [gg-scm.io](https://gg-scm.io/).
     The site includes workflow guides and the command reference.
@@ -172,7 +192,7 @@ One of the known issues in 0.6 is still present in 0.7:
 -   Ignored files can be tracked by naming them explicitly using `add`.
     ([#51](https://github.com/zombiezen/gg/issues/51))
 
-### Bug Fixes
+### Fixed
 
 -   `status` no longer crashes on newer versions of Git that detect renames in
     the working copy. ([#44](https://github.com/zombiezen/gg/issues/44))
@@ -196,16 +216,20 @@ There are a few known issues in 0.6:
     ([#60](https://github.com/zombiezen/gg/issues/60)) The workaround here is to
     install a newer version of Git.
 
-## 0.5.1 (2018-05-31)
+## [0.5.1][] - 2018-05-31
 
-### Bug Fixes
+[0.5.1]: https://github.com/zombiezen/gg/releases/tag/v0.5.1
+
+### Fixed
 
 -   Running `commit` with no arguments no longer emits a misleading "fatal"
     error message. ([#43](https://github.com/zombiezen/gg/issues/43))
 
-## 0.5.0 (2018-05-30)
+## [0.5.0][] - 2018-05-30
 
-### Features
+[0.5.0]: https://github.com/zombiezen/gg/releases/tag/v0.5.0
+
+### Added
 
 -   `diff` now has more flags for controlling comparisons: `-U`,
     `--ignore-space-change`, `--ignore-blank-lines`, `--ignore-all-space`,
@@ -226,7 +250,7 @@ There are a few known issues in 0.6:
 -   `rm` has a `-r` flag
     ([#24](https://github.com/zombiezen/gg/issues/24))
 
-### Bug Fixes
+### Fixed
 
 -   Fix crash when running `diff` before first commit
     ([#30](https://github.com/zombiezen/gg/issues/30))
@@ -242,27 +266,33 @@ There are a few known issues in 0.6:
 -   `merge` no longer creates a commit.
     ([#42](https://github.com/zombiezen/gg/issues/42))
 
-## 0.4.2 (2018-05-02)
+## [0.4.2][] - 2018-05-02
 
-### Bug Fixes
+[0.4.2]: https://github.com/zombiezen/gg/releases/tag/v0.4.2
+
+### Fixed
 
 -   `histedit` now works when passing a non-ref argument.
     ([#25](https://github.com/zombiezen/gg/issues/25))
 -   `rebase -src` now behaves as documented when given a revision that is
     unrelated to HEAD. ([#27](https://github.com/zombiezen/gg/issues/27))
 
-## 0.4.1 (2018-04-18)
+## [0.4.1][] - 2018-04-18
 
-### Bug Fixes
+[0.4.1]: https://github.com/zombiezen/gg/releases/tag/v0.4.1
+
+### Fixed
 
 -   Instead of rebasing onto the upstream, `histedit` will keep the current
     branch at its fork point. This was always the intended behavior, but I
     didn't have a test, so I forgot to implement it.
     ([#20](https://github.com/zombiezen/gg/issues/20))
 
-## 0.4.0 (2018-04-18)
+## [0.4.0][] - 2018-04-18
 
-### Features
+[0.4.0]: https://github.com/zombiezen/gg/releases/tag/v0.4.0
+
+### Added
 
 -   Add `upstream` command for querying and setting upstream branches.
     ([#15](https://github.com/zombiezen/gg/issues/15))
@@ -276,9 +306,11 @@ There are a few known issues in 0.6:
 -   `pull` now fetches all tags from a remote by default. Use `-tags=0` to
     disable this behavior. ([#17](https://github.com/zombiezen/gg/issues/17))
 
-## 0.3.0 (2018-04-06)
+## [0.3.0][] - 2018-04-06
 
-### Features
+[0.3.0]: https://github.com/zombiezen/gg/releases/tag/v0.3.0
+
+### Added
 
 -   Add `evolve` command for syncing Gerrit changes.
     ([#14](https://github.com/zombiezen/gg/issues/14))
@@ -286,20 +318,24 @@ There are a few known issues in 0.6:
     [Gerrit Change ID](https://gerrit-review.googlesource.com/hooks/commit-msg)
     hook. ([#13](https://github.com/zombiezen/gg/issues/13))
 
-### Bug Fixes
+### Fixed
 
 -   `rebase -dst` now always defaults to the upstream branch, whereas sometimes
     it would take from the source flags.
 
-## 0.2.1 (2018-04-03)
+## [0.2.1][] - 2018-04-03
 
-### Bug Fixes
+[0.2.1]: https://github.com/zombiezen/gg/releases/tag/v0.2.1
+
+### Added
 
 -   `histedit` flags no longer give incorrect usage errors. ([#11](https://github.com/zombiezen/gg/issues/11))
 
-## 0.2.0 (2018-04-03)
+## [0.2.0][] - 2018-04-03
 
-### Features
+[0.2.0]: https://github.com/zombiezen/gg/releases/tag/v0.2.0
+
+### Added
 
 -   `push` has a new `-f` flag that uses `git push --force-with-lease`.
     ([#9](https://github.com/zombiezen/gg/issues/9))
@@ -313,13 +349,15 @@ There are a few known issues in 0.6:
 -   Added the `merge` command.
     ([#6](https://github.com/zombiezen/gg/issues/6))
 
-### Bug Fixes
+### Fixed
 
 -   `commit -amend` with no changes now opens the editor instead of failing.
     ([#7](https://github.com/zombiezen/gg/issues/7))
 -   Running `commit` in a subdirectory of the working copy will no longer fail
     when committing a removed file. ([#10](https://github.com/zombiezen/gg/issues/10))
 
-## 0.1.3 (2018-03-23)
+## [0.1.3][] - 2018-03-23
 
 First public binary release.
+
+[0.1.3]: https://github.com/zombiezen/gg/releases/tag/v0.1.3
