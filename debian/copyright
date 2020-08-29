@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: gg
+Source: https://github.com/zombiezen/gg.git
+License: Apache-2.0
+
+Files: *
+Copyright: Copyright 2020 The gg Authors
+License: Apache-2.0

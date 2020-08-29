@@ -1,0 +1,32 @@
+Source: gg
+Section: devel
+Priority: optional
+Maintainer: Ross Light <ross@zombiezen.com>
+Build-Depends: debhelper (>= 11),
+               dh-golang,
+               git (>= 2.20.1),
+               golang-any (>= 2:1.14~~),
+               golang-gg-scm-pkg-git-dev (>= 0.3.0),
+               golang-github-google-go-cmp-dev,
+               golang-golang-x-sys-dev,
+               golang-golang-x-tools-dev,
+               pandoc
+Standards-Version: 4.2.1
+Homepage: https://gg-scm.io/
+Vcs-Browser: https://github.com/zombiezen/gg
+Vcs-Git: https://github.com/zombiezen/gg.git
+XS-Go-Import-Path: gg-scm.io/tool
+Testsuite: autopkgtest-pkg-go
+
+Package: gg
+Architecture: any
+Built-Using: ${misc:Built-Using}
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+         git (>= 2.20.1)
+Description: Git with less typing
+ gg is an alternative command-line interface for Git heavily inspired by
+ Mercurial. It’s designed for less typing in common workflows and make Git
+ easier to use for both novices and advanced users alike.
+
+ 

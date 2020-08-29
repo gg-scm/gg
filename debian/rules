@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+export DH_GOLANG_BUILDPKG := gg-scm.io/tool/cmd/gg
+
+override_dh_auto_install:
+	dh_auto_install -- --no-source
+
+override_dh_auto_build:
+	dh_auto_build -O--buildsystem=golang -- -buildmode=pie
+
+execute_before_dh_installman:
+	pandoc --standalone --to man docs/gg.1.md -o docs/gg.1
+
+%:
+	dh $@ --buildsystem=golang --with=golang

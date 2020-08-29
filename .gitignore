@@ -61,3 +61,14 @@ Session.vim
 tags
 ## Persistent undo
 [._]*.un~
+
+# Debian packaging
+.pc
+/obj-*/
+/debian/.debhelper/
+/debian/debhelper-build-stamp
+/debian/files
+/debian/gg/
+/debian/gg.debhelper.log
+/debian/gg.substvars
+/docs/gg.1
