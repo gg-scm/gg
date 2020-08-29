@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// gg is Git like Mercurial.
+// gg is Git with less typing.
 //
 // Learn more at https://gg-scm.io/
 package main
@@ -68,7 +68,7 @@ func main() {
 
 func run(ctx context.Context, pctx *processContext, args []string) error {
 	const synopsis = "gg [options] COMMAND [ARG [...]]"
-	const description = "Git like Mercurial\n\n" +
+	const description = "Git with less typing\n\n" +
 		"basic commands:\n" +
 		"  add           " + addSynopsis + "\n" +
 		"  branch        " + branchSynopsis + "\n" +
