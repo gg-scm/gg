@@ -54,7 +54,11 @@ func cat(ctx context.Context, cc *cmdContext, args []string) error {
 
 func catFile(ctx context.Context, cc *cmdContext, rev *git.Rev, path string) error {
 	// Find path relative to top of repository.
-	paths, err := cc.git.ListTree(ctx, rev.Commit.String(), []git.Pathspec{git.LiteralPath(path)})
+	paths, err := cc.git.ListTree(ctx, rev.Commit.String(), git.ListTreeOptions{
+		NameOnly:  true,
+		Recursive: true,
+		Pathspecs: []git.Pathspec{git.LiteralPath(path)},
+	})
 	if err != nil {
 		return err
 	}

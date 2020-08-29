@@ -78,7 +78,11 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 		if err != nil {
 			return err
 		}
-		tree, err := cc.git.ListTree(ctx, revObj.Commit.String(), unknownPathspecs)
+		tree, err := cc.git.ListTree(ctx, revObj.Commit.String(), git.ListTreeOptions{
+			NameOnly:  true,
+			Recursive: true,
+			Pathspecs: unknownPathspecs,
+		})
 		if err != nil {
 			return err
 		}

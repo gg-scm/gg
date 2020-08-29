@@ -861,12 +861,15 @@ func TestCommit_DirectoryWithUntracked(t *testing.T) {
 	}
 
 	// Verify that a new commit contains just foo/bar.txt.
-	got, err := env.git.ListTree(ctx, "HEAD", nil)
+	got, err := env.git.ListTree(ctx, "HEAD", git.ListTreeOptions{
+		NameOnly:  true,
+		Recursive: true,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[git.TopPath]struct{}{
-		"foo/bar.txt": {},
+	want := map[git.TopPath]*git.TreeEntry{
+		"foo/bar.txt": nil,
 	}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("HEAD tree (-want +got)\n%s", diff)
@@ -1099,7 +1102,10 @@ func catBlob(ctx context.Context, g *git.Git, rev string, path git.TopPath) ([]b
 }
 
 func objectExists(ctx context.Context, g *git.Git, rev string, path git.TopPath) error {
-	tree, err := g.ListTree(ctx, rev, nil)
+	tree, err := g.ListTree(ctx, rev, git.ListTreeOptions{
+		NameOnly:  true,
+		Recursive: true,
+	})
 	if err != nil {
 		return err
 	}
