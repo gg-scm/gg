@@ -5,9 +5,13 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 
-## [Unreleased][]
+## [1.0.2][] - 2020-09-01
 
-[Unreleased]: https://github.com/gg-scm/gg/compare/v1.0.1...HEAD
+1.0.2 is an organizational release: gg moved to a [new GitHub organization](https://github.com/gg-scm),
+released its internals as a [standalone Go library](https://github.com/gg-scm/gg-git),
+and released Debian/Ubuntu packages!
+
+[1.0.2]: https://github.com/gg-scm/gg/releases/tag/v1.0.2
 
 ### Added
 

@@ -43,5 +43,5 @@ weight = 5
 
 [params]
 licenseURL = "https://github.com/gg-scm/gg/blob/main/LICENSE"
-latestRelease = "1.0.1"
-releaseDate = "2020-06-22"
+latestRelease = "1.0.2"
+releaseDate = "2020-09-01"
