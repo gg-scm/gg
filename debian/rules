@@ -6,7 +6,9 @@ override_dh_auto_install:
 	dh_auto_install -- --no-source
 
 override_dh_auto_build:
-	dh_auto_build -O--buildsystem=golang -- -buildmode=pie
+	dh_auto_build -O--buildsystem=golang -- \
+		-buildmode=pie \
+		-ldflags="-X main.versionInfo=$$(dpkg-parsechangelog -SVersion) -X main.buildTime=$$(date -u '+%Y-%m-%dT%TZ')"
 
 execute_before_dh_installman:
 	pandoc --standalone --to man docs/gg.1.md -o docs/gg.1

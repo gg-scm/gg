@@ -9,10 +9,6 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 [Unreleased]: https://github.com/zombiezen/gg/compare/v1.0.1...HEAD
 
-### Added
-
--  Debian packages! ([#49](https://github.com/zombiezen/gg/issues/49))
-
 ### Changed
 
 -  `gg-scm.io/pkg/internal/git` is now available as `gg-scm.io/pkg/git`. To
