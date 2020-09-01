@@ -56,6 +56,13 @@
           "endsPattern": "^Total in [0-9]+ ms$"
         }
       }
-    }
+    },
+    {
+      "label": "Generate man page",
+      "type": "shell",
+      "command": "pandoc --standalone --to man docs/gg.1.md -o docs/gg.1",
+      "group": "build",
+      "problemMatcher": []
+     }
   ]
 }
