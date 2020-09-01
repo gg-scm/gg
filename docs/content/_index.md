@@ -41,7 +41,22 @@ easier to use for both novices and advanced users alike.
 
 ## Getting Started
 
-{{< latestrelease >}} Binaries are available for Linux and macOS.
+{{< latestrelease >}} Pre-built binaries are available for Linux and macOS.
+
+Binary packages are available for Debian-based systems, including Ubuntu.
+To use the APT repository:
+
+```
+# Import the gg public key
+curl -fsSL https://gg-scm.io/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/gg.gpg add -
+
+# Add the gg APT repository to the list of sources
+echo "deb [signed-by=/usr/share/keyrings/gg.gpg] https://apt.gg-scm.io gg main" | sudo tee /etc/apt/sources.list.d/gg.list
+echo "deb-src [signed-by=/usr/share/keyrings/gg.gpg] https://apt.gg-scm.io gg main" | sudo tee -a /etc/apt/sources.list.d/gg.list
+
+# Update the package list and install gg
+sudo apt-get update && sudo apt-get install gg
+```
 
 You must have a moderately recent copy of Git in your `PATH` to run gg. gg is
 tested against Git 2.20.1 and newer. Older versions may work, but are not

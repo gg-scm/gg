@@ -9,10 +9,17 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 [Unreleased]: https://github.com/zombiezen/gg/compare/v1.0.1...HEAD
 
+### Added
+
+-  gg now has an APT repository with Debian packages!
+   ([#49](https://github.com/gg-scm/gg/issues/49))
+   See https://gg-scm.io/ for installation instructions. Special thanks to my
+   sponsors for covering hosting costs!
+
 ### Changed
 
 -  `gg-scm.io/pkg/internal/git` is now available as `gg-scm.io/pkg/git`. To
-   support this change, this repository's import path has changed from
+   support this change, the main repository's import path has changed from
    `gg-scm.io/pkg` to `gg-scm.io/tool`.
 -  CHANGELOG.md now uses the [Keep a Changelog][] format.
 
