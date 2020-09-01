@@ -32,16 +32,16 @@ weight = 3
 [[menu.main]]
 identifier = "download"
 name = "Download"
-url = "https://github.com/zombiezen/gg/releases/latest"
+url = "https://github.com/gg-scm/gg/releases/latest"
 weight = 4
 
 [[menu.main]]
 identifier = "github"
 name = "GitHub"
-url = "https://github.com/zombiezen/gg"
+url = "https://github.com/gg-scm/gg"
 weight = 5
 
 [params]
-licenseURL = "https://github.com/zombiezen/gg/blob/main/LICENSE"
-latestRelease = "1.0.1"
-releaseDate = "2020-06-22"
+licenseURL = "https://github.com/gg-scm/gg/blob/main/LICENSE"
+latestRelease = "1.0.2"
+releaseDate = "2020-09-01"

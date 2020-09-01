@@ -1,6 +1,7 @@
 # Build Products
 /dist/
 /docs/public/
+/docs/gg.1
 
 # Go
 ## Binaries
@@ -71,4 +72,3 @@ tags
 /debian/gg/
 /debian/gg.debhelper.log
 /debian/gg.substvars
-/docs/gg.1

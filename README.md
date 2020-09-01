@@ -36,8 +36,23 @@ If you find gg useful, consider [sponsoring @zombiezen][].
 
 ## Getting Started
 
-Download the [latest release][] from GitHub.  Binaries are available for
-Linux and macOS.
+Download the [latest release][] from GitHub.  Pre-built binaries are available
+for Linux and macOS.
+
+Binary packages are available for Debian-based systems, including Ubuntu.
+To use the APT repository:
+
+```
+# Import the gg public key
+curl -fsSL https://gg-scm.io/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/gg.gpg add -
+
+# Add the gg APT repository to the list of sources
+echo "deb [signed-by=/usr/share/keyrings/gg.gpg] https://apt.gg-scm.io gg main" | sudo tee /etc/apt/sources.list.d/gg.list
+echo "deb-src [signed-by=/usr/share/keyrings/gg.gpg] https://apt.gg-scm.io gg main" | sudo tee -a /etc/apt/sources.list.d/gg.list
+
+# Update the package list and install gg
+sudo apt-get update && sudo apt-get install gg
+```
 
 To build from source, follow the instructions in [CONTRIBUTING.md][build-source].
 
@@ -51,7 +66,7 @@ guides and reference documentation.
 
 [build-source]: CONTRIBUTING.md#building-from-source
 [main site]: https://gg-scm.io/
-[latest release]: https://github.com/zombiezen/gg/releases/latest
+[latest release]: https://github.com/gg-scm/gg/releases/latest
 [Working Locally]: https://gg-scm.io/workflow/local/
 
 ## Testimonials

@@ -332,9 +332,9 @@ func showVersion(ctx context.Context, cc *cmdContext) error {
 
 func userAgentString() string {
 	if versionInfo == "" {
-		return "zombiezen/gg"
+		return "gg-scm.io"
 	}
-	return "zombiezen/gg " + versionInfo
+	return "gg-scm.io " + versionInfo
 }
 
 // processContext is the state that gg uses to run. It is collected in

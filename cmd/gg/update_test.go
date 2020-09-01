@@ -184,7 +184,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 	})
 	t.Run("UpstreamNoPush", func(t *testing.T) {
 		// Until gg 0.7, this was the default test.
-		// Behavior changed as part of https://github.com/zombiezen/gg/issues/80.
+		// Behavior changed as part of https://github.com/gg-scm/gg/issues/80.
 
 		env, err := newTestEnv(ctx, t)
 		if err != nil {
@@ -249,7 +249,7 @@ func TestUpdate_NoArgs(t *testing.T) {
 		}
 	})
 	t.Run("Merge", func(t *testing.T) {
-		// Regression test for https://github.com/zombiezen/gg/issues/76.
+		// Regression test for https://github.com/gg-scm/gg/issues/76.
 
 		env, err := newTestEnv(ctx, t)
 		if err != nil {
@@ -470,7 +470,7 @@ func TestUpdate_SwitchBranch(t *testing.T) {
 		}
 	})
 	t.Run("ToAheadBranch", func(t *testing.T) {
-		// Regression test for https://github.com/zombiezen/gg/issues/103
+		// Regression test for https://github.com/gg-scm/gg/issues/103
 
 		env, err := newTestEnv(ctx, t)
 		if err != nil {

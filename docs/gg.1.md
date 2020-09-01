@@ -20,7 +20,7 @@ Run **gg \--help** or visit https://gg-scm.io/cmd/ for reference.
 
 # BUGS
 
-See GitHub Issues: https://github.com/zombiezen/gg/issues
+See GitHub Issues: https://github.com/gg-scm/gg/issues
 
 # SEE ALSO
 

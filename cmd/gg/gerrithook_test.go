@@ -81,7 +81,7 @@ func TestGerritHook(t *testing.T) {
 		}
 	})
 	t.Run("Subdir", func(t *testing.T) {
-		// Regression test for https://github.com/zombiezen/gg/issues/105
+		// Regression test for https://github.com/gg-scm/gg/issues/105
 
 		env, err := newTestEnv(ctx, t)
 		if err != nil {

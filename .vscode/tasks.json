@@ -63,6 +63,6 @@
       "command": "pandoc --standalone --to man docs/gg.1.md -o docs/gg.1",
       "group": "build",
       "problemMatcher": []
-    }
+     }
   ]
 }

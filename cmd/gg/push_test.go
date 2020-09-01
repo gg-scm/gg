@@ -560,7 +560,7 @@ func TestPush_DistinctPushURL(t *testing.T) {
 func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 	// Ensure that -create=0 does not proceed if the branch is missing
 	// from the fetch URL but is present in the push URL. See
-	// https://github.com/zombiezen/gg/issues/75 for background.
+	// https://github.com/gg-scm/gg/issues/75 for background.
 
 	t.Parallel()
 	ctx := context.Background()
@@ -652,7 +652,7 @@ func TestPush_NoCreateFetchURLMissingBranch(t *testing.T) {
 func TestPush_NoCreatePushURLMissingBranch(t *testing.T) {
 	// Ensure that -create=0 succeeds if the branch is missing from the
 	// push URL but is present in the fetch URL. See
-	// https://github.com/zombiezen/gg/issues/75 for background.
+	// https://github.com/gg-scm/gg/issues/75 for background.
 
 	t.Parallel()
 	ctx := context.Background()

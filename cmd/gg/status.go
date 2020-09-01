@@ -98,13 +98,13 @@ aliases: st, check`)
 		case ent.Code.IsAdded():
 			name := ent.Name
 			if name == "" {
-				// See https://github.com/zombiezen/gg/issues/60 for explanation.
+				// See https://github.com/gg-scm/gg/issues/60 for explanation.
 				name = "???"
 				hitRenameBug = true
 			}
 			_, err = fmt.Fprintf(cc.stdout, "%sA %s\n", addedColor, name)
 			if ent.Code.IsOriginalMissing() {
-				// See https://github.com/zombiezen/gg/issues/44 for explanation.
+				// See https://github.com/gg-scm/gg/issues/44 for explanation.
 				if colorize {
 					if err := terminal.ResetTextStyle(cc.stdout); err != nil {
 						return err
@@ -152,10 +152,10 @@ aliases: st, check`)
 		}
 	}
 	if foundUnrecognized {
-		return errors.New("unrecognized output from git status. Please file a bug at https://github.com/zombiezen/gg/issues/new and include the output from this command.")
+		return errors.New("unrecognized output from git status. Please file a bug at https://github.com/gg-scm/gg/issues/new and include the output from this command.")
 	}
 	if hitRenameBug {
-		return errors.New("version of Git has buggy rename detection; please upgrade. See https://github.com/zombiezen/gg/issues/60 for details.")
+		return errors.New("version of Git has buggy rename detection; please upgrade. See https://github.com/gg-scm/gg/issues/60 for details.")
 	}
 	if statusErr != nil {
 		return statusErr
