@@ -92,7 +92,7 @@ func TestStatus(t *testing.T) {
 }
 
 // TestStatus_RenamedLocally is a regression test for
-// https://github.com/zombiezen/gg/issues/44.
+// https://github.com/gg-scm/gg/issues/44.
 func TestStatus_RenamedLocally(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -121,7 +121,7 @@ func TestStatus_RenamedLocally(t *testing.T) {
 	if err := env.trackFiles(ctx, "bar.txt"); err != nil {
 		t.Fatal(err)
 	}
-	// Check for buggy Git (see https://github.com/zombiezen/gg/issues/60).
+	// Check for buggy Git (see https://github.com/gg-scm/gg/issues/60).
 	// Useful for debugging.
 	statusOut, err := env.git.Output(ctx, "status", "--porcelain", "-z", "-unormal")
 	if err != nil {

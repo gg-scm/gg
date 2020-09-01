@@ -471,7 +471,7 @@ func TestRebase_Base(t *testing.T) {
 }
 
 func TestRebase_ResetUpstream(t *testing.T) {
-	// Regression test for https://github.com/zombiezen/gg/issues/41
+	// Regression test for https://github.com/gg-scm/gg/issues/41
 
 	t.Parallel()
 	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {

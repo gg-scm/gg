@@ -211,7 +211,7 @@ func TestCommit_Selective(t *testing.T) {
 }
 
 func TestCommit_SelectiveWrongFile(t *testing.T) {
-	// Regression test for https://github.com/zombiezen/gg/issues/63
+	// Regression test for https://github.com/gg-scm/gg/issues/63
 
 	t.Parallel()
 	ctx := context.Background()
@@ -393,7 +393,7 @@ func TestCommit_Amend(t *testing.T) {
 }
 
 func TestCommit_AmendRootCommit(t *testing.T) {
-	// Regression test for https://github.com/zombiezen/gg/issues/106
+	// Regression test for https://github.com/gg-scm/gg/issues/106
 
 	t.Parallel()
 	ctx := context.Background()
@@ -602,7 +602,7 @@ func TestCommit_AmendJustMessage(t *testing.T) {
 }
 
 func TestCommit_InSubdir(t *testing.T) {
-	// Regression test for https://github.com/zombiezen/gg/issues/10
+	// Regression test for https://github.com/gg-scm/gg/issues/10
 
 	t.Parallel()
 	tests := []struct {
@@ -720,7 +720,7 @@ func TestCommit_InSubdir(t *testing.T) {
 }
 
 func TestCommit_Merge(t *testing.T) {
-	// Regression test for https://github.com/zombiezen/gg/issues/38
+	// Regression test for https://github.com/gg-scm/gg/issues/38
 
 	t.Parallel()
 	ctx := context.Background()
@@ -831,7 +831,7 @@ func TestCommit_Merge(t *testing.T) {
 	}
 }
 
-// Regression test for https://github.com/zombiezen/gg/issues/74
+// Regression test for https://github.com/gg-scm/gg/issues/74
 func TestCommit_DirectoryWithUntracked(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

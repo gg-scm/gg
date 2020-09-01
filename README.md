@@ -66,7 +66,7 @@ guides and reference documentation.
 
 [build-source]: CONTRIBUTING.md#building-from-source
 [main site]: https://gg-scm.io/
-[latest release]: https://github.com/zombiezen/gg/releases/latest
+[latest release]: https://github.com/gg-scm/gg/releases/latest
 [Working Locally]: https://gg-scm.io/workflow/local/
 
 ## Testimonials
