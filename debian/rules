@@ -10,6 +10,9 @@ override_dh_auto_build:
 		-buildmode=pie \
 		-ldflags="-X main.versionInfo=$$(dpkg-parsechangelog -SVersion) -X main.buildTime=$$(date -u '+%Y-%m-%dT%TZ')"
 
+execute_after_dh_clean:
+	rm -f docs/gg.1
+
 execute_before_dh_installman:
 	pandoc --standalone --to man docs/gg.1.md -o docs/gg.1
 
