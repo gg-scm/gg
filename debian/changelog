@@ -1,3 +1,9 @@
+gg (1.0.2-2) gg; urgency=low
+
+  * debian: lower Git dependency version and set epoch
+
+ -- Ross Light <ross@zombiezen.com>  Wed, 02 Sep 2020 05:09:34 +0000
+
 gg (1.0.2-1) gg; urgency=medium
 
   * Initial release
