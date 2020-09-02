@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Ross Light <ross@zombiezen.com>
 Build-Depends: debhelper (>= 11),
                dh-golang,
-               git (>= 2.20.1),
+               git (>= 1:2.17.1~~),
                golang-any (>= 2:1.14~~),
                golang-gg-scm-pkg-git-dev (>= 0.3.0),
                golang-github-google-go-cmp-dev,
@@ -23,7 +23,7 @@ Architecture: any
 Built-Using: ${misc:Built-Using}
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-         git (>= 2.20.1)
+         git (>= 1:2.17.1~~)
 Description: Git with less typing
  gg is an alternative command-line interface for Git heavily inspired by
  Mercurial. It’s designed for less typing in common workflows and make Git
