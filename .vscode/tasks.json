@@ -14,50 +14,6 @@
       "problemMatcher": ["$go"]
     },
     {
-      "label": "Serve Docs",
-      "type": "shell",
-      "command": "hugo serve --disableFastRender --port=8080",
-      "options": {"cwd": "${workspaceRoot}/docs"},
-      "isBackground": true,
-      "problemMatcher": {
-        "pattern": {
-          "regexp": "(ERROR|Error:) .*\"([^\"]+):(\\d+):(\\d+)\": (.*)$",
-          "file": 2,
-          "line": 3,
-          "column": 4,
-          "message": 5
-        },
-        "fileLocation": "absolute",
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": "^Change detected, rebuilding site$",
-          "endsPattern": "^Total in [0-9]+ ms$"
-        }
-      }
-    },
-    {
-      "label": "Serve Docs with Drafts",
-      "type": "shell",
-      "command": "hugo serve -D --disableFastRender --port=8080",
-      "options": {"cwd": "${workspaceRoot}/docs"},
-      "isBackground": true,
-      "problemMatcher": {
-        "pattern": {
-          "regexp": "(ERROR|Error:) .*\"([^\"]+):(\\d+):(\\d+)\": (.*)$",
-          "file": 2,
-          "line": 3,
-          "column": 4,
-          "message": 5
-        },
-        "fileLocation": "absolute",
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": "^Change detected, rebuilding site$",
-          "endsPattern": "^Total in [0-9]+ ms$"
-        }
-      }
-    },
-    {
       "label": "Generate man page",
       "type": "shell",
       "command": "pandoc --standalone --to man docs/gg.1.md -o docs/gg.1",

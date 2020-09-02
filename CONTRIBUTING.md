@@ -7,7 +7,8 @@ just a few small guidelines you need to follow.
 
 **Issues:** Report bugs or request features using [GitHub issues][issues].
 
-**Documentation:** You can send documentation changes via pull requests.
+**Documentation:** You can send documentation changes via pull requests to the
+[website repository][].
 
 **Bug fixes:** You can send bug fixes via pull requests.
 
@@ -19,8 +20,9 @@ broken, adding new tests is always welcome.
 tracker first. Also, take a look at [DESIGN.md][], which outlines the scope of
 features and the ideas behind the project.
 
-[issues]: https://github.com/gg-scm/gg/issues
 [DESIGN.md]: https://github.com/gg-scm/gg/blob/main/DESIGN.md
+[issues]: https://github.com/gg-scm/gg/issues
+[website repository]: https://github.com/gg-scm/gg-scm.io
 
 ## Building from Source
 

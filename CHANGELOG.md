@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 
+## [Unreleased][]
+
+[Unreleased]: https://github.com/gg-scm/gg/compare/v1.0.2...HEAD
+
+### Changed
+
+-  The documentation has been moved to a [new repository](https://github.com/gg-scm/gg-scm.io).
+   ([#119](https://github.com/gg-scm/gg/issues/119))
+
 ## [1.0.2][] - 2020-09-01
 
 1.0.2 is an organizational release: gg moved to a [new GitHub organization](https://github.com/gg-scm),
