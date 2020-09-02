@@ -22,8 +22,9 @@ jobs:
       matrix:
         git:
         - "2.27.0"  # latest
-        - "2.25.1"  # Ubuntu LTS focal
+        - "2.25.1"  # Ubuntu LTS 20.04 focal
         - "2.20.1"  # Debian buster
+        - "2.17.1"  # Ubuntu LTS 18.04 bionic
     steps:
     - name: Install Git dependencies
       run: |
