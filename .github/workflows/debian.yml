@@ -29,21 +29,27 @@ jobs:
       image: debian:unstable
     steps:
     - name: Install GnuPG and curl
-      run: apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg
+      run: |-
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates curl gnupg
     - name: Add gg apt repository
       run: |-
         curl -fsSL https://gg-scm.io/apt-key.gpg | apt-key --keyring /etc/apt/trusted.gpg.d/gg.gpg add -
         echo "deb [signed-by=/etc/apt/trusted.gpg.d/gg.gpg] https://apt.gg-scm.io gg main" | tee /etc/apt/sources.list.d/gg.list
         echo "deb-src [signed-by=/etc/apt/trusted.gpg.d/gg.gpg] https://apt.gg-scm.io gg main" | tee -a /etc/apt/sources.list.d/gg.list
     - name: Install dev tools
-      run: apt-get update && apt-get install -y --no-install-recommends devscripts equivs git-buildpackage
+      run: |-
+        apt-get update
+        apt-get install -y --no-install-recommends devscripts equivs git-buildpackage
     - name: Check out code
       uses: actions/checkout@v2
       with:
         # Check out everything, since we need upstream tags.
         fetch-depth: 0
     - name: Install build dependencies
-      run: mk-build-deps --install --remove --tool="apt-get -y --no-install-recommends" && rm -f *.buildinfo *.changes
+      run: |-
+        mk-build-deps --install --remove --tool="apt-get -o Debug::pkgProblemResolver=yes -y --no-install-recommends"
+        rm -f *.buildinfo *.changes
     - name: Build package
       run: gbp buildpackage --git-export-dir=build --no-sign --git-ignore-branch
     - uses: actions/upload-artifact@v2
