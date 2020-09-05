@@ -48,6 +48,7 @@ jobs:
         fetch-depth: 0
     - name: Install build dependencies
       run: |-
+        apt-get install -y --no-install-recommends golang-gg-scm-pkg-git-dev=0.3.0-2
         mk-build-deps --install --remove --tool="apt-get -o Debug::pkgProblemResolver=yes -y --no-install-recommends"
         rm -f *.buildinfo *.changes
     - name: Build package
