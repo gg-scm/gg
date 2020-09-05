@@ -130,17 +130,17 @@ type testEnv struct {
 }
 
 var (
-	gitPathOnce  sync.Once
-	gitPath      string
-	gitPathError error
+	globalGitOnce  sync.Once
+	globalGit      *git.Git
+	globalGitError error
 )
 
 func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
-	gitPathOnce.Do(func() {
-		gitPath, gitPathError = exec.LookPath("git")
+	globalGitOnce.Do(func() {
+		globalGit, globalGitError = git.New(git.Options{})
 	})
-	if gitPathError != nil {
-		tb.Skipf("could not find git, skipping (error: %v)", gitPathError)
+	if globalGitError != nil {
+		tb.Skipf("could not find git, skipping (error: %v)", globalGitError)
 	}
 	topDir, err := ioutil.TempDir("", "gg_integration_test")
 	if err != nil {
@@ -164,7 +164,9 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	root := topFS.FromSlash("scratch")
 	xdgConfigDir := topFS.FromSlash("xdgconfig")
 	xdgCacheDir := topFS.FromSlash("xdgcache")
-	git, err := git.New(gitPath, root, git.Options{
+	git, err := git.New(git.Options{
+		GitExe: globalGit.Exe(),
+		Dir:    root,
 		Env: append(os.Environ(),
 			"GIT_CONFIG_NOSYSTEM=1",
 			"HOME="+topDir,
@@ -263,7 +265,7 @@ func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte,
 		httpClient: &http.Client{Transport: env.roundTripper},
 		lookPath: func(name string) (string, error) {
 			if name == "git" {
-				return gitPath, gitPathError
+				return globalGit.Exe(), globalGitError
 			}
 			return "", errors.New("look path stubbed")
 		},

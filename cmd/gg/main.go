@@ -118,7 +118,9 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		}
 	}
 	opts := git.Options{
-		Env: pctx.env,
+		GitExe: *gitPath,
+		Dir:    pctx.dir,
+		Env:    pctx.env,
 	}
 	if *showArgs {
 		opts.LogHook = func(_ context.Context, args []string) {
@@ -138,7 +140,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 			pctx.stderr.Write(buf.Bytes())
 		}
 	}
-	git, err := git.New(*gitPath, pctx.dir, opts)
+	git, err := git.New(opts)
 	if err != nil {
 		return fmt.Errorf("gg: %w", err)
 	}
