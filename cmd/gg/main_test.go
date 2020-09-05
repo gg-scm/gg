@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -233,7 +234,11 @@ var (
 // configuration setting.
 func (env *testEnv) editorCmd(content []byte) (string, error) {
 	cpPathOnce.Do(func() {
-		cpPath, cpPathError = exec.LookPath("cp")
+		if runtime.GOOS == "windows" {
+			cpPath, cpPathError = "copy", nil
+		} else {
+			cpPath, cpPathError = exec.LookPath("cp")
+		}
 	})
 	if cpPathError != nil {
 		return "", fmt.Errorf("editor command: cp not found: %w", cpPathError)

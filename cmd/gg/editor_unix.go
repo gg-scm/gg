@@ -1,4 +1,4 @@
-// Copyright 2018 The gg Authors
+// Copyright 2020 The gg Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,14 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
-module gg-scm.io/tool
+// +build !windows
 
-go 1.14
+package main
 
-require (
-	gg-scm.io/pkg/git v0.4.1
-	github.com/google/go-cmp v0.3.0
-	golang.org/x/sys v0.0.0-20200905004654-be1d3432aa8f
-	golang.org/x/tools v0.0.0-20180628163957-1c99e1239a0c
-)
+import "os/exec"
+
+func shellCommand(line string) (*exec.Cmd, error) {
+	return exec.Command("/bin/sh", "-c", line), nil
+}

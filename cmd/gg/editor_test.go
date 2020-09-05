@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"testing"
@@ -39,14 +40,19 @@ func TestEditor(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	stderr := new(bytes.Buffer)
 	e := &editor{
 		git:      env.git,
 		tempRoot: env.root.String(),
 		log: func(e error) {
 			t.Error("Editor error:", e)
 		},
+		stderr: stderr,
 	}
 	got, err := e.open(ctx, "foo.txt", []byte("This is the initial content.\n"))
+	if stderr.Len() > 0 {
+		t.Log(stderr)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}

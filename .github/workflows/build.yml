@@ -110,3 +110,22 @@ jobs:
       with:
         name: macOS binary
         path: gg
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.14
+    - name: Check out code
+      uses: actions/checkout@v1
+    - name: Download dependencies
+      run: go mod download
+      env:
+        GO111MODULE: on
+    - name: Run tests
+      run: go test -mod=readonly -v ./...
+      env:
+        GO111MODULE: on
+
