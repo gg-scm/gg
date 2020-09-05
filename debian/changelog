@@ -1,8 +1,11 @@
-gg (1.0.2-3) UNRELEASED; urgency=low
+gg (1.0.2-3) gg; urgency=medium
 
-  * .github: only run Build workflow on main branch
+  * .github/workflows: add Debian workflow
+  * .github/workflows: only run Build workflow on main branch
+  * .vscode: hide Debian build objects from explorer
+  * debian: specify gg-scm.io/pkg/git 0.3.0 dependency as range
 
- -- Ross Light <ross@zombiezen.com>  Sat, 05 Sep 2020 16:59:03 +0000
+ -- Ross Light <ross@zombiezen.com>  Sat, 05 Sep 2020 20:52:49 +0000
 
 gg (1.0.2-2) gg; urgency=low
 
