@@ -28,8 +28,8 @@ jobs:
     container:
       image: debian:unstable
     steps:
-    - name: Install GnuPG
-      run: apt-get update && apt-get install -y --no-install-recommends gnupg
+    - name: Install GnuPG and curl
+      run: apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg
     - name: Add gg apt repository
       run: |-
         curl -fsSL https://gg-scm.io/apt-key.gpg | apt-key --keyring /etc/apt/trusted.gpg.d/gg.gpg add -
