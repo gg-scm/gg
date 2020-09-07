@@ -78,27 +78,18 @@ jobs:
     name: macOS
     runs-on: macOS-latest
     steps:
-    - name: Install xz
-      run: brew update && brew install xz
     - name: Set up Go
       uses: actions/setup-go@v1
       with:
         go-version: 1.14
     - name: Check out code
       uses: actions/checkout@v1
-    - name: Install Git
-      run: misc/build-git.bash ~/git 2.27.0
     - name: Download dependencies
       run: go mod download
       env:
         GO111MODULE: on
     - name: Run tests
-      run: |
-        PATH="$HOME/git/bin-wrappers:$PATH" \
-          go test \
-            -mod=readonly \
-            -v \
-            ./...
+      run: go test -mod=readonly -v ./...
       env:
         GO111MODULE: on
     - name: Build binary
