@@ -19,8 +19,8 @@ on:
   release:
     types: [published]
 jobs:
-  release:
-    name: Release
+  unix:
+    name: Unix
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -48,5 +48,39 @@ jobs:
       with:
         upload_url: ${{ github.event.release.upload_url }}
         asset_path: ./${{ steps.package.outputs.file }}
+        asset_name: ${{ steps.package.outputs.file }}
+        asset_content_type: application/gzip
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.14
+    - name: Check out code
+      uses: actions/checkout@v1
+    - name: Download dependencies
+      run: go mod download
+      env:
+        GO111MODULE: on
+    - name: Build executable
+      run: |-
+        release\build.ps1 `
+          -version ($Env:GITHUB_REF).trimstart('refs/tags/') `
+          -out release\msi\gg.exe
+      env:
+        GO111MODULE: on
+    - name: Package release
+      run: .\release.ps1
+      working-directory: .\release\msi
+      id: package
+    - name: Upload binary
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: .\release\msi\${{ steps.package.outputs.file }}
         asset_name: ${{ steps.package.outputs.file }}
         asset_content_type: application/gzip
