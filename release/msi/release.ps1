@@ -47,6 +47,7 @@ If ( $LastExitCode -ne 0 ) {
 }
 & "${env:wix}bin\\light.exe" `
   -nologo `
+  -dcl:high `
   -ext WixUIExtension `
   -ext WixUtilExtension `
   gg.wixobj `
