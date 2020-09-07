@@ -32,6 +32,28 @@
       "command": "pandoc --standalone --to man misc/gg.1.md -o misc/gg.1",
       "group": "build",
       "problemMatcher": []
-     }
+    },
+    {
+      "label": "Build MSI",
+      "dependsOn": ["Build"],
+      "type": "shell",
+      "windows": {
+        "command": ".\\release.ps1",
+        "options": {
+          "cwd": "${workspaceFolder}\\release\\msi"
+        }
+      },
+      "problemMatcher": {
+        "owner": "wix",
+        "fileLocation": "absolute",
+        "pattern": {
+          "regexp": "^(.*)\\(([0-9]+)\\) : \\S+ (\\S+) : (.*)",
+          "file": 1,
+          "line": 2,
+          "code": 3,
+          "message": 4
+        }
+      }
+    }
   ]
 }

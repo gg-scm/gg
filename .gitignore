@@ -61,3 +61,8 @@ Session.vim
 tags
 ## Persistent undo
 [._]*.un~
+
+# WiX
+*.msi
+*.wixobj
+*.wixpdb
