@@ -14,9 +14,44 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+param($version='')
+
 If ( ! ( Test-Path Env:wix ) ) {
   Write-Error 'WiX not installed; cannot find %wix%.'
   exit 1
 }
-& "${env:wix}bin\\candle.exe" -arch x64 gg.wxs
-& "${env:wix}bin\\light.exe" -ext WixUIExtension -ext WixUtilExtension gg.wixobj
+
+$filename="gg"
+If ( $version -ne '' ) {
+  $filename+="_${version}"
+}
+$filename+=".msi"
+
+$wixVersion="0.0.0"
+$wixVersionMatch=[regex]::Match($version, '^v([0-9]+\.[0-9]+\.[0-9]+)')
+If ( $wixVersionMatch.success ) {
+  $wixVersion=$wixVersionMatch.captures.groups[1].value
+} Elseif ( $version -ne '' ) {
+  Write-Error "Invalid version $version"
+  exit 1
+}
+
+& "${env:wix}bin\\candle.exe" `
+  -nologo `
+  -arch x64 `
+  "-dGgVersion=$version" `
+  "-dWixGgVersion=$wixVersion" `
+  gg.wxs
+If ( $LastExitCode -ne 0 ) {
+  exit $LastExitCode
+}
+& "${env:wix}bin\\light.exe" `
+  -nologo `
+  -ext WixUIExtension `
+  -ext WixUtilExtension `
+  gg.wixobj `
+  -o $filename
+If ( $LastExitCode -ne 0 ) {
+  exit $LastExitCode
+}
+Write-Output "::set-output name=file::${filename}"

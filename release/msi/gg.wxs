@@ -19,13 +19,13 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product Name="gg"
+  <Product Name="gg $(var.GgVersion)"
     Manufacturer="https://gg-scm.io"
     Id="a157faae-3e61-4c5a-a281-cf7477705054"
     UpgradeCode="e258c8c3-2fd4-483a-b41f-402f8eb3246d"
     Language="1033"
     Codepage="1252"
-    Version="1.0.2">
+    Version="$(var.WixGgVersion)">
     <Package Id="*"
       Keywords="Installer"
       Description="gg Installer"
