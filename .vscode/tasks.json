@@ -4,6 +4,19 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Build",
+      "type": "shell",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "command": "release/build.bash gg",
+      "windows": {
+        "command": "release\\build.ps1 -out release\\msi\\gg.exe"
+      },
+      "problemMatcher": ["$go"]
+    },
+    {
       "label": "go test",
       "type": "shell",
       "command": "go test ./...",

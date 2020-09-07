@@ -120,8 +120,7 @@ jobs:
       env:
         GO111MODULE: on
     - name: Build binary
-      run: |-
-        go build -o gg.exe -ldflags="-X main.buildCommit=$Env:GITHUB_SHA -X main.buildTime=$((Get-Date).ToUniversalTime() | Get-Date -UFormat '%Y-%m-%dT%TZ')" gg-scm.io/tool/cmd/gg
+      run: release\build.ps1 -out gg.exe
       env:
         GO111MODULE: on
     - name: Upload binary
