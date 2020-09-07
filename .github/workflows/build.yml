@@ -128,4 +128,14 @@ jobs:
       run: go test -mod=readonly -v ./...
       env:
         GO111MODULE: on
+    - name: Build binary
+      run: |-
+        go build -o gg.exe -ldflags="-X main.buildCommit=$Env:GITHUB_SHA -X main.buildTime=$((Get-Date).ToUniversalTime() | Get-Date -UFormat '%Y-%m-%dT%TZ')" gg-scm.io/tool/cmd/gg
+      env:
+        GO111MODULE: on
+    - name: Upload binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: Windows binary
+        path: gg.exe
 
