@@ -1,3 +1,3 @@
 # misc/ directory
 
-This directory holds scripts used for developing gg.
+This directory holds supporting files for the gg installation.

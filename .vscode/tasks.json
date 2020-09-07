@@ -16,7 +16,7 @@
     {
       "label": "Generate man page",
       "type": "shell",
-      "command": "pandoc --standalone --to man docs/gg.1.md -o docs/gg.1",
+      "command": "pandoc --standalone --to man misc/gg.1.md -o misc/gg.1",
       "group": "build",
       "problemMatcher": []
      }

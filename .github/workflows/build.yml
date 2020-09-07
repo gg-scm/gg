@@ -49,7 +49,7 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v1
     - name: Install Git
-      run: misc/build-git.bash ~/git ${{ matrix.git }}
+      run: release/build-git.bash ~/git ${{ matrix.git }}
     - name: Download dependencies
       run: go mod download
       env:
@@ -64,7 +64,7 @@ jobs:
       env:
         GO111MODULE: on
     - name: Build binary
-      run: misc/build.bash gg
+      run: release/build.bash gg
       env:
         GO111MODULE: on
       if: matrix.git == '2.27.0'
@@ -93,7 +93,7 @@ jobs:
       env:
         GO111MODULE: on
     - name: Build binary
-      run: misc/build.bash gg
+      run: release/build.bash gg
       env:
         GO111MODULE: on
     - name: Upload binary

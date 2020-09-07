@@ -30,7 +30,7 @@ You must have Go 1.14 or later to build gg.
 
 ```
 # From a release tarball or a local clone:
-misc/build.bash ~/bin/gg
+release/build.bash ~/bin/gg
 
 # Or using the go tool:
 go install ./cmd/gg

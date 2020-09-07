@@ -1,7 +1,6 @@
 # Build Products
 /dist/
-/docs/public/
-/docs/gg.1
+/misc/gg.1
 
 # Go
 ## Binaries

@@ -28,7 +28,7 @@ commitinfo() {
 }
 
 if [[ $# -ne 1 && $# -ne 2 ]]; then
-  echo "usage: misc/build.bash OUT [VERSION]" 1>&2
+  echo "usage: release/build.bash OUT [VERSION]" 1>&2
   exit 64
 fi
 buildtime="$(date -u '+%Y-%m-%dT%TZ')"

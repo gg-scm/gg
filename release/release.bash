@@ -23,20 +23,20 @@ parse_tag_ref() {
 }
 
 if [[ $# -gt 1 ]]; then
-  echo "usage: misc/release.bash [VERSION]" 1>&2
+  echo "usage: release/release.bash [VERSION]" 1>&2
   exit 64
 fi
 srcroot="$(dirname "$(dirname "${BASH_SOURCE[0]}")")"
 release_version="${1:-$(echo "${GITHUB_REF:-}" | parse_tag_ref)}"
 if [[ -z "$release_version" ]]; then
-  echo "misc/release.bash: cannot infer version, please pass explicitly" 1>&2
+  echo "release/release.bash: cannot infer version, please pass explicitly" 1>&2
   exit 1
 fi
 release_os="$(go env GOOS)"
 release_arch="$(go env GOARCH)"
 if [[ "$release_version" == "dev" ]]; then
   if [[ -z "${GITHUB_SHA:-}" ]]; then
-    echo "misc/release.bash: must set GITHUB_SHA for dev" 1>&2
+    echo "release/release.bash: must set GITHUB_SHA for dev" 1>&2
     exit 1
   fi
   release_name="gg_${GITHUB_SHA:-}_${release_os}_${release_arch}"
@@ -53,9 +53,9 @@ cp "$srcroot/README.md" "$srcroot/CHANGELOG.md" "$srcroot/LICENSE" "$distroot/"
 mkdir "$distroot/misc"
 cp "$srcroot/misc/completion.zsh" "$srcroot/misc/_gg_complete.bash" "$distroot/misc/"
 if [[ "$release_version" == "dev" ]]; then
-  "$srcroot/misc/build.bash" "$distroot/gg"
+  "$srcroot/release/build.bash" "$distroot/gg"
 else
-  "$srcroot/misc/build.bash" "$distroot/gg" "$release_version"
+  "$srcroot/release/build.bash" "$distroot/gg" "$release_version"
 fi
 tar -zcf - -C "$stagedir" "$release_name" > "${release_name}.tar.gz"
 echo "::set-output name=file::${release_name}.tar.gz"
