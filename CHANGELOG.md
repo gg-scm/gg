@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 [Unreleased]: https://github.com/gg-scm/gg/compare/v1.0.2...HEAD
 
+### Added
+
+-  gg now has pre-built Windows binaries!
+   ([#48](https://github.com/gg-scm/gg/issues/48))
+
 ### Changed
 
 -  The documentation has been moved to a [new repository](https://github.com/gg-scm/gg-scm.io).

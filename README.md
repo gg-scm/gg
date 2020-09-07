@@ -37,7 +37,7 @@ If you find gg useful, consider [sponsoring @zombiezen][].
 ## Getting Started
 
 Download the [latest release][] from GitHub.  Pre-built binaries are available
-for Linux and macOS.
+for Linux, Windows, and macOS.
 
 Binary packages are available for Debian-based systems, including Ubuntu.
 To use the APT repository:
