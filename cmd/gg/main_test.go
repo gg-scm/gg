@@ -235,7 +235,7 @@ var (
 func (env *testEnv) editorCmd(content []byte) (string, error) {
 	cpPathOnce.Do(func() {
 		if runtime.GOOS == "windows" {
-			cpPath, cpPathError = "copy", nil
+			cpPath, cpPathError = "cp", nil
 		} else {
 			cpPath, cpPathError = exec.LookPath("cp")
 		}

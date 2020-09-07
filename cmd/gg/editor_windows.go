@@ -18,19 +18,19 @@ package main
 
 import (
 	"os/exec"
-
-	"golang.org/x/sys/windows"
+	"path/filepath"
 )
 
-func shellCommand(line string) (*exec.Cmd, error) {
-	cmd, err := exec.LookPath("cmd")
-	if err != nil {
+func shellCommand(gitExe, line string) (*exec.Cmd, error) {
+	// Git for Windows comes with an MSYS2 bash emulation that Git uses to invoke
+	// shell commands. To preserve the semantics of the Git editor line, we use
+	// the same shell.
+	//
+	// In the default install location, git.exe lives at C:\Program Files\Git\cmd\git.exe.
+	// bash.exe lives at C:\Program Files\Git\bin\bash.exe and is not on the PATH.
+	bash := filepath.Join(gitExe, "..", "..", "bin", "bash.exe")
+	if _, err := exec.LookPath(bash); err != nil {
 		return nil, err
 	}
-	return &exec.Cmd{
-		Path: cmd,
-		SysProcAttr: &windows.SysProcAttr{
-			CmdLine: "cmd /C " + line,
-		},
-	}, nil
+	return exec.Command(bash, "-c", line), nil
 }
