@@ -64,17 +64,12 @@ jobs:
       run: go mod download
       env:
         GO111MODULE: on
-    - name: Build executable
-      run: |-
-        release\build.ps1 `
-          -version ($Env:GITHUB_REF).trimstart('refs/tags/') `
-          -out release\msi\gg.exe
-      env:
-        GO111MODULE: on
     - name: Package release
-      run: .\release.ps1 -version ($Env:GITHUB_REF).trimstart('refs/tags/')
+      run: .\release.ps1 -version ($Env:GITHUB_REF).trimstart('refs/tags/v')
       working-directory: .\release\msi
       id: package
+      env:
+        GO111MODULE: on
     - name: Upload binary
       uses: actions/upload-release-asset@v1
       env:
