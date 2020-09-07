@@ -61,7 +61,7 @@ func (e *editor) open(ctx context.Context, basename string, initial []byte) ([]b
 	if err := ioutil.WriteFile(path, initial, 0600); err != nil {
 		return nil, fmt.Errorf("open editor: %w", err)
 	}
-	c, err := shellCommand(e.git.Exe(), string(editor)+" "+escape.Shell(path))
+	c, err := bashCommand(e.git.Exe(), string(editor)+" "+escape.Bash(path))
 	if err != nil {
 		return nil, fmt.Errorf("open editor: %w", err)
 	}

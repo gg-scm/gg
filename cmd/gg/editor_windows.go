@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 )
 
-func shellCommand(gitExe, line string) (*exec.Cmd, error) {
+func bashCommand(gitExe, line string) (*exec.Cmd, error) {
 	// Git for Windows comes with an MSYS2 bash emulation that Git uses to invoke
 	// shell commands. To preserve the semantics of the Git editor line, we use
 	// the same shell.

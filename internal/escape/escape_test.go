@@ -16,7 +16,7 @@ package escape
 
 import "testing"
 
-func TestShellUnix(t *testing.T) {
+func TestBash(t *testing.T) {
 	tests := []struct {
 		in, out string
 	}{
@@ -30,28 +30,8 @@ func TestShellUnix(t *testing.T) {
 		{`abc\`, `'abc\'`},
 	}
 	for _, test := range tests {
-		if out := shellUnix(test.in); out != test.out {
-			t.Errorf("shellUnix(%q) = %s; want %s", test.in, out, test.out)
-		}
-	}
-}
-
-func TestShellWindows(t *testing.T) {
-	tests := []struct {
-		in, out string
-	}{
-		{``, `""`},
-		{`abc`, `abc`},
-		{`abc def`, `"abc def"`},
-		{`abc/def`, `abc/def`},
-		{`abc.def`, `abc.def`},
-		{`"abc"`, `"""abc"""`},
-		{`'abc'`, `"'abc'"`},
-		{`abc\`, `abc\`},
-	}
-	for _, test := range tests {
-		if out := shellWindows(test.in); out != test.out {
-			t.Errorf("shellWindows(%q) = %s; want %s", test.in, out, test.out)
+		if out := Bash(test.in); out != test.out {
+			t.Errorf("Bash(%q) = %s; want %s", test.in, out, test.out)
 		}
 	}
 }

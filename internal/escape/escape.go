@@ -16,20 +16,12 @@
 package escape
 
 import (
-	"runtime"
 	"strings"
 )
 
-// Shell quotes s such that it can be used as a literal argument
-// to a shell command.
-func Shell(s string) string {
-	if runtime.GOOS == "windows" {
-		return shellWindows(s)
-	}
-	return shellUnix(s)
-}
-
-func shellUnix(s string) string {
+// Bash quotes s such that it can be used as a literal argument in a
+// bash command line.
+func Bash(s string) string {
 	if s == "" {
 		return "''"
 	}
@@ -54,34 +46,6 @@ func shellUnix(s string) string {
 		}
 	}
 	sb.WriteByte('\'')
-	return sb.String()
-}
-
-func shellWindows(s string) string {
-	if s == "" {
-		return `""`
-	}
-	safe := true
-	for i := 0; i < len(s); i++ {
-		if !isShellSafe(s[i]) && s[i] != '\\' {
-			safe = false
-			break
-		}
-	}
-	if safe {
-		return s
-	}
-	sb := new(strings.Builder)
-	sb.Grow(len(s) + 2)
-	sb.WriteByte('"')
-	for i := 0; i < len(s); i++ {
-		if s[i] == '"' {
-			sb.WriteString(`""`)
-		} else {
-			sb.WriteByte(s[i])
-		}
-	}
-	sb.WriteByte('"')
 	return sb.String()
 }
 

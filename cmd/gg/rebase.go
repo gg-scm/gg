@@ -108,7 +108,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		editorCmd := fmt.Sprintf(
 			"%s log --reverse --first-parent --pretty='tformat:pick %%H' %s~..%s >",
-			escape.Shell(cc.git.Exe()), escape.Shell(*src), escape.Shell(descend[0].String()))
+			escape.Bash(cc.git.Exe()), escape.Bash(*src), escape.Bash(descend[0].String()))
 		c := cc.git.Command(ctx,
 			"-c", "sequence.editor="+editorCmd,
 			"rebase",

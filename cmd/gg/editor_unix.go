@@ -20,6 +20,6 @@ package main
 
 import "os/exec"
 
-func shellCommand(gitExe, line string) (*exec.Cmd, error) {
+func bashCommand(gitExe, line string) (*exec.Cmd, error) {
 	return exec.Command("/bin/sh", "-c", line), nil
 }

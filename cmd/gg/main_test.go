@@ -250,7 +250,7 @@ func (env *testEnv) editorCmd(content []byte) (string, error) {
 		return "", fmt.Errorf("editor command: %w", err)
 	}
 	dst := env.topDir.FromSlash(fname)
-	return fmt.Sprintf("%s %s", cpPath, escape.Shell(dst)), nil
+	return fmt.Sprintf("%s %s", cpPath, escape.Bash(dst)), nil
 }
 
 func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte, error) {
