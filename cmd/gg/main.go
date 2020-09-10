@@ -226,6 +226,13 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return evolve(ctx, cc, args)
 	case "gerrithook":
 		return gerrithook(ctx, cc, args)
+	case "token":
+		token, err := githubDeviceFlow(ctx, cc.httpClient, cc.stderr)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(cc.stdout, "Token:", token)
+		return nil
 	case "histedit":
 		return histedit(ctx, cc, args)
 	case "identify", "id":

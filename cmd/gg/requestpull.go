@@ -27,7 +27,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"gg-scm.io/pkg/git"
 	"gg-scm.io/tool/internal/flag"
@@ -51,15 +53,10 @@ aliases: pr
 	title, and any subsequent lines will be used as the body. You can exit
 	your editor without modifications to accept the default summary.
 
-	For non-dry runs, you must create a [personal access token][] at
-	https://github.com/settings/tokens/new and save it to
-	`+"`$XDG_CONFIG_HOME/gg/github_token`"+` (or in any other directory
-	in `+"`$XDG_CONFIG_DIRS`"+`). By default, this would be
-	`+"`~/.config/gg/github_token`"+`. gg needs at least `+"`public_repo`"+` scope
-	to be able to create pull requests, but you can grant `+"`repo`"+` scope to
-	create pull requests in any repositories you have access to.
-
-[personal access token]: https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/`)
+	The first time you run requestpull, it will ask you to authorize access to
+	GitHub. A token will be saved to `+"`$XDG_CONFIG_HOME/gg/github_token`"+`
+	(usually `+"`~/.config/gg/github_token`"+`). gg never sees your password,
+	and you can revoke access at any time by visiting your GitHub settings.`)
 	bodyFlag := f.String("body", "", "pull request `description` (requires --title)")
 	draft := f.Bool("draft", false, "create a pull request as draft")
 	edit := f.Bool("e", true, "invoke editor on pull request message (ignored if --title is specified)")
@@ -92,10 +89,18 @@ aliases: pr
 		var err error
 		token, err = cc.xdgDirs.readConfig("github_token")
 		if os.IsNotExist(err) {
-			fmt.Fprintln(cc.stderr, "Missing github_token config file. Generate a new GitHub personal access")
-			fmt.Fprintln(cc.stderr, "token at https://github.com/settings/tokens/new?scopes=repo and save it to")
-			fmt.Fprintln(cc.stderr, filepath.Join(cc.xdgDirs.configPaths()[0], "gg", "github_token")+".")
-			return err
+			newToken, err := githubDeviceFlow(ctx, cc.httpClient, cc.stderr)
+			if err != nil {
+				return err
+			}
+			token = append([]byte(newToken), '\n')
+			tokenPath := filepath.Join(cc.xdgDirs.configHome, "gg", "github_token")
+			if err := ioutil.WriteFile(tokenPath, token, 0600); err != nil {
+				fmt.Fprintln(cc.stderr, "gg is authorized, but failed to save the authorization:", err)
+				fmt.Fprintln(cc.stderr, "You will need to connect again the next time you run requestpull.")
+			} else {
+				fmt.Fprintln(cc.stderr, "Success! Your account will remembered in the future.")
+			}
 		}
 		if err != nil {
 			return err
@@ -532,4 +537,149 @@ func parseGitHubRemoteURL(u string) (owner, repo string) {
 		return "", ""
 	}
 	return path[:i], path[i+1:]
+}
+
+// githubDeviceFlow obtains a GitHub token using the device flow as described in
+// https://docs.github.com/en/developers/apps/authorizing-oauth-apps#device-flow
+func githubDeviceFlow(ctx context.Context, client *http.Client, output io.Writer) (string, error) {
+	const clientID = "4f3e4a5a8231ed09c4ab"
+	codeData, err := postOAuth(ctx, client, "https://github.com/login/device/code", url.Values{
+		"client_id": {clientID},
+		"scope":     {"repo"},
+	})
+	if err != nil {
+		return "", fmt.Errorf("github authorization flow: get device code: %w", err)
+	}
+	fmt.Fprintf(output, "Looks like this is your first time using gg with GitHub.\n")
+	fmt.Fprintf(output, "You need to authorize gg to access your GitHub account.\n\n")
+	fmt.Fprintf(output, "Go to %s in your browser,\n", codeData.Get("verification_uri"))
+	fmt.Fprintf(output, "and enter the code: %s\n", codeData.Get("user_code"))
+	fmt.Fprintf(output, "\nWaiting for GitHub (Ctrl-C to cancel)...\n")
+
+	expiry, _ := parseSeconds(codeData.Get("expires_in"))
+	if expiry <= 0 {
+		expiry = 15 * time.Minute
+	}
+	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(expiry))
+	defer cancel()
+	accessTokenRequest := url.Values{
+		"client_id":   {clientID},
+		"device_code": {codeData.Get("device_code")},
+		"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
+	}
+	interval, _ := parseSeconds(codeData.Get("interval"))
+	if interval <= 0 {
+		interval = 5 * time.Second
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			tokenResponse, err := postOAuth(ctx, client, "https://github.com/login/oauth/access_token", accessTokenRequest)
+			if oauthErr := (*oauthError)(nil); errors.As(err, &oauthErr) {
+				switch oauthErr.code {
+				case "authorization_pending":
+					continue
+				case "slow_down":
+					if oauthErr.interval > 0 {
+						ticker.Reset(oauthErr.interval)
+					}
+					continue
+				}
+			}
+			if errors.Is(err, context.DeadlineExceeded) {
+				return "", fmt.Errorf("github authorization flow: timed out waiting for entry")
+			}
+			if err != nil {
+				return "", fmt.Errorf("github authorization flow: get access token: %w", err)
+			}
+			token := tokenResponse.Get("access_token")
+			if token == "" {
+				return "", fmt.Errorf("github authorization flow: get access token: server did not return an access token")
+			}
+			return token, nil
+		case <-ctx.Done():
+			err := ctx.Err()
+			if errors.Is(err, context.DeadlineExceeded) {
+				return "", fmt.Errorf("github authorization flow: timed out waiting for entry")
+			}
+			return "", fmt.Errorf("github authorization flow: get access token: %w", err)
+		}
+	}
+}
+
+// postOAuth makes a POST request and parses its response.
+// We use this over golang.org/x/oauth2 because our needs are simpler and
+// we can avoid the dependency.
+func postOAuth(ctx context.Context, client *http.Client, urlstr string, form url.Values) (url.Values, error) {
+	req, err := http.NewRequestWithContext(ctx,
+		http.MethodPost,
+		urlstr,
+		strings.NewReader(form.Encode()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("post %s: %w", urlstr, err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("post %s: %w", urlstr, err)
+	}
+	defer resp.Body.Close()
+	var respValues url.Values
+	var readErr error
+	if mtype, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type")); err != nil {
+		readErr = fmt.Errorf("post %s: invalid Content-Type: %w", urlstr, err)
+	} else if mtype != "application/x-www-form-urlencoded" {
+		readErr = fmt.Errorf("post %s: Content-Type is %q instead of JSON", urlstr, mtype)
+	} else if data, err := ioutil.ReadAll(resp.Body); err != nil {
+		readErr = fmt.Errorf("post %s: read response: %w", urlstr, err)
+	} else if respValues, err = url.ParseQuery(string(data)); err != nil {
+		readErr = fmt.Errorf("post %s: read response: %w", urlstr, err)
+	}
+
+	if resp.StatusCode != http.StatusOK || respValues.Get("error") != "" {
+		errorObject := newOAuthError(respValues)
+		if readErr != nil || errorObject == nil {
+			return nil, fmt.Errorf("post %s: http %s", urlstr, resp.Status)
+		}
+		return nil, fmt.Errorf("post %s: %w", urlstr, errorObject)
+	}
+	if readErr != nil {
+		return nil, readErr
+	}
+	return respValues, nil
+}
+
+type oauthError struct {
+	code        string
+	description string
+	interval    time.Duration
+}
+
+func newOAuthError(v url.Values) *oauthError {
+	e := &oauthError{
+		code:        v.Get("error"),
+		description: v.Get("error_description"),
+	}
+	if e.code == "" {
+		return nil
+	}
+	e.interval, _ = parseSeconds(v.Get("interval"))
+	return e
+}
+
+func (e *oauthError) Error() string {
+	if e.description == "" {
+		return "oauth " + e.code
+	}
+	return e.description
+}
+
+func parseSeconds(s string) (time.Duration, error) {
+	n, err := strconv.ParseUint(s, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return time.Duration(n) * time.Second, nil
 }
