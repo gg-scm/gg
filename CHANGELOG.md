@@ -7,7 +7,19 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 ## [Unreleased][]
 
-[Unreleased]: https://github.com/gg-scm/gg/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/gg-scm/gg/compare/v1.0.3...HEAD
+
+### Added
+
+-  gg has a new command, `github-login`, which obtains a GitHub authorization
+   token using a CLI-based OAuth flow. ([#122](https://github.com/gg-scm/gg/issues/122))
+
+### Fixed
+
+-  Released binaries are smaller: they no longer contain debug information.
+   ([#121](https://github.com/gg-scm/gg/issues/121))
+
+## [1.0.3][] - 2020-09-07
 
 ### Added
 
