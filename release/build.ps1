@@ -19,4 +19,8 @@ param($out,$version='')
 $buildTime = (Get-Date).ToUniversalTime() | Get-Date -UFormat '%Y-%m-%dT%TZ'
 $env:GOOS = "windows"
 $env:GOARCH = "amd64"
-go build -o $out -ldflags="-X main.versionInfo=$version -X main.buildCommit=$env:GITHUB_SHA -X main.buildTime=$buildTime" gg-scm.io/tool/cmd/gg
+go build `
+  -o $out `
+  -trimpath `
+  -ldflags="-s -w -X main.versionInfo=$version -X main.buildCommit=$env:GITHUB_SHA -X main.buildTime=$buildTime" `
+  gg-scm.io/tool/cmd/gg
