@@ -91,6 +91,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  backout       " + backoutSynopsis + "\n" +
 		"  evolve        " + evolveSynopsis + "\n" +
 		"  gerrithook    " + gerrithookSynopsis + "\n" +
+		"  github-login  " + gitHubLoginSynopsis + "\n" +
 		"  histedit      " + histeditSynopsis + "\n" +
 		"  mail          " + mailSynopsis + "\n" +
 		"  rebase        " + rebaseSynopsis + "\n" +
