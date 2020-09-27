@@ -95,7 +95,10 @@ func gitHubDeviceFlow(ctx context.Context, client *http.Client, mode bool, outpu
 		interval = 5 * time.Second
 	}
 	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+	defer func() {
+		// The ticker can be reassigned, so evaluate ticker when defer is called.
+		ticker.Stop()
+	}()
 	for {
 		select {
 		case <-ticker.C:
@@ -106,7 +109,8 @@ func gitHubDeviceFlow(ctx context.Context, client *http.Client, mode bool, outpu
 					continue
 				case "slow_down":
 					if oauthErr.interval > 0 {
-						ticker.Reset(oauthErr.interval)
+						ticker.Stop()
+						ticker = time.NewTicker(oauthErr.interval)
 					}
 					continue
 				}
