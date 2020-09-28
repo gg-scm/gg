@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"gg-scm.io/tool/internal/flag"
-	"gg-scm.io/tool/internal/sigterm"
 )
 
 const diffSynopsis = "diff repository (or selected files)"
@@ -104,11 +103,7 @@ func diff(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	diffArgs = append(diffArgs, "--")
 	diffArgs = append(diffArgs, f.Args()...)
-	c := cc.git.Command(ctx, diffArgs...)
-	c.Stdin = cc.stdin
-	c.Stdout = cc.stdout
-	c.Stderr = cc.stderr
-	return sigterm.Run(ctx, c)
+	return cc.interactiveGit(ctx, diffArgs...)
 }
 
 type revFlag struct {

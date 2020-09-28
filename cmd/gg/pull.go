@@ -22,7 +22,6 @@ import (
 
 	"gg-scm.io/pkg/git"
 	"gg-scm.io/tool/internal/flag"
-	"gg-scm.io/tool/internal/sigterm"
 )
 
 const pullSynopsis = "pull changes from the specified source"
@@ -94,11 +93,8 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 
-	c := cc.git.Command(ctx, gitArgs...)
-	c.Stdin = cc.stdin
-	c.Stdout = cc.stdout
-	c.Stderr = cc.stderr
-	if err := sigterm.Run(ctx, c); err != nil {
+	err = cc.interactiveGit(ctx, gitArgs...)
+	if err != nil {
 		return err
 	}
 	remoteName := ""

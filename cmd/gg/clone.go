@@ -21,7 +21,6 @@ import (
 
 	"gg-scm.io/pkg/git"
 	"gg-scm.io/tool/internal/flag"
-	"gg-scm.io/tool/internal/sigterm"
 )
 
 const cloneSynopsis = "make a copy of an existing repository"
@@ -49,19 +48,13 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 		dst = defaultCloneDest(src)
 	}
 	if *branch == git.Head.String() {
-		c := cc.git.Command(ctx, "clone", "--", src, dst)
-		c.Stdin = cc.stdin
-		c.Stdout = cc.stdout
-		c.Stderr = cc.stderr
-		if err := sigterm.Run(ctx, c); err != nil {
+		err := cc.interactiveGit(ctx, "clone", "--", src, dst)
+		if err != nil {
 			return err
 		}
 	} else {
-		c := cc.git.Command(ctx, "clone", "--branch="+*branch, "--", src, dst)
-		c.Stdin = cc.stdin
-		c.Stdout = cc.stdout
-		c.Stderr = cc.stderr
-		if err := sigterm.Run(ctx, c); err != nil {
+		err := cc.interactiveGit(ctx, "clone", "--branch="+*branch, "--", src, dst)
+		if err != nil {
 			return err
 		}
 	}

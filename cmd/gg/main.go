@@ -207,6 +207,20 @@ func (cc *cmdContext) withDir(path string) *cmdContext {
 	return cc2
 }
 
+func (cc *cmdContext) interactiveGit(ctx context.Context, args ...string) error {
+	err := cc.git.Runner().RunGit(ctx, &git.Invocation{
+		Dir:    cc.dir,
+		Args:   args,
+		Stdin:  cc.stdin,
+		Stdout: cc.stdout,
+		Stderr: cc.stderr,
+	})
+	if err != nil {
+		return fmt.Errorf("git %s: %w", args[0], err)
+	}
+	return nil
+}
+
 func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, name string, args []string) error {
 	switch name {
 	case "add":
@@ -329,10 +343,14 @@ func showVersion(ctx context.Context, cc *cmdContext) error {
 	if err != nil {
 		return err
 	}
-	c := cc.git.Command(ctx, "--version")
-	c.Stdout = cc.stdout
-	c.Stderr = cc.stderr
-	return sigterm.Run(ctx, c)
+	out, err := cc.git.Output(ctx, "--version")
+	if err != nil {
+		return err
+	}
+	if _, err := io.WriteString(cc.stdout, out); err != nil {
+		return err
+	}
+	return nil
 }
 
 func userAgentString() string {

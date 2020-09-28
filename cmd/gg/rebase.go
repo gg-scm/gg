@@ -23,7 +23,6 @@ import (
 	"gg-scm.io/pkg/git"
 	"gg-scm.io/tool/internal/escape"
 	"gg-scm.io/tool/internal/flag"
-	"gg-scm.io/tool/internal/sigterm"
 )
 
 const rebaseSynopsis = "move revision (and descendants) to a different branch"
@@ -57,11 +56,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("can't specify other options with --abort or --continue")
 	}
 	if *abort {
-		c := cc.git.Command(ctx, "rebase", "--abort")
-		c.Stdin = cc.stdin
-		c.Stdout = cc.stdout
-		c.Stderr = cc.stderr
-		return sigterm.Run(ctx, c)
+		return cc.interactiveGit(ctx, "rebase", "--abort")
 	}
 	if *continue_ {
 		return continueRebase(ctx, cc)
@@ -70,11 +65,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 	case *base != "" && *src != "":
 		return usagef("can't specify both -s and -b")
 	case *base != "":
-		c := cc.git.Command(ctx, "rebase", "--onto="+*dst, "--no-fork-point", "--", *base)
-		c.Stdin = cc.stdin
-		c.Stdout = cc.stdout
-		c.Stderr = cc.stderr
-		return sigterm.Run(ctx, c)
+		return cc.interactiveGit(ctx, "rebase", "--onto="+*dst, "--no-fork-point", "--", *base)
 	case *src != "":
 		if strings.HasPrefix(*src, "-") {
 			return fmt.Errorf("revision cannot start with '-'")
@@ -85,11 +76,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 		if ancestor {
 			// Simple case: this is an ancestor revision.
-			c := cc.git.Command(ctx, "rebase", "--onto="+*dst, "--no-fork-point", "--", *src+"~")
-			c.Stdin = cc.stdin
-			c.Stdout = cc.stdout
-			c.Stderr = cc.stderr
-			return sigterm.Run(ctx, c)
+			return cc.interactiveGit(ctx, "rebase", "--onto="+*dst, "--no-fork-point", "--", *src+"~")
 		}
 
 		// More complicated: this is on an unrelated branch.
@@ -109,23 +96,15 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 		editorCmd := fmt.Sprintf(
 			"%s log --reverse --first-parent --pretty='tformat:pick %%H' %s~..%s >",
 			escape.Bash(cc.git.Exe()), escape.Bash(*src), escape.Bash(descend[0].String()))
-		c := cc.git.Command(ctx,
+		return cc.interactiveGit(ctx,
 			"-c", "sequence.editor="+editorCmd,
 			"rebase",
 			"-i",
 			"--onto="+*dst,
 			"--no-fork-point",
 			git.Head.String())
-		c.Stdin = cc.stdin
-		c.Stdout = cc.stdout
-		c.Stderr = cc.stderr
-		return sigterm.Run(ctx, c)
 	default:
-		c := cc.git.Command(ctx, "rebase", "--onto="+*dst, "--no-fork-point")
-		c.Stdin = cc.stdin
-		c.Stdout = cc.stdout
-		c.Stderr = cc.stderr
-		return sigterm.Run(ctx, c)
+		return cc.interactiveGit(ctx, "rebase", "--onto="+*dst, "--no-fork-point")
 	}
 }
 
@@ -173,20 +152,12 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 			rebaseArgs = append(rebaseArgs, "--exec="+cmd)
 		}
 		rebaseArgs = append(rebaseArgs, "--", mergeBase.String())
-		c := cc.git.Command(ctx, rebaseArgs...)
-		c.Stdin = cc.stdin
-		c.Stdout = cc.stdout
-		c.Stderr = cc.stderr
-		return sigterm.Run(ctx, c)
+		return cc.interactiveGit(ctx, rebaseArgs...)
 	case *abort && !*continue_ && !*editPlan:
 		if f.NArg() != 0 {
 			return usagef("can't pass arguments with --abort")
 		}
-		c := cc.git.Command(ctx, "rebase", "--abort")
-		c.Stdin = cc.stdin
-		c.Stdout = cc.stdout
-		c.Stderr = cc.stderr
-		return sigterm.Run(ctx, c)
+		return cc.interactiveGit(ctx, "rebase", "--abort")
 	case !*abort && *continue_ && !*editPlan:
 		if f.NArg() != 0 {
 			return usagef("can't pass arguments with --continue")
@@ -196,11 +167,7 @@ func histedit(ctx context.Context, cc *cmdContext, args []string) error {
 		if f.NArg() != 0 {
 			return usagef("can't pass arguments with --edit-todo")
 		}
-		c := cc.git.Command(ctx, "rebase", "--edit-todo")
-		c.Stdin = cc.stdin
-		c.Stdout = cc.stdout
-		c.Stderr = cc.stderr
-		return sigterm.Run(ctx, c)
+		return cc.interactiveGit(ctx, "rebase", "--edit-todo")
 	default:
 		return usagef("must specify at most one of --abort, --continue, or --edit-plan")
 	}
@@ -222,11 +189,7 @@ func continueRebase(ctx context.Context, cc *cmdContext) error {
 			return err
 		}
 	}
-	c := cc.git.Command(ctx, "rebase", "--continue")
-	c.Stdin = cc.stdin
-	c.Stdout = cc.stdout
-	c.Stderr = cc.stderr
-	return sigterm.Run(ctx, c)
+	return cc.interactiveGit(ctx, "rebase", "--continue")
 }
 
 // findDescendants returns the set of distinct heads under refs/heads/
