@@ -225,6 +225,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 	switch name {
 	case "add":
 		return add(ctx, cc, args)
+	case "addremove":
+		return addRemove(ctx, cc, args)
 	case "backout":
 		return backout(ctx, cc, args)
 	case "branch":

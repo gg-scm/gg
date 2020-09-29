@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 ### Added
 
+-  `addremove` command ([#95](https://github.com/gg-scm/gg/issues/95))
 -  gg has a new command, `github-login`, which obtains a GitHub authorization
    token using a CLI-based OAuth flow. ([#122](https://github.com/gg-scm/gg/issues/122))
 
