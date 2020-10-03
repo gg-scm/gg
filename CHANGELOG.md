@@ -14,6 +14,12 @@ The format is based on [Keep a Changelog][], and this project adheres to
 -  `addremove` command ([#95](https://github.com/gg-scm/gg/issues/95))
 -  gg has a new command, `github-login`, which obtains a GitHub authorization
    token using a CLI-based OAuth flow. ([#122](https://github.com/gg-scm/gg/issues/122))
+-  `branch` has a new `--sort` flag to control the sort order.
+
+### Changed
+
+-  `branch` shows the commit hash, author, and summary for each branch.
+-  `branch` now sorts by descending commit date by default.
 
 ### Fixed
 

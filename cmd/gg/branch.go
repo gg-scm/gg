@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -44,6 +45,8 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	force := f.Bool("f", false, "force")
 	f.Alias("f", "force")
 	rev := f.String("r", "", "`rev`ision to place branches on")
+	ord := branchSortOrder{key: branchSortDate, dir: descending}
+	f.Var(&ord, "sort", "sort order when listing: 'name' or 'date'. May be prefixed by '-' for descending.")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -67,7 +70,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		if *rev != "" {
 			return usagef("can't pass -r without branch names")
 		}
-		return listBranches(ctx, cc)
+		return listBranches(ctx, cc, ord)
 	default:
 		// Create or update
 		for _, b := range f.Args() {
@@ -126,7 +129,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	return nil
 }
 
-func listBranches(ctx context.Context, cc *cmdContext) error {
+func listBranches(ctx context.Context, cc *cmdContext, ord branchSortOrder) error {
 	// Get color settings. Most errors can be ignored without impacting
 	// the command output.
 	var (
@@ -160,13 +163,36 @@ func listBranches(ctx context.Context, cc *cmdContext) error {
 	if err != nil {
 		return err
 	}
-	branches := make([]string, 0, len(refs))
+	commits, err := refsCommitInfo(ctx, cc.git, refs)
+	if err != nil {
+		return err
+	}
+	branches := make([]git.Ref, 0, len(refs))
 	for ref := range refs {
-		if b := ref.Branch(); b != "" {
-			branches = append(branches, b)
+		if ref.IsBranch() {
+			branches = append(branches, ref)
 		}
 	}
-	sort.Strings(branches)
+	switch ord {
+	case branchSortOrder{branchSortName, ascending}:
+		sort.Slice(branches, func(i, j int) bool {
+			return branches[i] < branches[j]
+		})
+	case branchSortOrder{branchSortName, descending}:
+		sort.Slice(branches, func(i, j int) bool {
+			return branches[i] > branches[j]
+		})
+	case branchSortOrder{branchSortDate, ascending}:
+		sort.Slice(branches, func(i, j int) bool {
+			return commits[refs[branches[i]]].CommitTime.Before(commits[refs[branches[j]]].CommitTime)
+		})
+	case branchSortOrder{branchSortDate, descending}:
+		sort.Slice(branches, func(i, j int) bool {
+			return commits[refs[branches[j]]].CommitTime.Before(commits[refs[branches[i]]].CommitTime)
+		})
+	default:
+		panic("unknown sort order")
+	}
 
 	if colorize {
 		if err := terminal.ResetTextStyle(cc.stdout); err != nil {
@@ -175,10 +201,12 @@ func listBranches(ctx context.Context, cc *cmdContext) error {
 	}
 	for _, b := range branches {
 		color, marker := localColor, ' '
-		if headRef == git.BranchRef(b) {
+		if headRef == b {
 			color, marker = currentColor, '*'
 		}
-		if _, err := fmt.Fprintf(cc.stdout, "%s%c %s\n", color, marker, b); err != nil {
+		commit := commits[refs[b]]
+		_, err := fmt.Fprintf(cc.stdout, "%s%c %-30s %s %-20s %s\n", color, marker, b.Branch(), refs[b].Short(), commit.Author.Name, commit.Summary())
+		if err != nil {
 			return err
 		}
 		if colorize {
@@ -188,6 +216,37 @@ func listBranches(ctx context.Context, cc *cmdContext) error {
 		}
 	}
 	return nil
+}
+
+func refsCommitInfo(ctx context.Context, g *git.Git, refs map[git.Ref]git.Hash) (map[git.Hash]*git.CommitInfo, error) {
+	hashes := make([]string, 0, len(refs))
+	for _, c := range refs {
+		present := false
+		rev := c.String()
+		for _, addedRev := range hashes {
+			if rev == addedRev {
+				present = true
+				break
+			}
+		}
+		if !present {
+			hashes = append(hashes, rev)
+		}
+	}
+	commitLog, err := g.Log(ctx, git.LogOptions{
+		Revs:   hashes,
+		NoWalk: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	commits := make(map[git.Hash]*git.CommitInfo)
+	for commitLog.Next() {
+		info := commitLog.CommitInfo()
+		commits[info.Hash] = info
+	}
+	err = commitLog.Close()
+	return commits, err
 }
 
 func deleteBranches(ctx context.Context, g *git.Git, branchNames []string, force bool) error {
@@ -252,3 +311,52 @@ func branchUpstream(cfg *git.Config, name string) string {
 	}
 	return remote + "/" + merge.Branch()
 }
+
+type branchSortOrder struct {
+	key string
+	dir bool
+}
+
+const (
+	branchSortName = "name"
+	branchSortDate = "date"
+)
+
+const (
+	ascending  = false
+	descending = true
+)
+
+func (ord *branchSortOrder) Set(s string) error {
+	if len(s) == 0 {
+		return errors.New("empty sort order")
+	}
+	if s[0] == '-' {
+		ord.dir = descending
+		s = s[1:]
+	} else {
+		ord.dir = ascending
+	}
+	switch s {
+	case "name", "refname":
+		ord.key = branchSortName
+	case "date", "creatordate", "committerdate":
+		ord.key = branchSortDate
+	default:
+		return fmt.Errorf("unknown sort key %q", s)
+	}
+	return nil
+}
+
+func (ord branchSortOrder) Get() interface{} {
+	return ord
+}
+
+func (ord branchSortOrder) String() string {
+	if ord.dir == descending {
+		return "-" + ord.key
+	}
+	return ord.key
+}
+
+func (ord branchSortOrder) IsBoolFlag() bool { return false }
