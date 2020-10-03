@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 -  `branch` shows the commit hash, author, and summary for each branch.
 -  `branch` now sorts by descending commit date by default.
+   ([#101](https://github.com/gg-scm/gg/issues/101))
 
 ### Fixed
 
