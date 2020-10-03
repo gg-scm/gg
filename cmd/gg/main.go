@@ -530,7 +530,7 @@ func usagef(format string, args ...interface{}) error {
 }
 
 func (ue *usageError) Error() string {
-	return "gg: usage: " + string(*ue)
+	return "usage: " + string(*ue)
 }
 
 func isUsage(e error) bool {
