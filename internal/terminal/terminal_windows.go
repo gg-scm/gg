@@ -15,9 +15,6 @@
 package terminal
 
 import (
-	"errors"
-	"io"
-
 	"golang.org/x/sys/windows"
 )
 
@@ -25,8 +22,4 @@ func isTerminal(fd uintptr) bool {
 	var st uint32
 	err := windows.GetConsoleMode(windows.Handle(fd), &st)
 	return err == nil
-}
-
-func resetTextStyle(w io.Writer) error {
-	return errors.New("reset text style not implemented on Windows")
 }
