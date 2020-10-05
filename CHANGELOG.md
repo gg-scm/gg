@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog][], and this project adheres to
 -  gg has a new command, `github-login`, which obtains a GitHub authorization
    token using a CLI-based OAuth flow. ([#122](https://github.com/gg-scm/gg/issues/122))
 -  `branch` has a new `--sort` flag to control the sort order.
+-  gg can now be installed via [Homebrew][]! See https://gg-scm.io/install for
+   instructions.
+
+[Homebrew]: https://brew.sh/
 
 ### Changed
 
