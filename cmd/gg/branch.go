@@ -46,7 +46,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	f.Alias("f", "force")
 	rev := f.String("r", "", "`rev`ision to place branches on")
 	ord := branchSortOrder{key: branchSortDate, dir: descending}
-	f.Var(&ord, "sort", "sort order when listing: 'name' or 'date'. May be prefixed by '-' for descending.")
+	f.Var(&ord, "sort", "sort `order` when listing: 'name' or 'date'. May be prefixed by '-' for descending.")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
