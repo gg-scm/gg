@@ -36,6 +36,7 @@ _gg_complete() {
   if [[ $COMP_CWORD -eq $subcmd_idx && "$curr_word" != -* ]]; then
     local commands=( \
       add \
+      addremove \
       backout \
       branch \
       check \
@@ -47,6 +48,7 @@ _gg_complete() {
       diff \
       evolve \
       gerrithook \
+      github-login \
       histedit \
       history \
       id \
@@ -89,7 +91,7 @@ _gg_complete() {
         return 0
         ;;
       branch)
-        COMPREPLY=( $(compgen -W '-d -delete --delete -f -force --force -r' -- "$curr_word") )
+        COMPREPLY=( $(compgen -W '-d -delete --delete -f -force --force -r -sort --sort' -- "$curr_word") )
         return 0
         ;;
       clone)
@@ -172,7 +174,7 @@ _gg_complete() {
   else
     # A positional argument.
     case "$subcmd" in
-      add|check|clone|evolve|init|remove|rm|st|status)
+      add|addremove|check|clone|evolve|init|remove|rm|st|status)
         # Commands that only deal with files.
         compopt -o nospace -o filenames
         COMPREPLY=( $(compgen -f -- "$curr_word") )
@@ -212,6 +214,10 @@ _gg_complete() {
         ;;
       gerrithook)
         COMPREPLY=( $(compgen -W 'on off' -- "$curr_word") )
+        return 0
+        ;;
+      github-login)
+        COMPREPLY=()
         return 0
         ;;
       log|history)

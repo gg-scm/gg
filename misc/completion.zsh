@@ -21,6 +21,7 @@
 if (( CURRENT == 2 )); then
   _values 'gg commands' \
     'add[add the specified files on the next commit]' \
+    'addremove[add all new files, delete all missing files]' \
     'backout[reverse effect of an earlier commit]' \
     'branch[list or manage branches]' \
     'clone[make a copy of an existing repository]' \
@@ -28,6 +29,7 @@ if (( CURRENT == 2 )); then
     'diff[diff repository (or selected files)]' \
     'evolve[sync with Gerrit changes in upstream]' \
     'gerrithook[install or uninstall Gerrit change ID hook]' \
+    'github-login[log into GitHub]' \
     'histedit[interactively edit revision history]' \
     {identify,id}'[identify the working directory or specified revision]' \
     'init[create a new repository in the given directory]' \
@@ -67,6 +69,11 @@ case "${words[2]}" in
       ':command:' \
       '*:file:_files'
     ;;
+  addremove)
+    _arguments -S : \
+      ':command:' \
+      '*:file:_files'
+    ;;
   backout)
     _arguments -S : \
       ':command:' \
@@ -81,6 +88,7 @@ case "${words[2]}" in
       {-d,-delete}'[delete the given branch]' \
       {-f,-force}'[force]' \
       '-r=[revision]:rev:named_revs' \
+      '-sort=[sort order for listing]:order:(name -name date -date)' \
       '*:name:branches'
     ;;
   clone)
@@ -127,6 +135,10 @@ case "${words[2]}" in
       '-url=[URL of hook script to download]' \
       '-cached[Use local cache instead of downloading]' \
       ':on/off:(on off)'
+    ;;
+  github-login)
+    _arguments -S : \
+      ':command:'
     ;;
   histedit)
     _arguments -S : \
