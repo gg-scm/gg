@@ -24,6 +24,8 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 ### Fixed
 
+-  `status` and `branch` now display color on Windows.
+   ([#125](https://github.com/gg-scm/gg/issues/125))
 -  Released binaries are smaller: they no longer contain debug information.
    ([#121](https://github.com/gg-scm/gg/issues/121))
 
