@@ -31,7 +31,7 @@ import (
 const gitHubLoginSynopsis = "log into GitHub"
 
 func gitHubLogin(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg github-login", upstreamSynopsis)
+	f := flag.NewFlagSet(true, "gg github-login", gitHubLoginSynopsis)
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
