@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"gg-scm.io/pkg/git"
 	"gg-scm.io/tool/internal/flag"
@@ -34,6 +35,7 @@ func addRemove(ctx context.Context, cc *cmdContext, args []string) error {
 		return usagef("%v", err)
 	}
 	var pathspecs []git.Pathspec
+	var doNotIgnore []git.Pathspec
 	if len(args) == 0 {
 		root, err := cc.git.WorkTree(ctx)
 		if err != nil {
@@ -42,11 +44,25 @@ func addRemove(ctx context.Context, cc *cmdContext, args []string) error {
 		pathspecs = []git.Pathspec{git.LiteralPath(root)}
 	} else {
 		for _, a := range args {
-			pathspecs = append(pathspecs, git.LiteralPath(a))
+			if info, err := os.Stat(cc.abs(a)); err == nil && !info.IsDir() {
+				doNotIgnore = append(doNotIgnore, git.LiteralPath(a))
+			} else {
+				pathspecs = append(pathspecs, git.LiteralPath(a))
+			}
 		}
 	}
-	return cc.git.Add(ctx, pathspecs, git.AddOptions{
-		IncludeIgnored: true,
-		IntentToAdd:    true,
+	err1 := cc.git.Add(ctx, pathspecs, git.AddOptions{
+		IntentToAdd: true,
 	})
+	err2 := cc.git.Add(ctx, doNotIgnore, git.AddOptions{
+		IntentToAdd:    true,
+		IncludeIgnored: true,
+	})
+	if err1 != nil {
+		return err1
+	}
+	if err2 != nil {
+		return err2
+	}
+	return nil
 }

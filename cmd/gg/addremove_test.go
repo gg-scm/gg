@@ -126,6 +126,48 @@ func TestAddRemove(t *testing.T) {
 				{Code: git.StatusCode{' ', 'A'}, Name: "quux.txt"},
 			},
 		},
+		{
+			name: "NoArgs/IgnoredFiles",
+			beforeCommit: []filesystem.Operation{
+				filesystem.Write(".gitignore", "foo.txt\n"),
+			},
+			afterCommit: []filesystem.Operation{
+				filesystem.Write("foo.txt", dummyContent),
+				filesystem.Write("bar.txt", dummyContent),
+			},
+			status: []git.StatusEntry{
+				{Code: git.StatusCode{' ', 'A'}, Name: "bar.txt"},
+			},
+		},
+		{
+			name: "Ignored/Explicit",
+			beforeCommit: []filesystem.Operation{
+				filesystem.Write(".gitignore", "foo.txt\n"),
+			},
+			afterCommit: []filesystem.Operation{
+				filesystem.Write("foo.txt", dummyContent),
+				filesystem.Write("bar.txt", dummyContent),
+			},
+			args: []string{"foo.txt"},
+			status: []git.StatusEntry{
+				{Code: git.StatusCode{' ', 'A'}, Name: "foo.txt"},
+				{Code: git.StatusCode{'?', '?'}, Name: "bar.txt"},
+			},
+		},
+		{
+			name: "Ignored/Dir",
+			beforeCommit: []filesystem.Operation{
+				filesystem.Write(".gitignore", "foo/bar.txt\n"),
+			},
+			afterCommit: []filesystem.Operation{
+				filesystem.Write("foo/bar.txt", dummyContent),
+				filesystem.Write("foo/baz.txt", dummyContent),
+			},
+			args: []string{"foo"},
+			status: []git.StatusEntry{
+				{Code: git.StatusCode{' ', 'A'}, Name: "foo/baz.txt"},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
