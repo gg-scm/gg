@@ -199,13 +199,16 @@ func listBranches(ctx context.Context, cc *cmdContext, ord branchSortOrder) erro
 			return err
 		}
 	}
-	for _, b := range branches {
+	for i, b := range branches {
+		if i > 0 {
+			fmt.Fprintln(cc.stdout)
+		}
 		color, marker := localColor, ' '
 		if headRef == b {
 			color, marker = currentColor, '*'
 		}
 		commit := commits[refs[b]]
-		_, err := fmt.Fprintf(cc.stdout, "%s%c %-30s %s %-20s %s\n", color, marker, b.Branch(), refs[b].Short(), commit.Author.Name, commit.Summary())
+		_, err := fmt.Fprintf(cc.stdout, "%s%c %-30s %s %s\n    %s\n", color, marker, b.Branch(), refs[b].Short(), commit.Author.Name, commit.Summary())
 		if err != nil {
 			return err
 		}
