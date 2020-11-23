@@ -23,8 +23,9 @@ easier to use for both novices and advanced users alike.
   any hooks or custom patches to Git that your project may use. You can see the
   exact Git commands gg runs by passing in `--show-git`.
 
-Learn more at [gg-scm.io][].
+Learn more at [gg-scm.io][] and talk with us on [Discord][].
 
+[Discord]: https://discord.gg/2hkE3yj7y6
 [Git]: https://git-scm.com/
 [Mercurial]: https://www.mercurial-scm.org/
 [creating Gerrit changesets]: https://gg-scm.io/workflow/gerrit/
