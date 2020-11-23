@@ -26,9 +26,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
-	"time"
 
 	"gg-scm.io/pkg/git"
 	"gg-scm.io/tool/internal/flag"
@@ -534,79 +532,4 @@ func parseGitHubRemoteURL(u string) (owner, repo string) {
 		return "", ""
 	}
 	return path[:i], path[i+1:]
-}
-
-// postOAuth makes a POST request and parses its response.
-// We use this over golang.org/x/oauth2 because our needs are simpler and
-// we can avoid the dependency.
-func postOAuth(ctx context.Context, client *http.Client, urlstr string, form url.Values) (url.Values, error) {
-	req, err := http.NewRequestWithContext(ctx,
-		http.MethodPost,
-		urlstr,
-		strings.NewReader(form.Encode()),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("post %s: %w", urlstr, err)
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("post %s: %w", urlstr, err)
-	}
-	defer resp.Body.Close()
-	var respValues url.Values
-	var readErr error
-	if mtype, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type")); err != nil {
-		readErr = fmt.Errorf("post %s: invalid Content-Type: %w", urlstr, err)
-	} else if mtype != "application/x-www-form-urlencoded" {
-		readErr = fmt.Errorf("post %s: Content-Type is %q instead of JSON", urlstr, mtype)
-	} else if data, err := ioutil.ReadAll(resp.Body); err != nil {
-		readErr = fmt.Errorf("post %s: read response: %w", urlstr, err)
-	} else if respValues, err = url.ParseQuery(string(data)); err != nil {
-		readErr = fmt.Errorf("post %s: read response: %w", urlstr, err)
-	}
-
-	if resp.StatusCode != http.StatusOK || respValues.Get("error") != "" {
-		errorObject := newOAuthError(respValues)
-		if readErr != nil || errorObject == nil {
-			return nil, fmt.Errorf("post %s: http %s", urlstr, resp.Status)
-		}
-		return nil, fmt.Errorf("post %s: %w", urlstr, errorObject)
-	}
-	if readErr != nil {
-		return nil, readErr
-	}
-	return respValues, nil
-}
-
-type oauthError struct {
-	code        string
-	description string
-	interval    time.Duration
-}
-
-func newOAuthError(v url.Values) *oauthError {
-	e := &oauthError{
-		code:        v.Get("error"),
-		description: v.Get("error_description"),
-	}
-	if e.code == "" {
-		return nil
-	}
-	e.interval, _ = parseSeconds(v.Get("interval"))
-	return e
-}
-
-func (e *oauthError) Error() string {
-	if e.description == "" {
-		return "oauth " + e.code
-	}
-	return e.description
-}
-
-func parseSeconds(s string) (time.Duration, error) {
-	n, err := strconv.ParseUint(s, 10, 32)
-	if err != nil {
-		return 0, err
-	}
-	return time.Duration(n) * time.Second, nil
 }

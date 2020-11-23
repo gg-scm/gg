@@ -18,13 +18,12 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"time"
 
+	"gg-scm.io/pkg/ghdevice"
 	"gg-scm.io/tool/internal/flag"
 )
 
@@ -63,75 +62,26 @@ const (
 // gitHubDeviceFlow obtains a GitHub token using the device flow as described in
 // https://docs.github.com/en/developers/apps/authorizing-oauth-apps#device-flow
 func gitHubDeviceFlow(ctx context.Context, client *http.Client, mode bool, output io.Writer) (string, error) {
-	const clientID = "4f3e4a5a8231ed09c4ab"
-	codeData, err := postOAuth(ctx, client, "https://github.com/login/device/code", url.Values{
-		"client_id": {clientID},
-		"scope":     {"repo"},
-	})
-	if err != nil {
-		return "", fmt.Errorf("github authorization flow: get device code: %w", err)
-	}
-	if mode == firstTimeLogin {
-		fmt.Fprintf(output, "Looks like this is your first time using gg with GitHub.\n")
-		fmt.Fprintf(output, "You need to authorize gg to access your GitHub account.\n\n")
-	}
-	fmt.Fprintf(output, "Go to %s in your browser,\n", codeData.Get("verification_uri"))
-	fmt.Fprintf(output, "and enter the code: %s\n", codeData.Get("user_code"))
-	fmt.Fprintf(output, "\nWaiting for GitHub (Ctrl-C to cancel)...\n")
-
-	expiry, _ := parseSeconds(codeData.Get("expires_in"))
-	if expiry <= 0 {
-		expiry = 15 * time.Minute
-	}
-	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(expiry))
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
-	accessTokenRequest := url.Values{
-		"client_id":   {clientID},
-		"device_code": {codeData.Get("device_code")},
-		"grant_type":  {"urn:ietf:params:oauth:grant-type:device_code"},
-	}
-	interval, _ := parseSeconds(codeData.Get("interval"))
-	if interval <= 0 {
-		interval = 5 * time.Second
-	}
-	ticker := time.NewTicker(interval)
-	defer func() {
-		// The ticker can be reassigned, so evaluate ticker when defer is called.
-		ticker.Stop()
-	}()
-	for {
-		select {
-		case <-ticker.C:
-			tokenResponse, err := postOAuth(ctx, client, "https://github.com/login/oauth/access_token", accessTokenRequest)
-			if oauthErr := (*oauthError)(nil); errors.As(err, &oauthErr) {
-				switch oauthErr.code {
-				case "authorization_pending":
-					continue
-				case "slow_down":
-					if oauthErr.interval > 0 {
-						ticker.Stop()
-						ticker = time.NewTicker(oauthErr.interval)
-					}
-					continue
-				}
+	iteration := 0
+	return ghdevice.Flow(ctx, ghdevice.Options{
+		ClientID:   "4f3e4a5a8231ed09c4ab",
+		Scopes:     []string{"repo"},
+		HTTPClient: client,
+		Prompter: func(ctx context.Context, p ghdevice.Prompt) error {
+			if mode == firstTimeLogin && iteration == 0 {
+				fmt.Fprintf(output, "Looks like this is your first time using gg with GitHub.\n")
+				fmt.Fprintf(output, "You need to authorize gg to access your GitHub account.\n\n")
 			}
-			if errors.Is(err, context.DeadlineExceeded) {
-				return "", fmt.Errorf("github authorization flow: timed out waiting for entry")
+			if iteration > 0 {
+				fmt.Fprintln(output, "The code has expired. Let's try again:")
 			}
-			if err != nil {
-				return "", fmt.Errorf("github authorization flow: get access token: %w", err)
-			}
-			token := tokenResponse.Get("access_token")
-			if token == "" {
-				return "", fmt.Errorf("github authorization flow: get access token: server did not return an access token")
-			}
-			return token, nil
-		case <-ctx.Done():
-			err := ctx.Err()
-			if errors.Is(err, context.DeadlineExceeded) {
-				return "", fmt.Errorf("github authorization flow: timed out waiting for entry")
-			}
-			return "", fmt.Errorf("github authorization flow: get access token: %w", err)
-		}
-	}
+			iteration++
+			fmt.Fprintf(output, "Go to %s in your browser,\n", p.VerificationURL)
+			fmt.Fprintf(output, "and enter the code: %s\n", p.UserCode)
+			fmt.Fprintf(output, "\nWaiting for GitHub (Ctrl-C to cancel)...\n")
+			return nil
+		},
+	})
 }
