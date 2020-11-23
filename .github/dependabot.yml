@@ -19,19 +19,9 @@ updates:
   - package-ecosystem: gomod
     directory: "/"
     schedule:
-      interval: monthly
+      interval: weekly
     allow:
       - dependency-type: direct
-    reviewers:
-      - zombiezen
-    commit-message:
-      prefix: "go.mod: "
-  - package-ecosystem: gomod
-    directory: "/"
-    schedule:
-      interval: daily
-    allow:
-      - dependency-name: "gg-scm.io/pkg/*"
     reviewers:
       - zombiezen
     commit-message:
