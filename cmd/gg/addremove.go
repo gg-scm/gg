@@ -27,7 +27,7 @@ import (
 const addRemoveSynopsis = "add all new files, delete all missing files"
 
 func addRemove(ctx context.Context, cc *cmdContext, args []string) error {
-	f := flag.NewFlagSet(true, "gg addremove FILE [...]", addRemoveSynopsis)
+	f := flag.NewFlagSet(true, "gg addremove [FILE [...]]", addRemoveSynopsis)
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
