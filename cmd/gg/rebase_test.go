@@ -569,6 +569,30 @@ func TestRebase_ResetUpstream(t *testing.T) {
 	})
 }
 
+func TestRebase_NoUpstream(t *testing.T) {
+	// Regression test for https://github.com/gg-scm/gg/issues/127
+
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := env.initRepoWithHistory(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg rebase.
+	stdout, err := env.gg(ctx, env.root.String(), "rebase")
+	if err == nil {
+		t.Error("gg succeeded even though it should have returned an error")
+	} else {
+		t.Log(err)
+		t.Logf("%s", stdout)
+	}
+}
+
 func TestHistedit(t *testing.T) {
 	t.Parallel()
 	runRebaseArgVariants(t, func(t *testing.T, argFunc rebaseArgFunc) {
@@ -999,6 +1023,30 @@ func TestHistedit_ContinueNoModifications(t *testing.T) {
 			t.Error(err)
 		}
 	})
+}
+
+func TestHistedit_NoUpstream(t *testing.T) {
+	// Regression test for https://github.com/gg-scm/gg/issues/127
+
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := env.initRepoWithHistory(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg histedit.
+	stdout, err := env.gg(ctx, env.root.String(), "histedit")
+	if err == nil {
+		t.Error("gg succeeded even though it should have returned an error")
+	} else {
+		t.Log(err)
+		t.Logf("%s", stdout)
+	}
 }
 
 type rebaseArgFunc = func(mainCommit git.Hash) string

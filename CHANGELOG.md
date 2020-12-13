@@ -34,6 +34,8 @@ The format is based on [Keep a Changelog][], and this project adheres to
    ([#121](https://github.com/gg-scm/gg/issues/121))
 -  `commit --amend` no longer exits with an error if the commit contains a
    rename. ([#129](https://github.com/gg-scm/gg/issues/129))
+-  `rebase` displays a simpler error message if the `-dst` argument doesn't
+   exist. ([#127](https://github.com/gg-scm/gg/issues/127))
 
 ## [1.0.3][] - 2020-09-07
 

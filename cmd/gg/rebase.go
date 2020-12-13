@@ -28,15 +28,16 @@ import (
 const rebaseSynopsis = "move revision (and descendants) to a different branch"
 
 func rebase(ctx context.Context, cc *cmdContext, args []string) error {
+	const upstreamRev = "@{upstream}"
 	f := flag.NewFlagSet(true, "gg rebase [--src REV | --base REV] [--dst REV] [options]", rebaseSynopsis+`
 
 	Rebasing will replay a set of changes on top of the destination
 	revision and set the current branch to the final revision.
 
 	If neither `+"`--src`"+` or `+"`--base`"+` is specified, it acts as if
-	`+"`--base=@{upstream}`"+` was specified.`)
+	`+"`--base="+upstreamRev+"`"+` was specified.`)
 	base := f.String("base", "", "rebase everything from branching point of specified `rev`ision")
-	dst := f.String("dst", "@{upstream}", "rebase onto the specified `rev`ision")
+	dst := f.String("dst", upstreamRev, "rebase onto the specified `rev`ision")
 	src := f.String("src", "", "rebase the specified `rev`ision and descendants")
 	abort := f.Bool("abort", false, "abort an interrupted rebase")
 	continue_ := f.Bool("continue", false, "continue an interrupted rebase")
@@ -52,7 +53,7 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 	if *abort && *continue_ {
 		return usagef("can't specify both --abort and --continue")
 	}
-	if (*abort || *continue_) && (*base != "" || *dst != "@{upstream}" || *src != "") {
+	if (*abort || *continue_) && (*base != "" || *dst != upstreamRev || *src != "") {
 		return usagef("can't specify other options with --abort or --continue")
 	}
 	if *abort {
@@ -60,6 +61,11 @@ func rebase(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	if *continue_ {
 		return continueRebase(ctx, cc)
+	}
+	// Verify that -dst exists to give the user a better error message.
+	// See https://github.com/gg-scm/gg/issues/127
+	if _, err := cc.git.ParseRev(ctx, *dst); err != nil {
+		return fmt.Errorf("destination: %w", err)
 	}
 	switch {
 	case *base != "" && *src != "":
