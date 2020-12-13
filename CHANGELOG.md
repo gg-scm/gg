@@ -4,14 +4,19 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
+[Unreleased]: https://github.com/gg-scm/gg/compare/v1.1.0...HEAD
 
-## [Unreleased][]
+## [1.1.0][] - 2020-12-13
 
-[Unreleased]: https://github.com/gg-scm/gg/compare/v1.0.3...HEAD
+Version 1.1 is the second stable release of gg and includes new commands,
+improved `gg branch` output, simpler GitHub integration, and a Homebrew formula.
+
+[1.1.0]: https://github.com/gg-scm/gg/releases/tag/v1.1.0
 
 ### Added
 
--  `addremove` command ([#95](https://github.com/gg-scm/gg/issues/95))
+-  New `addremove` command that adds new files and removes missing ones.
+   ([#95](https://github.com/gg-scm/gg/issues/95))
 -  gg has a new command, `github-login`, which obtains a GitHub authorization
    token using a CLI-based OAuth flow. ([#122](https://github.com/gg-scm/gg/issues/122))
 -  `branch` has a new `--sort` flag to control the sort order.
