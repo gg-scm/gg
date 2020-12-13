@@ -32,6 +32,8 @@ The format is based on [Keep a Changelog][], and this project adheres to
    ([#125](https://github.com/gg-scm/gg/issues/125))
 -  Released binaries are smaller: they no longer contain debug information.
    ([#121](https://github.com/gg-scm/gg/issues/121))
+-  `commit --amend` no longer exits with an error if the commit contains a
+   rename. ([#129](https://github.com/gg-scm/gg/issues/129))
 
 ## [1.0.3][] - 2020-09-07
 

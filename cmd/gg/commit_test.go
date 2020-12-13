@@ -489,6 +489,97 @@ func TestCommit_AmendRootCommit(t *testing.T) {
 	}
 }
 
+func TestCommit_AmendRename(t *testing.T) {
+	// Regression test for https://github.com/gg-scm/gg/issues/129
+
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the first commit with foo.txt.
+	err = env.root.Apply(
+		filesystem.Write("foo.txt", dummyContent),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := env.addFiles(ctx, "foo.txt"); err != nil {
+		t.Fatal(err)
+	}
+	parent, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a second commit that moves foo.txt to bar.txt.
+	// This is the commit that will be amended.
+	if err := env.git.Run(ctx, "mv", "foo.txt", "bar.txt"); err != nil {
+		t.Fatal(err)
+	}
+	r1, err := env.newCommit(ctx, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Arrange working copy changes.
+	const modifiedContent = dummyContent + "aaa\n"
+	err = env.root.Apply(
+		filesystem.Write("bar.txt", modifiedContent),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to make a commit.
+	const wantMessage = "gg amended this commit\n"
+	if _, err := env.gg(ctx, env.root.String(), "commit", "--amend", "-m", "gg amended this commit"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify that a new commit was created and has a parent of HEAD~.
+	changes := map[git.Hash]string{
+		parent: "parent commit",
+		r1:     "tip",
+	}
+	r2, err := env.git.Head(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r2.Commit == r1 {
+		t.Fatal("commit --amend did not create a new commit in the working copy")
+	}
+	if ref := r2.Ref; ref != "refs/heads/main" {
+		t.Errorf("HEAD ref = %q; want refs/heads/main", ref)
+	}
+	if newParent, err := env.git.ParseRev(ctx, "HEAD~"); err != nil {
+		t.Error(err)
+	} else if newParent.Commit != parent {
+		t.Errorf("HEAD~ after amend = %s; want %s",
+			prettyCommit(newParent.Commit, changes),
+			prettyCommit(parent, changes))
+	}
+
+	// Verify that the commit incorporated all the changes from the working copy.
+	if data, err := catBlob(ctx, env.git, r2.Commit.String(), "bar.txt"); err != nil {
+		t.Error(err)
+	} else if string(data) != modifiedContent {
+		t.Errorf("bar.txt = %q; want %q", data, modifiedContent)
+	}
+
+	// Verify that the commit message matches the given message.
+	if info, err := env.git.CommitInfo(ctx, r2.Commit.String()); err != nil {
+		t.Error(err)
+	} else if info.Message != wantMessage {
+		t.Errorf("commit message = %q; want %q", info.Message, wantMessage)
+	}
+}
+
 func TestCommit_NoChanges(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
