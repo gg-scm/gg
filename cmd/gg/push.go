@@ -23,7 +23,6 @@ import (
 
 	"gg-scm.io/pkg/git"
 	"gg-scm.io/tool/internal/flag"
-	"gg-scm.io/tool/internal/sigterm"
 )
 
 const pushSynopsis = "push changes to the specified destination"
@@ -142,11 +141,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 			pushArgs = append(pushArgs, ref.String()+":"+ref.String())
 		}
 	}
-	c := cc.git.Command(ctx, pushArgs...)
-	c.Stdin = cc.stdin
-	c.Stdout = cc.stdout
-	c.Stderr = cc.stderr
-	return sigterm.Run(ctx, c)
+	return cc.interactiveGit(ctx, pushArgs...)
 }
 
 const mailSynopsis = "creates or updates a Gerrit change"
@@ -236,11 +231,7 @@ func mail(ctx context.Context, cc *cmdContext, args []string) error {
 		*dstBranch = strings.TrimPrefix(*dstBranch, "refs/for/")
 	}
 	ref := gerritPushRef(*dstBranch, gopts)
-	c := cc.git.Command(ctx, "push", "--", dstRepo, src.Commit.String()+":"+ref.String())
-	c.Stdin = cc.stdin
-	c.Stdout = cc.stdout
-	c.Stderr = cc.stderr
-	return sigterm.Run(ctx, c)
+	return cc.interactiveGit(ctx, "push", "--", dstRepo, src.Commit.String()+":"+ref.String())
 }
 
 type gerritOptions struct {

@@ -21,7 +21,6 @@ import (
 
 	"gg-scm.io/pkg/git"
 	"gg-scm.io/tool/internal/flag"
-	"gg-scm.io/tool/internal/sigterm"
 )
 
 const evolveSynopsis = "sync with Gerrit changes in upstream"
@@ -106,11 +105,7 @@ func evolve(ctx context.Context, cc *cmdContext, args []string) error {
 	if last >= len(featureChanges) {
 		return nil
 	}
-	c := cc.git.Command(ctx, "rebase", "--onto="+submitted[featureChanges[last].id], "--no-fork-point", "--", featureChanges[last].commitHex)
-	c.Stdin = cc.stdin
-	c.Stdout = cc.stdout
-	c.Stderr = cc.stderr
-	return sigterm.Run(ctx, c)
+	return cc.interactiveGit(ctx, "rebase", "--onto="+submitted[featureChanges[last].id], "--no-fork-point", "--", featureChanges[last].commitHex)
 }
 
 type change struct {

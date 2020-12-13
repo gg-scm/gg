@@ -4,6 +4,19 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Build",
+      "type": "shell",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "command": "release/build.bash gg",
+      "windows": {
+        "command": "release\\build.ps1 -out release\\msi\\gg.exe"
+      },
+      "problemMatcher": ["$go"]
+    },
+    {
       "label": "go test",
       "type": "shell",
       "command": "go test ./...",
@@ -14,55 +27,33 @@
       "problemMatcher": ["$go"]
     },
     {
-      "label": "Serve Docs",
-      "type": "shell",
-      "command": "hugo serve --disableFastRender --port=8080",
-      "options": {"cwd": "${workspaceRoot}/docs"},
-      "isBackground": true,
-      "problemMatcher": {
-        "pattern": {
-          "regexp": "(ERROR|Error:) .*\"([^\"]+):(\\d+):(\\d+)\": (.*)$",
-          "file": 2,
-          "line": 3,
-          "column": 4,
-          "message": 5
-        },
-        "fileLocation": "absolute",
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": "^Change detected, rebuilding site$",
-          "endsPattern": "^Total in [0-9]+ ms$"
-        }
-      }
-    },
-    {
-      "label": "Serve Docs with Drafts",
-      "type": "shell",
-      "command": "hugo serve -D --disableFastRender --port=8080",
-      "options": {"cwd": "${workspaceRoot}/docs"},
-      "isBackground": true,
-      "problemMatcher": {
-        "pattern": {
-          "regexp": "(ERROR|Error:) .*\"([^\"]+):(\\d+):(\\d+)\": (.*)$",
-          "file": 2,
-          "line": 3,
-          "column": 4,
-          "message": 5
-        },
-        "fileLocation": "absolute",
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": "^Change detected, rebuilding site$",
-          "endsPattern": "^Total in [0-9]+ ms$"
-        }
-      }
-    },
-    {
       "label": "Generate man page",
       "type": "shell",
-      "command": "pandoc --standalone --to man docs/gg.1.md -o docs/gg.1",
+      "command": "pandoc --standalone --to man misc/gg.1.md -o misc/gg.1",
       "group": "build",
       "problemMatcher": []
-     }
+    },
+    {
+      "label": "Build MSI",
+      "dependsOn": ["Build"],
+      "type": "shell",
+      "windows": {
+        "command": ".\\release.ps1",
+        "options": {
+          "cwd": "${workspaceFolder}\\release\\msi"
+        }
+      },
+      "problemMatcher": {
+        "owner": "wix",
+        "fileLocation": "absolute",
+        "pattern": {
+          "regexp": "^(.*)\\(([0-9]+)\\) : \\S+ (\\S+) : (.*)",
+          "file": 1,
+          "line": 2,
+          "code": 3,
+          "message": 4
+        }
+      }
+    }
   ]
 }

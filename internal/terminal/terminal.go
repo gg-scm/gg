@@ -33,5 +33,6 @@ func IsTerminal(w io.Writer) bool {
 // ResetTextStyle clears any text styles on the writer. The behavior of
 // calling this function on a non-terminal is undefined.
 func ResetTextStyle(w io.Writer) error {
-	return resetTextStyle(w)
+	_, err := w.Write([]byte("\x1b[m"))
+	return err
 }

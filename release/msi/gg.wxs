@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+Copyright 2020 The gg Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+  https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Name="gg $(var.GgVersion)"
+    Manufacturer="https://gg-scm.io"
+    Id="a157faae-3e61-4c5a-a281-cf7477705054"
+    UpgradeCode="e258c8c3-2fd4-483a-b41f-402f8eb3246d"
+    Language="1033"
+    Codepage="1252"
+    Version="$(var.WixGgVersion)">
+    <Package Id="*"
+      Keywords="Installer"
+      Description="gg Installer"
+      Languages="1033"
+      InstallerVersion="200"
+      InstallScope="perMachine"
+      Compressed="yes"
+      SummaryCodepage="1252" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+    <Property Id="ARPREADME" Value="https://gg-scm.io" />
+    <Property Id="ARPURLINFOABOUT" Value="https://gg-scm.io" />
+    <Icon Id="gg.ico" SourceFile="gg.ico" />
+    <Property Id="ARPPRODUCTICON" Value="gg.ico" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <Media Id="1" Cabinet="gg.cab" EmbedCab="yes" CompressionLevel="high" />
+    <Condition Message="Windows 7 (with Service Pack 1) or greater required.">
+      ((VersionNT > 601) OR (VersionNT = 601 AND ServicePackLevel >= 1))
+    </Condition>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLDIR" Name="gg">
+          <Component Id="MainExecutable" Guid="639b8cdf-0530-4cef-8bdc-39cf6fc60f92">
+            <File Id="GgExe" Name="gg.exe" DiskId="1" Source="gg.exe" KeyPath="yes" />
+            <File Id="GgLicense" Name="LICENSE" DiskId="1" Source="..\..\LICENSE" />
+          </Component>
+          <Component Id="Readme" Guid="8b2bd559-da74-4adb-9fb3-8908091de949">
+            <File Id="GgReadme" Name="README.md" DiskId="1" Source="..\..\README.md" KeyPath="yes" />
+          </Component>
+          <Component Id="Changelog" Guid="61125545-1372-47c0-b637-b0117481a226">
+            <File Id="GgChangelog" Name="CHANGELOG.md" DiskId="1" Source="..\..\CHANGELOG.md" KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+      <Directory Id="EnvironmentEntries">
+        <Directory Id="GgEnvironmentEntries">
+          <Component Id="GgEnvironment" Guid="8f2aa3ac-1de5-4920-9f2d-4426c6634a37">
+            <RegistryKey Root="HKCU" Key="Software\GgScm">
+              <RegistryValue Name="installed" Type="integer" Value="1" KeyPath="yes" />
+              <RegistryValue Name="installLocation" Type="string" Value="[INSTALLDIR]" />
+            </RegistryKey>
+            <Environment
+              Id="PathEntry"
+              Action="set"
+              Part="last"
+              Name="PATH"
+              Permanent="no"
+              System="yes"
+              Value="[INSTALLDIR]" />
+            <RemoveFolder
+              Id="GgEnvironmentEntries"
+              On="uninstall" />
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id="Complete" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="Readme" />
+      <ComponentRef Id="Changelog" />
+      <ComponentRef Id="GgEnvironment" />
+    </Feature>
+
+    <CustomActionRef Id="WixBroadcastEnvironmentChange" />
+
+    <UIRef Id="WixUI_InstallDir" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+  </Product>
+</Wix>

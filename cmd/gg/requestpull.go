@@ -26,7 +26,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"gg-scm.io/pkg/git"
@@ -51,15 +50,10 @@ aliases: pr
 	title, and any subsequent lines will be used as the body. You can exit
 	your editor without modifications to accept the default summary.
 
-	For non-dry runs, you must create a [personal access token][] at
-	https://github.com/settings/tokens/new and save it to
-	`+"`$XDG_CONFIG_HOME/gg/github_token`"+` (or in any other directory
-	in `+"`$XDG_CONFIG_DIRS`"+`). By default, this would be
-	`+"`~/.config/gg/github_token`"+`. gg needs at least `+"`public_repo`"+` scope
-	to be able to create pull requests, but you can grant `+"`repo`"+` scope to
-	create pull requests in any repositories you have access to.
-
-[personal access token]: https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/`)
+	The first time you run requestpull, it will ask you to authorize access to
+	GitHub. A token will be saved to `+"`$XDG_CONFIG_HOME/gg/github_token`"+`
+	(usually `+"`~/.config/gg/github_token`"+`). gg never sees your password,
+	and you can revoke access at any time by visiting your GitHub settings.`)
 	bodyFlag := f.String("body", "", "pull request `description` (requires --title)")
 	draft := f.Bool("draft", false, "create a pull request as draft")
 	edit := f.Bool("e", true, "invoke editor on pull request message (ignored if --title is specified)")
@@ -90,14 +84,20 @@ aliases: pr
 	var token []byte
 	if !*dryRun {
 		var err error
-		token, err = cc.xdgDirs.readConfig("github_token")
+		token, err = cc.xdgDirs.readConfig(gitHubTokenFilename)
 		if os.IsNotExist(err) {
-			fmt.Fprintln(cc.stderr, "Missing github_token config file. Generate a new GitHub personal access")
-			fmt.Fprintln(cc.stderr, "token at https://github.com/settings/tokens/new?scopes=repo and save it to")
-			fmt.Fprintln(cc.stderr, filepath.Join(cc.xdgDirs.configPaths()[0], "gg", "github_token")+".")
-			return err
-		}
-		if err != nil {
+			newToken, err := gitHubDeviceFlow(ctx, cc.httpClient, firstTimeLogin, cc.stderr)
+			if err != nil {
+				return err
+			}
+			token = append([]byte(newToken), '\n')
+			if err := cc.xdgDirs.writeSecret(gitHubTokenFilename, token); err != nil {
+				fmt.Fprintln(cc.stderr, "gg is authorized, but failed to save the authorization:", err)
+				fmt.Fprintln(cc.stderr, "You will need to connect again the next time you run requestpull.")
+			} else {
+				fmt.Fprintln(cc.stderr, "Success! Your account will remembered in the future.")
+			}
+		} else if err != nil {
 			return err
 		}
 		token = bytes.TrimSpace(token)
@@ -370,16 +370,6 @@ func createPullRequest(ctx context.Context, client *http.Client, params pullRequ
 		return 0, "", errors.New("create pull request: missing title")
 	}
 
-	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls",
-		url.PathEscape(params.baseOwner), url.PathEscape(params.baseRepo))
-	req, err := http.NewRequest("POST", apiURL, nil)
-	if err != nil {
-		return 0, "", fmt.Errorf("create pull request: %w", err)
-	}
-	req.Header.Set("User-Agent", userAgentString())
-	req.Header.Set("Accept", draftPRAPIAccept)
-	req.Header.Set("Authorization", "token "+params.authToken)
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	reqBody := map[string]interface{}{
 		"title":                 params.title,
 		"base":                  params.baseBranch,
@@ -394,18 +384,28 @@ func createPullRequest(ctx context.Context, client *http.Client, params pullRequ
 	}
 	reqBodyJSON, err := json.Marshal(reqBody)
 	if err != nil {
-		return 0, "", fmt.Errorf("create pull request: %w", err)
+		return 0, "", fmt.Errorf("create pull request for %s/%s: %w", params.baseOwner, params.baseRepo, err)
 	}
-	req.Body = ioutil.NopCloser(bytes.NewReader(reqBodyJSON))
 
-	resp, err := client.Do(req.WithContext(ctx))
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls",
+		url.PathEscape(params.baseOwner), url.PathEscape(params.baseRepo))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewReader(reqBodyJSON))
+	if err != nil {
+		return 0, "", fmt.Errorf("create pull request for %s/%s: %w", params.baseOwner, params.baseRepo, err)
+	}
+	req.Header.Set("User-Agent", userAgentString())
+	req.Header.Set("Accept", draftPRAPIAccept)
+	req.Header.Set("Authorization", "token "+params.authToken)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return 0, "", fmt.Errorf("create pull request for %s/%s: %w", params.baseOwner, params.baseRepo, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		err := parseGitHubErrorResponse(resp)
-		return 0, "", fmt.Errorf("create pull request for %s/%s: %w", params.baseOwner, params.baseRepo, err)
+		return 0, "", fmt.Errorf("create pull request for %s/%s: %v: %w", params.baseOwner, params.baseRepo, resp.Request.URL, err)
 	}
 	var respDoc struct {
 		Number  uint64

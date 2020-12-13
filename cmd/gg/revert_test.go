@@ -16,10 +16,7 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
-	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -639,52 +636,4 @@ func TestRevert_UnknownFile(t *testing.T) {
 			t.Errorf("error = %q; want to contain \"bar.txt\"", got)
 		}
 	})
-}
-
-func TestEvalSymlinksSloppy(t *testing.T) {
-	t.Parallel()
-	dir, err := ioutil.TempDir("", "gg_evaltest")
-	if err != nil {
-		t.Fatal(err)
-	}
-	origDir := dir
-	t.Cleanup(func() { os.RemoveAll(origDir) })
-	dir, err = filepath.EvalSymlinks(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = filesystem.Dir(dir).Apply(
-		filesystem.Mkdir("foo"),
-		filesystem.Symlink("foo", "bar"),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	type testCase struct {
-		path string
-		want string
-	}
-	tests := []testCase{
-		{path: dir, want: dir},
-		{path: filepath.Join(dir, "bar"), want: filepath.Join(dir, "bar")},
-		{path: filepath.Join(dir, "bar/baz.txt"), want: filepath.Join(dir, "foo/baz.txt")},
-	}
-	if runtime.GOOS == "windows" {
-		tests = append(tests,
-			testCase{path: `C:\`, want: `C:\`},
-			testCase{path: `C:\foo.txt`, want: `C:\foo.txt`},
-		)
-	} else {
-		tests = append(tests,
-			testCase{path: "/", want: "/"},
-			testCase{path: "/foo.txt", want: "/foo.txt"},
-		)
-	}
-	for _, test := range tests {
-		got, err := evalSymlinksSloppy(test.path)
-		if got != test.want || err != nil {
-			t.Errorf("evalSymlinksSloppy(%q) = %q, %v; want %q, <nil>", test.path, got, err, test.want)
-		}
-	}
 }

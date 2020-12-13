@@ -15,11 +15,13 @@
 // Package escape provides functions for escaping strings for different contexts.
 package escape
 
-import "strings"
+import (
+	"strings"
+)
 
-// Shell quotes s such that it can be used as a literal argument
-// to a shell command.
-func Shell(s string) string {
+// Bash quotes s such that it can be used as a literal argument in a
+// bash command line.
+func Bash(s string) string {
 	if s == "" {
 		return "''"
 	}

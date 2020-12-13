@@ -1,7 +1,6 @@
 # Build Products
 /dist/
-/docs/public/
-/docs/gg.1
+/misc/gg.1
 
 # Go
 ## Binaries
@@ -62,6 +61,11 @@ Session.vim
 tags
 ## Persistent undo
 [._]*.un~
+
+# WiX
+*.msi
+*.wixobj
+*.wixpdb
 
 # Debian packaging
 .pc

@@ -4,6 +4,55 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
+[Unreleased]: https://github.com/gg-scm/gg/compare/v1.1.0...HEAD
+
+## [1.1.0][] - 2020-12-13
+
+Version 1.1 is the second stable release of gg and includes new commands,
+improved `gg branch` output, simpler GitHub integration, and a Homebrew formula.
+
+[1.1.0]: https://github.com/gg-scm/gg/releases/tag/v1.1.0
+
+### Added
+
+-  New `addremove` command that adds new files and removes missing ones.
+   ([#95](https://github.com/gg-scm/gg/issues/95))
+-  gg has a new command, `github-login`, which obtains a GitHub authorization
+   token using a CLI-based OAuth flow. ([#122](https://github.com/gg-scm/gg/issues/122))
+-  `branch` has a new `--sort` flag to control the sort order.
+-  gg can now be installed via [Homebrew][]! See https://gg-scm.io/install for
+   instructions.
+
+[Homebrew]: https://brew.sh/
+
+### Changed
+
+-  `branch` shows the commit hash, author, and summary for each branch.
+-  `branch` now sorts by descending commit date by default.
+   ([#101](https://github.com/gg-scm/gg/issues/101))
+
+### Fixed
+
+-  `status` and `branch` now display color on Windows.
+   ([#125](https://github.com/gg-scm/gg/issues/125))
+-  Released binaries are smaller: they no longer contain debug information.
+   ([#121](https://github.com/gg-scm/gg/issues/121))
+-  `commit --amend` no longer exits with an error if the commit contains a
+   rename. ([#129](https://github.com/gg-scm/gg/issues/129))
+-  `rebase` displays a simpler error message if the `-dst` argument doesn't
+   exist. ([#127](https://github.com/gg-scm/gg/issues/127))
+
+## [1.0.3][] - 2020-09-07
+
+### Added
+
+-  gg now has pre-built Windows binaries!
+   ([#48](https://github.com/gg-scm/gg/issues/48))
+
+### Changed
+
+-  The documentation has been moved to a [new repository](https://github.com/gg-scm/gg-scm.io).
+   ([#119](https://github.com/gg-scm/gg/issues/119))
 
 ## [1.0.2][] - 2020-09-01
 

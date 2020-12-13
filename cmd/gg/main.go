@@ -91,6 +91,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		"  backout       " + backoutSynopsis + "\n" +
 		"  evolve        " + evolveSynopsis + "\n" +
 		"  gerrithook    " + gerrithookSynopsis + "\n" +
+		"  github-login  " + gitHubLoginSynopsis + "\n" +
 		"  histedit      " + histeditSynopsis + "\n" +
 		"  mail          " + mailSynopsis + "\n" +
 		"  rebase        " + rebaseSynopsis + "\n" +
@@ -118,7 +119,9 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		}
 	}
 	opts := git.Options{
-		Env: pctx.env,
+		GitExe: *gitPath,
+		Dir:    pctx.dir,
+		Env:    pctx.env,
 	}
 	if *showArgs {
 		opts.LogHook = func(_ context.Context, args []string) {
@@ -138,7 +141,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 			pctx.stderr.Write(buf.Bytes())
 		}
 	}
-	git, err := git.New(*gitPath, pctx.dir, opts)
+	git, err := git.New(opts)
 	if err != nil {
 		return fmt.Errorf("gg: %w", err)
 	}
@@ -204,10 +207,26 @@ func (cc *cmdContext) withDir(path string) *cmdContext {
 	return cc2
 }
 
+func (cc *cmdContext) interactiveGit(ctx context.Context, args ...string) error {
+	err := cc.git.Runner().RunGit(ctx, &git.Invocation{
+		Dir:    cc.dir,
+		Args:   args,
+		Stdin:  cc.stdin,
+		Stdout: cc.stdout,
+		Stderr: cc.stderr,
+	})
+	if err != nil {
+		return fmt.Errorf("git %s: %w", args[0], err)
+	}
+	return nil
+}
+
 func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, name string, args []string) error {
 	switch name {
 	case "add":
 		return add(ctx, cc, args)
+	case "addremove":
+		return addRemove(ctx, cc, args)
 	case "backout":
 		return backout(ctx, cc, args)
 	case "branch":
@@ -224,6 +243,8 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 		return evolve(ctx, cc, args)
 	case "gerrithook":
 		return gerrithook(ctx, cc, args)
+	case "github-login":
+		return gitHubLogin(ctx, cc, args)
 	case "histedit":
 		return histedit(ctx, cc, args)
 	case "identify", "id":
@@ -324,10 +345,14 @@ func showVersion(ctx context.Context, cc *cmdContext) error {
 	if err != nil {
 		return err
 	}
-	c := cc.git.Command(ctx, "--version")
-	c.Stdout = cc.stdout
-	c.Stderr = cc.stderr
-	return sigterm.Run(ctx, c)
+	out, err := cc.git.Output(ctx, "--version")
+	if err != nil {
+		return err
+	}
+	if _, err := io.WriteString(cc.stdout, out); err != nil {
+		return err
+	}
+	return nil
 }
 
 func userAgentString() string {
@@ -417,10 +442,14 @@ func newXDGDirs(environ []string) *xdgDirs {
 	return x
 }
 
+// configDirname is the name of the subdirectory inside the user's configuration
+// or cache directory to store files.
+const configDirname = "gg"
+
 // readConfig reads the file at the given slash-separated path relative
 // to the gg config directory.
 func (x *xdgDirs) readConfig(name string) ([]byte, error) {
-	relpath := filepath.Join("gg", filepath.FromSlash(name))
+	relpath := filepath.Join(configDirname, filepath.FromSlash(name))
 	for _, dir := range x.configPaths() {
 		data, err := ioutil.ReadFile(filepath.Join(dir, relpath))
 		if err == nil {
@@ -435,6 +464,19 @@ func (x *xdgDirs) readConfig(name string) ([]byte, error) {
 		Path: filepath.Join("$XDG_CONFIG_HOME", relpath),
 		Err:  os.ErrNotExist,
 	}
+}
+
+// writeSecret writes the file at the given slash-separated path relative to the
+// gg directory with restricted permissions.
+func (x *xdgDirs) writeSecret(name string, value []byte) error {
+	path := filepath.Join(x.configHome, configDirname, filepath.FromSlash(name))
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(path, value, 0600); err != nil {
+		return err
+	}
+	return nil
 }
 
 // configPaths returns the list of directories to search for
@@ -454,7 +496,7 @@ func (x *xdgDirs) openCache(name string) (*os.File, error) {
 	if x.cacheHome == "" {
 		return nil, fmt.Errorf("open cache %s: no $XDG_CACHE_HOME variable set", name)
 	}
-	f, err := os.Open(filepath.Join(x.cacheHome, "gg", filepath.FromSlash(name)))
+	f, err := os.Open(filepath.Join(x.cacheHome, configDirname, filepath.FromSlash(name)))
 	if err != nil {
 		return nil, fmt.Errorf("open cache %s: %w", name, err)
 	}
@@ -469,8 +511,8 @@ func (x *xdgDirs) createCache(name string) (*os.File, error) {
 	if x.cacheHome == "" {
 		return nil, fmt.Errorf("create cache %s: no $XDG_CACHE_HOME variable set", name)
 	}
-	relpath := filepath.Join(x.cacheHome, "gg", filepath.FromSlash(name))
-	if err := os.MkdirAll(filepath.Dir(relpath), 0777); err != nil {
+	relpath := filepath.Join(x.cacheHome, configDirname, filepath.FromSlash(name))
+	if err := os.MkdirAll(filepath.Dir(relpath), 0755); err != nil {
 		return nil, fmt.Errorf("create cache %s: %w", name, err)
 	}
 	f, err := os.Create(relpath)
@@ -488,7 +530,7 @@ func usagef(format string, args ...interface{}) error {
 }
 
 func (ue *usageError) Error() string {
-	return "gg: usage: " + string(*ue)
+	return "usage: " + string(*ue)
 }
 
 func isUsage(e error) bool {

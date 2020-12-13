@@ -19,7 +19,6 @@ import (
 
 	"gg-scm.io/pkg/git"
 	"gg-scm.io/tool/internal/flag"
-	"gg-scm.io/tool/internal/sigterm"
 )
 
 const backoutSynopsis = "reverse effect of an earlier commit"
@@ -64,11 +63,7 @@ func backout(ctx context.Context, cc *cmdContext, args []string) error {
 	case *edit:
 		// TODO(someday): Use our editor by running --no-commit and then
 		// immediately running commit.
-		c := cc.git.Command(ctx, "revert", "--edit", r.Commit.String())
-		c.Stdin = cc.stdin
-		c.Stdout = cc.stdout
-		c.Stderr = cc.stderr
-		return sigterm.Run(ctx, c)
+		return cc.interactiveGit(ctx, "revert", "--edit", r.Commit.String())
 	default:
 		return cc.git.Run(ctx, "revert", "--no-edit", r.Commit.String())
 	}

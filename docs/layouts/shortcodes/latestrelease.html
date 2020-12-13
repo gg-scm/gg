@@ -1,6 +1,0 @@
-Download the
-{{with .Site.Params.latestRelease -}}
-<a href="https://github.com/gg-scm/gg/releases/tag/v{{.}}" class="downloadlink">latest release</a>
-({{.}})
-{{- end}}, which was released on
-{{with .Site.Params.releaseDate}}<time datetime="{{.}}">{{. | dateFormat "Jan 2, 2006" }}</time>{{end}}.

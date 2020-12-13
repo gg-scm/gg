@@ -1,4 +1,4 @@
-// Copyright 2018 The gg Authors
+// Copyright 2020 The gg Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,15 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
-package terminal
+// +build !windows
 
-import (
-	"golang.org/x/sys/windows"
-)
+package main
 
-func isTerminal(fd uintptr) bool {
-	var st uint32
-	err := windows.GetConsoleMode(windows.Handle(fd), &st)
-	return err == nil
+import "os/exec"
+
+func bashCommand(gitExe, line string) (*exec.Cmd, error) {
+	return exec.Command("/bin/sh", "-c", line), nil
 }

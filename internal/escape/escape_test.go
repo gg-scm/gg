@@ -16,7 +16,7 @@ package escape
 
 import "testing"
 
-func TestShell(t *testing.T) {
+func TestBash(t *testing.T) {
 	tests := []struct {
 		in, out string
 	}{
@@ -30,8 +30,8 @@ func TestShell(t *testing.T) {
 		{`abc\`, `'abc\'`},
 	}
 	for _, test := range tests {
-		if out := Shell(test.in); out != test.out {
-			t.Errorf("Shell(%q) = %s; want %s", test.in, out, test.out)
+		if out := Bash(test.in); out != test.out {
+			t.Errorf("Bash(%q) = %s; want %s", test.in, out, test.out)
 		}
 	}
 }

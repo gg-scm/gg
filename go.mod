@@ -17,8 +17,9 @@ module gg-scm.io/tool
 go 1.14
 
 require (
-	gg-scm.io/pkg/git v0.3.0
-	github.com/google/go-cmp v0.3.0
-	golang.org/x/sys v0.0.0-20180329131831-378d26f46672
-	golang.org/x/tools v0.0.0-20180628163957-1c99e1239a0c
+	gg-scm.io/pkg/ghdevice v0.1.0
+	gg-scm.io/pkg/git v0.7.3
+	github.com/google/go-cmp v0.5.4
+	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68
+	golang.org/x/tools v0.0.0-20200825202427-b303f430e36d
 )
