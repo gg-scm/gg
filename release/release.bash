@@ -51,7 +51,7 @@ distroot="$stagedir/$release_name"
 mkdir "$distroot"
 cp "$srcroot/README.md" "$srcroot/CHANGELOG.md" "$srcroot/LICENSE" "$distroot/"
 mkdir "$distroot/misc"
-cp "$srcroot/misc/completion.zsh" "$srcroot/misc/_gg_complete.bash" "$distroot/misc/"
+cp "$srcroot/misc/_gg.zsh" "$srcroot/misc/gg.bash" "$distroot/misc/"
 if [[ "$release_version" == "dev" ]]; then
   "$srcroot/release/build.bash" "$distroot/gg"
 else
