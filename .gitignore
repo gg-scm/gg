@@ -76,3 +76,4 @@ tags
 /debian/gg/
 /debian/gg.debhelper.log
 /debian/gg.substvars
+/debian/tmp/

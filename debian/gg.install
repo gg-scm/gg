@@ -1,0 +1,3 @@
+#!/usr/bin/dh-exec
+misc/gg.bash => /usr/share/bash-completion/completions/gg
+misc/_gg.zsh => /usr/share/zsh/vendor-completions/_gg

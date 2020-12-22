@@ -1,1 +1,1 @@
---extend-diff-ignore=^(.github/workflows/|.vscode/)
+--extend-diff-ignore=^(.github/workflows/|.vscode/|misc/gg.1$)

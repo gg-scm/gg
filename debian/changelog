@@ -1,3 +1,9 @@
+gg (1.1.0-1) gg; urgency=medium
+
+  * New upstream release.
+
+ -- Ross Light <ross@zombiezen.com>  Sun, 13 Dec 2020 15:51:58 -0800
+
 gg (1.0.2-3) gg; urgency=medium
 
   * .github/workflows: add Debian workflow
