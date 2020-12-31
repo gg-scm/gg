@@ -26,7 +26,7 @@ features and the ideas behind the project.
 
 ## Building from Source
 
-You must have Go 1.14 or later to build gg.
+You must have Go 1.15 or later to build gg.
 
 ```
 # From a release tarball or a local clone:

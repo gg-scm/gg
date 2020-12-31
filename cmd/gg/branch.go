@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"gg-scm.io/pkg/git"
+	"gg-scm.io/pkg/git/object"
 	"gg-scm.io/tool/internal/flag"
 	"gg-scm.io/tool/internal/terminal"
 )
@@ -208,7 +209,7 @@ func listBranches(ctx context.Context, cc *cmdContext, ord branchSortOrder) erro
 			color, marker = currentColor, '*'
 		}
 		commit := commits[refs[b]]
-		_, err := fmt.Fprintf(cc.stdout, "%s%c %-30s %s %s\n    %s\n", color, marker, b.Branch(), refs[b].Short(), commit.Author.Name, commit.Summary())
+		_, err := fmt.Fprintf(cc.stdout, "%s%c %-30s %s %s\n    %s\n", color, marker, b.Branch(), refs[b].Short(), commit.Author.Name(), commit.Summary())
 		if err != nil {
 			return err
 		}
@@ -221,7 +222,10 @@ func listBranches(ctx context.Context, cc *cmdContext, ord branchSortOrder) erro
 	return nil
 }
 
-func refsCommitInfo(ctx context.Context, g *git.Git, refs map[git.Ref]git.Hash) (map[git.Hash]*git.CommitInfo, error) {
+func refsCommitInfo(ctx context.Context, g *git.Git, refs map[git.Ref]git.Hash) (map[git.Hash]*object.Commit, error) {
+	if len(refs) == 0 {
+		return nil, nil
+	}
 	hashes := make([]string, 0, len(refs))
 	for _, c := range refs {
 		present := false
@@ -243,10 +247,10 @@ func refsCommitInfo(ctx context.Context, g *git.Git, refs map[git.Ref]git.Hash) 
 	if err != nil {
 		return nil, err
 	}
-	commits := make(map[git.Hash]*git.CommitInfo)
+	commits := make(map[git.Hash]*object.Commit)
 	for commitLog.Next() {
 		info := commitLog.CommitInfo()
-		commits[info.Hash] = info
+		commits[info.SHA1()] = info
 	}
 	err = commitLog.Close()
 	return commits, err
