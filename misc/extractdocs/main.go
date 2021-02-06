@@ -333,7 +333,7 @@ func isCommandName(word string) bool {
 		return false
 	}
 	for i := 0; i < len(word); i++ {
-		if word[i] < 'a' || 'z' < word[i] {
+		if (word[i] < 'a' || 'z' < word[i]) && word[i] != '-' {
 			return false
 		}
 	}
