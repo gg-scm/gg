@@ -46,6 +46,7 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: 1.16rc1
+        stable: false
     - name: Check out code
       uses: actions/checkout@v2
     - name: Install Git
@@ -82,6 +83,7 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: 1.16rc1
+        stable: false
     - name: Check out code
       uses: actions/checkout@v2
     - name: Download dependencies
@@ -109,6 +111,7 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: 1.16rc1
+        stable: false
     - name: Check out code
       uses: actions/checkout@v2
     - name: Download dependencies
