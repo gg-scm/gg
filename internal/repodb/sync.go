@@ -392,7 +392,6 @@ func copyPackCommits(conn *sqlite.Conn) (err error) {
 			return err
 		}
 	}
-	// TODO(now): Add tags.
 	return nil
 }
 
