@@ -69,6 +69,9 @@ func open(ctx context.Context, gitDir string, mode sqlite.OpenFlags) (*sqlite.Co
 		sqlite.SQLITE_OPEN_WAL,
 		sqlite.SQLITE_OPEN_NOMUTEX,
 	)
+	if mode == 0 && sqlite.ErrCode(err)&0xff == sqlite.SQLITE_CANTOPEN {
+		return nil, fmt.Errorf("open commit index: %w", errMissingDatabase)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("open commit index: %w", err)
 	}
