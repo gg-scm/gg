@@ -21,6 +21,7 @@ import (
 
 	"gg-scm.io/pkg/git"
 	"gg-scm.io/tool/internal/flag"
+	"gg-scm.io/tool/internal/repodb"
 )
 
 const identifySynopsis = "identify the working directory or specified revision"
@@ -46,9 +47,31 @@ aliases: id
 		return usagef("identify takes no arguments")
 	}
 
-	rev, err := cc.git.ParseRev(ctx, *revFlag)
+	dir, err := cc.git.GitDir(ctx)
 	if err != nil {
 		return err
+	}
+	db, err := repodb.Open(ctx, dir)
+	var rev *repodb.Revision
+	if repodb.IsMissingDatabase(err) {
+		gitRev, err := cc.git.ParseRev(ctx, *revFlag)
+		if err != nil {
+			return err
+		}
+		rev = &repodb.Revision{
+			SHA1: gitRev.Commit,
+			Ref:  gitRev.Ref,
+		}
+	} else if err != nil {
+		return err
+	} else {
+		if err := repodb.Sync(ctx, db, dir); err != nil {
+			return err
+		}
+		rev, err = repodb.ParseRevision(ctx, db, *revFlag)
+		if err != nil {
+			return err
+		}
 	}
 
 	hasChanges := false
@@ -72,7 +95,7 @@ aliases: id
 	var branchNames []string
 	var tagNames []string
 	for ref, hash := range refs {
-		if rev.Commit != hash {
+		if rev.SHA1 != hash {
 			continue
 		}
 		if b := ref.Branch(); b != "" {
@@ -88,7 +111,7 @@ aliases: id
 	sort.Strings(tagNames)
 
 	out := new(bytes.Buffer)
-	out.WriteString(rev.Commit.String())
+	out.WriteString(rev.SHA1.String())
 	if hasChanges {
 		out.WriteByte('+')
 	}

@@ -41,19 +41,31 @@ const sqliteTimestampFormat = "2006-01-02 15:04:05"
 
 //go:embed *.sql
 //go:embed commit/*.sql
+//go:embed revision/*.sql
 //go:embed sync/*.sql
 var sqlFiles embed.FS
 
 // Create opens the database for the given Git common directory, creating it if
 // necessary.
 func Create(ctx context.Context, gitDir string) (*sqlite.Conn, error) {
+	return open(ctx, gitDir, sqlite.SQLITE_OPEN_CREATE)
+}
+
+// Open opens the database for the given Git common directory. If there is no
+// available database, Open returns an error for which IsMissingDatabase returns
+// true.
+func Open(ctx context.Context, gitDir string) (*sqlite.Conn, error) {
+	return open(ctx, gitDir, 0)
+}
+
+func open(ctx context.Context, gitDir string, mode sqlite.OpenFlags) (*sqlite.Conn, error) {
 	schema, err := initSchema()
 	if err != nil {
 		return nil, fmt.Errorf("open commit index: %w", err)
 	}
 	conn, err := sqlite.OpenConn(filepath.Join(gitDir, "gg.sqlite"),
+		mode,
 		sqlite.SQLITE_OPEN_READWRITE,
-		sqlite.SQLITE_OPEN_CREATE,
 		sqlite.SQLITE_OPEN_WAL,
 		sqlite.SQLITE_OPEN_NOMUTEX,
 	)
@@ -112,9 +124,18 @@ func readString(fsys fs.FS, filename string) (string, error) {
 	return content.String(), nil
 }
 
+var (
+	errMissingDatabase = errors.New("commit index not found")
+	errObjectExists    = errors.New("object exists")
+)
+
+// IsMissingDatabase reports whether an error returned from Open indicates that
+// a database has not been created.
+func IsMissingDatabase(e error) bool {
+	return errors.Is(e, errMissingDatabase)
+}
+
 // IsExist reports whether the error indicates that the object already exists.
 func IsExist(e error) bool {
 	return errors.Is(e, errObjectExists)
 }
-
-var errObjectExists = errors.New("object exists")
