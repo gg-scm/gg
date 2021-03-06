@@ -143,7 +143,7 @@ func findRevisionByNumber(conn *sqlite.Conn, rev string) (*Revision, error) {
 		Named: map[string]interface{}{":revno": revno},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			r = new(Revision)
-			r.Revno = revno
+			r.Revno = stmt.GetInt64("revno")
 			stmt.GetBytes("sha1sum", r.SHA1[:])
 			return nil
 		},
