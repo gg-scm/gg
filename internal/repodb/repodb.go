@@ -27,17 +27,12 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"crawshaw.io/sqlite"
 	"crawshaw.io/sqlite/sqlitex"
 	"zombiezen.com/go/bass/sql/sqlitemigration"
 )
-
-// sqliteTimestampFormat is the date string layout used in SQLite, suitable for
-// use with time.Format and time.Parse.
-//
-// See https://sqlite.org/lang_datefunc.html
-const sqliteTimestampFormat = "2006-01-02 15:04:05"
 
 //go:embed *.sql
 //go:embed commit/*.sql
@@ -153,4 +148,26 @@ func execTransient(stmt *sqlite.Stmt) error {
 		return err
 	}
 	return nil
+}
+
+// sqliteTimestampFormat is the date string layout used in SQLite, suitable for
+// use with time.Format and time.Parse.
+//
+// See https://sqlite.org/lang_datefunc.html
+const sqliteTimestampFormat = "2006-01-02 15:04:05"
+
+// ParseTime converts a SQLite timestamp and timezone offset (in seconds) into
+// a time.Time value. The timestamp string is assumed to be in UTC.
+func ParseTime(s string, tzOffset int) (time.Time, error) {
+	t, err := time.Parse(sqliteTimestampFormat, s)
+	if err != nil {
+		return time.Time{}, err
+	}
+	tzHours := tzOffset / (60 * 60)
+	tzMinutes := (tzOffset / 60) % 60
+	if tzOffset < 0 {
+		tzMinutes = (-tzOffset / 60) % 60
+	}
+	loc := time.FixedZone(fmt.Sprintf("%+02d%02d", tzHours, tzMinutes), tzOffset)
+	return t.In(loc), nil
 }

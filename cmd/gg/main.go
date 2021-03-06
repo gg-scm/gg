@@ -20,6 +20,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"io"
@@ -36,6 +37,9 @@ import (
 	"gg-scm.io/tool/internal/flag"
 	"gg-scm.io/tool/internal/sigterm"
 )
+
+//go:embed *.sql
+var sqlFiles embed.FS
 
 func main() {
 	pctx, err := osProcessContext()
