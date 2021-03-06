@@ -19,14 +19,16 @@ import (
 	"context"
 	"sort"
 
+	"crawshaw.io/sqlite/sqlitex"
 	"gg-scm.io/pkg/git"
+	"gg-scm.io/pkg/git/githash"
 	"gg-scm.io/tool/internal/flag"
 	"gg-scm.io/tool/internal/repodb"
 )
 
 const identifySynopsis = "identify the working directory or specified revision"
 
-func identify(ctx context.Context, cc *cmdContext, args []string) error {
+func identify(ctx context.Context, cc *cmdContext, args []string) (err error) {
 	f := flag.NewFlagSet(true, "gg identify [-r REV]", identifySynopsis+`
 
 aliases: id
@@ -65,6 +67,8 @@ aliases: id
 	} else if err != nil {
 		return err
 	} else {
+		defer db.Close()
+		defer sqlitex.Save(db)(&err)
 		if err := repodb.Sync(ctx, db, dir); err != nil {
 			return err
 		}
@@ -88,9 +92,17 @@ aliases: id
 		}
 	}
 
-	refs, err := cc.git.ListRefs(ctx)
-	if err != nil {
-		return err
+	var refs map[githash.Ref]githash.SHA1
+	if db == nil {
+		refs, err = cc.git.ListRefs(ctx)
+		if err != nil {
+			return err
+		}
+	} else {
+		refs, err = repodb.ListRefs(ctx, db)
+		if err != nil {
+			return err
+		}
 	}
 	var branchNames []string
 	var tagNames []string

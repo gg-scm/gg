@@ -98,6 +98,7 @@ func initSchema() (sqlitemigration.Schema, error) {
 	schema.once.Do(func() {
 		filenames := []string{
 			"schema01.sql",
+			"schema02.sql",
 		}
 		schema.AppID = 0x18302f95
 		schema.Migrations = make([]string, 0, len(filenames))
@@ -109,6 +110,7 @@ func initSchema() (sqlitemigration.Schema, error) {
 			}
 			schema.Migrations = append(schema.Migrations, source)
 		}
+		schema.RepeatableMigration, schema.err = readString(sqlFiles, "repeatable.sql")
 	})
 	return schema.Schema, schema.err
 }
@@ -141,4 +143,14 @@ func IsMissingDatabase(e error) bool {
 // IsExist reports whether the error indicates that the object already exists.
 func IsExist(e error) bool {
 	return errors.Is(e, errObjectExists)
+}
+
+func execTransient(stmt *sqlite.Stmt) error {
+	if _, err := stmt.Step(); err != nil {
+		return err
+	}
+	if err := stmt.Reset(); err != nil {
+		return err
+	}
+	return nil
 }

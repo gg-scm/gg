@@ -93,6 +93,9 @@ func Sync(ctx context.Context, conn *sqlite.Conn, gitDir string) (err error) {
 	if err := copyPackTags(conn); err != nil {
 		return fmt.Errorf("index commits: %w", err)
 	}
+	if err := updateLabels(conn, refs); err != nil {
+		return fmt.Errorf("index commits: %w", err)
+	}
 	return nil
 }
 
@@ -169,10 +172,7 @@ func unpack(conn *sqlite.Conn, p *packfile.Reader) (err error) {
 			insertOffsetDeltaStmt.SetInt64(":offset", hdr.Offset)
 			insertOffsetDeltaStmt.SetInt64(":base_offset", hdr.BaseOffset)
 			insertOffsetDeltaStmt.SetInt64(":size", hdr.Size)
-			if _, err := insertOffsetDeltaStmt.Step(); err != nil {
-				return fmt.Errorf("unpack: %w", err)
-			}
-			if err := insertOffsetDeltaStmt.Reset(); err != nil {
+			if err := execTransient(insertOffsetDeltaStmt); err != nil {
 				return fmt.Errorf("unpack: %w", err)
 			}
 			if err := writeDelta(conn, hdr.Offset, p); err != nil {
@@ -182,10 +182,7 @@ func unpack(conn *sqlite.Conn, p *packfile.Reader) (err error) {
 			insertRefDeltaStmt.SetInt64(":offset", hdr.Offset)
 			insertRefDeltaStmt.SetBytes(":base_object", hdr.BaseObject[:])
 			insertRefDeltaStmt.SetInt64(":size", hdr.Size)
-			if _, err := insertRefDeltaStmt.Step(); err != nil {
-				return fmt.Errorf("unpack: %w", err)
-			}
-			if err := insertRefDeltaStmt.Reset(); err != nil {
+			if err := execTransient(insertRefDeltaStmt); err != nil {
 				return fmt.Errorf("unpack: %w", err)
 			}
 			if err := writeDelta(conn, hdr.Offset, p); err != nil {
@@ -209,10 +206,7 @@ func insertPackObject(conn *sqlite.Conn, insertObject, setObjectSum *sqlite.Stmt
 	insertObject.SetInt64(":offset", hdr.Offset)
 	insertObject.SetInt64(":type", int64(hdr.Type))
 	insertObject.SetInt64(":size", hdr.Size)
-	if _, err := insertObject.Step(); err != nil {
-		return fmt.Errorf("unpack %v: %w", prefix.Type, err)
-	}
-	if err := insertObject.Reset(); err != nil {
+	if err := execTransient(insertObject); err != nil {
 		return fmt.Errorf("unpack %v: %w", prefix.Type, err)
 	}
 
@@ -425,11 +419,8 @@ func copyPackTags(conn *sqlite.Conn) (err error) {
 		_, tzOffset := tag.Time.Zone()
 		insertTag.SetInt64(":tag_tzoffset", int64(tzOffset))
 		insertTag.SetText(":message", tag.Message)
-		if _, err := insertTag.Step(); err != nil {
+		if err := execTransient(insertTag); err != nil {
 			return fmt.Errorf("insert tag %v (%s): %w", sha1Sum, tag.Name, err)
-		}
-		if err := insertTag.Reset(); err != nil {
-			return err
 		}
 		return nil
 	}
@@ -483,4 +474,79 @@ func sortCommits(graph map[githash.SHA1][]githash.SHA1) []githash.SHA1 {
 		}
 	}
 	return list
+}
+
+func updateLabels(conn *sqlite.Conn, refs map[githash.Ref]*client.Ref) (err error) {
+	files := [...]string{
+		"sync/clear_label_alias.sql",
+		"sync/clear_labels_by_name.sql",
+		"sync/clear_later_labels.sql",
+		"sync/insert_label.sql",
+		"sync/insert_label_alias.sql",
+	}
+	stmts := make([]*sqlite.Stmt, 0, len(files))
+	defer func() {
+		for _, stmt := range stmts {
+			stmt.Finalize()
+		}
+	}()
+	for _, fname := range files {
+		s, err := sqlitefile.PrepareTransient(conn, sqlFiles, fname)
+		if err != nil {
+			return fmt.Errorf("update labels: %w", err)
+		}
+		stmts = append(stmts, s)
+	}
+	clearLabelAliasStmt := stmts[0]
+	clearLabelsByNameStmt := stmts[1]
+	clearLaterLabelsStmt := stmts[2]
+	insertLabelStmt := stmts[3]
+	insertLabelAliasStmt := stmts[4]
+
+	defer sqlitex.Save(conn)(&err)
+	for _, ref := range refs {
+		// If this is not a symbolic ref, then clear any existing label aliases.
+		if ref.SymrefTarget == "" {
+			clearLabelAliasStmt.SetText(":name", ref.Name.String())
+			if err := execTransient(clearLabelAliasStmt); err != nil {
+				return fmt.Errorf("update labels: %v: %w", ref.Name, err)
+			}
+		}
+
+		// Clear any undesired labels.
+		if isExclusiveLabel(ref.Name) || ref.SymrefTarget != "" {
+			clearLabelsByNameStmt.SetText(":name", ref.Name.String())
+			if err := execTransient(clearLabelsByNameStmt); err != nil {
+				return fmt.Errorf("update labels: %v: %w", ref.Name, err)
+			}
+		} else {
+			clearLaterLabelsStmt.SetText(":name", ref.Name.String())
+			clearLaterLabelsStmt.SetBytes(":sha1sum", ref.ObjectID[:])
+			if err := execTransient(clearLaterLabelsStmt); err != nil {
+				return fmt.Errorf("update labels: %v: %w", ref.Name, err)
+			}
+		}
+
+		// Add label or alias with the new information.
+		if ref.SymrefTarget != "" {
+			insertLabelAliasStmt.SetText(":name", ref.Name.String())
+			insertLabelAliasStmt.SetText(":target", ref.SymrefTarget.String())
+			if err := execTransient(insertLabelAliasStmt); err != nil {
+				return fmt.Errorf("update labels: %v: %w", ref.Name, err)
+			}
+			continue
+		}
+		insertLabelStmt.SetText(":name", ref.Name.String())
+		insertLabelStmt.SetBytes(":sha1sum", ref.ObjectID[:])
+		if err := execTransient(insertLabelStmt); err != nil {
+			return fmt.Errorf("update labels: %v: %w", ref.Name, err)
+		}
+	}
+	return nil
+}
+
+// isExclusiveLabel reports whether previous labels should be cleared when
+// adding this ref for the sync.
+func isExclusiveLabel(ref githash.Ref) bool {
+	return ref == githash.Head || ref == githash.FetchHead || ref.IsTag()
 }

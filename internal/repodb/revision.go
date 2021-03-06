@@ -56,6 +56,7 @@ func parseRevision(conn *sqlite.Conn, rev string) (*Revision, error) {
 		findTipRevision,
 		findRevisionByNumber, // Try decimal integers as revision numbers first.
 		findSHA1Revision,
+		findRefRevision,
 	}
 	for _, f := range parsers {
 		r, err := f(conn, rev)
@@ -154,6 +155,56 @@ func findRevisionByNumber(conn *sqlite.Conn, rev string) (*Revision, error) {
 		return nil, errNotExist
 	}
 	return r, nil
+}
+
+func findRefRevision(conn *sqlite.Conn, rev string) (*Revision, error) {
+	if rev == "@" || rev == "." {
+		rev = githash.Head.String()
+	}
+	var r *Revision
+	err := sqlitefile.Exec(conn, sqlFiles, "revision/find_ref.sql", &sqlitefile.ExecOptions{
+		Named: map[string]interface{}{":ref": rev},
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			name := githash.Ref(stmt.GetText("name"))
+			if r != nil {
+				if r.Ref.String() == rev {
+					// Use exact match over an imprecise one.
+					return nil
+				}
+				return fmt.Errorf("%q is ambiguous (found %q and %q)", rev, r.Ref, name)
+			}
+			r = new(Revision)
+			r.Revno = stmt.GetInt64("revno")
+			stmt.GetBytes("sha1sum", r.SHA1[:])
+			r.Ref = name
+			return nil
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if r == nil {
+		return nil, errNotExist
+	}
+	return r, nil
+}
+
+// ListRefs lists all of the refs in the repository with tags dereferenced.
+func ListRefs(ctx context.Context, conn *sqlite.Conn) (map[githash.Ref]githash.SHA1, error) {
+	defer conn.SetInterrupt(conn.SetInterrupt(ctx.Done()))
+	refs := make(map[githash.Ref]githash.SHA1)
+	err := sqlitefile.Exec(conn, sqlFiles, "revision/list_refs.sql", &sqlitefile.ExecOptions{
+		ResultFunc: func(stmt *sqlite.Stmt) error {
+			var sum githash.SHA1
+			stmt.GetBytes("sha1sum", sum[:])
+			refs[githash.Ref(stmt.GetText("name"))] = sum
+			return nil
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list refs: %w", err)
+	}
+	return refs, nil
 }
 
 // upperHex converts s into an uppercase hex string.
