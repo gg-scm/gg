@@ -36,6 +36,26 @@ release/build.bash ~/bin/gg
 go install ./cmd/gg
 ```
 
+## Trying out the Experimental Features
+
+I'm currently working on adding new features that rely on querying the
+repository graph using SQLite. These work by treating the local Git repository
+as an upstream of a follower "repository". Every command using the database runs
+the equivalent of a `git fetch` at the start of the command.
+
+However, this behavior is not enabled by default. To enable the database in your
+Git working copy, run:
+
+```shell
+gg init -experimental-index
+```
+
+To inspect the database, run:
+
+```shell
+sqlite3 .git/gg.sqlite
+```
+
 ## Code reviews
 
 All submissions require review. We use GitHub pull requests for this purpose.
