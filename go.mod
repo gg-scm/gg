@@ -20,7 +20,7 @@ require (
 	crawshaw.io/sqlite v0.3.3-zombiezen
 	gg-scm.io/pkg/ghdevice v0.1.0
 	gg-scm.io/pkg/git v0.9.1-0.20210206173336-581070ae6e74
-	github.com/google/go-cmp v0.5.4
+	github.com/google/go-cmp v0.5.5
 	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68
 	golang.org/x/tools v0.0.0-20200825202427-b303f430e36d
 	zombiezen.com/go/bass v0.0.0-20210206054613-221958025604
