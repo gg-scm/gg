@@ -19,11 +19,11 @@ import (
 	"context"
 	"sort"
 
-	"crawshaw.io/sqlite/sqlitex"
 	"gg-scm.io/pkg/git"
 	"gg-scm.io/pkg/git/githash"
 	"gg-scm.io/tool/internal/flag"
 	"gg-scm.io/tool/internal/repodb"
+	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 const identifySynopsis = "identify the working directory or specified revision"

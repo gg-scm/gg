@@ -21,13 +21,12 @@ import (
 	"sort"
 	"strings"
 
-	"crawshaw.io/sqlite"
-	"crawshaw.io/sqlite/sqlitex"
 	"gg-scm.io/pkg/git/githash"
 	"gg-scm.io/pkg/git/object"
 	"gg-scm.io/tool/internal/flag"
 	"gg-scm.io/tool/internal/repodb"
-	"zombiezen.com/go/bass/sql/sqlitefile"
+	"zombiezen.com/go/sqlite"
+	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 const logSynopsis = "show revision history of entire repository or files"
@@ -174,7 +173,7 @@ func logWithDB(ctx context.Context, cc *cmdContext, flags *logFlags, dir string,
 
 	for _, revno := range revnos {
 		buf := new(bytes.Buffer)
-		err := sqlitefile.Exec(db, sqlFiles, "log.sql", &sqlitefile.ExecOptions{
+		err := sqlitex.ExecFS(db, sqlFiles, "log.sql", &sqlitex.ExecOptions{
 			Named: map[string]interface{}{
 				":revno": revno,
 			},
@@ -194,7 +193,7 @@ func logWithDB(ctx context.Context, cc *cmdContext, flags *logFlags, dir string,
 
 				buf.Reset()
 				fmt.Fprintf(buf, "\x1b[33mcommit:      %d:%x\x1b[0m\n", revno, id[:6])
-				err = sqlitefile.Exec(db, sqlFiles, "log_labels.sql", &sqlitefile.ExecOptions{
+				err = sqlitex.ExecFS(db, sqlFiles, "log_labels.sql", &sqlitex.ExecOptions{
 					Named: map[string]interface{}{
 						":revno": revno,
 					},

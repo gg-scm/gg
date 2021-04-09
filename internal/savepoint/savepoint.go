@@ -17,8 +17,8 @@
 package savepoint
 
 import (
-	"crawshaw.io/sqlite"
-	"crawshaw.io/sqlite/sqlitex"
+	"zombiezen.com/go/sqlite"
+	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 // Run runs f inside a SQLite savepoint.

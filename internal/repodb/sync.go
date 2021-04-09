@@ -23,13 +23,12 @@ import (
 	"fmt"
 	"io"
 
-	"crawshaw.io/sqlite"
-	"crawshaw.io/sqlite/sqlitex"
 	"gg-scm.io/pkg/git/githash"
 	"gg-scm.io/pkg/git/object"
 	"gg-scm.io/pkg/git/packfile"
 	"gg-scm.io/pkg/git/packfile/client"
-	"zombiezen.com/go/bass/sql/sqlitefile"
+	"zombiezen.com/go/sqlite"
+	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 // Sync copies any new commits from the Git repository into the database then
@@ -68,11 +67,11 @@ func Sync(ctx context.Context, conn *sqlite.Conn, gitDir string) (err error) {
 	if err != nil {
 		return fmt.Errorf("index commits: %w", err)
 	}
-	if err := sqlitefile.ExecScript(conn, sqlFiles, "sync/init.sql", nil); err != nil {
+	if err := sqlitex.ExecScriptFS(conn, sqlFiles, "sync/init.sql", nil); err != nil {
 		return fmt.Errorf("index commits: %w", err)
 	}
 	defer func() {
-		cleanupErr := sqlitefile.ExecScript(conn, sqlFiles, "sync/cleanup.sql", nil)
+		cleanupErr := sqlitex.ExecScriptFS(conn, sqlFiles, "sync/cleanup.sql", nil)
 		if cleanupErr != nil && err == nil {
 			err = fmt.Errorf("index commits: %w", cleanupErr)
 		}
@@ -100,7 +99,7 @@ func Sync(ctx context.Context, conn *sqlite.Conn, gitDir string) (err error) {
 }
 
 func findNewCommits(conn *sqlite.Conn, refs map[githash.Ref]*client.Ref) ([]githash.SHA1, error) {
-	hasObjectStmt, err := sqlitefile.PrepareTransient(conn, sqlFiles, "sync/has_ref_object.sql")
+	hasObjectStmt, err := sqlitex.PrepareTransientFS(conn, sqlFiles, "sync/has_ref_object.sql")
 	if err != nil {
 		return nil, fmt.Errorf("find new commits: %w", err)
 	}
@@ -143,7 +142,7 @@ func unpack(conn *sqlite.Conn, p *packfile.Reader) (err error) {
 		}
 	}()
 	for _, fname := range files {
-		s, err := sqlitefile.PrepareTransient(conn, sqlFiles, fname)
+		s, err := sqlitex.PrepareTransientFS(conn, sqlFiles, fname)
 		if err != nil {
 			return fmt.Errorf("unpack: %w", err)
 		}
@@ -271,7 +270,7 @@ func undeltify(conn *sqlite.Conn) error {
 		}
 	}()
 	for _, fname := range files {
-		s, err := sqlitefile.PrepareTransient(conn, sqlFiles, fname)
+		s, err := sqlitex.PrepareTransientFS(conn, sqlFiles, fname)
 		if err != nil {
 			return fmt.Errorf("undeltify: %w", err)
 		}
@@ -391,7 +390,7 @@ func copyPackCommits(conn *sqlite.Conn) (err error) {
 
 func copyPackTags(conn *sqlite.Conn) (err error) {
 	defer sqlitex.Save(conn)(&err)
-	insertTag, err := sqlitefile.PrepareTransient(conn, sqlFiles, "sync/insert_tag.sql")
+	insertTag, err := sqlitex.PrepareTransientFS(conn, sqlFiles, "sync/insert_tag.sql")
 	if err != nil {
 		return fmt.Errorf("insert tags: %w", err)
 	}
@@ -491,7 +490,7 @@ func updateLabels(conn *sqlite.Conn, refs map[githash.Ref]*client.Ref) (err erro
 		}
 	}()
 	for _, fname := range files {
-		s, err := sqlitefile.PrepareTransient(conn, sqlFiles, fname)
+		s, err := sqlitex.PrepareTransientFS(conn, sqlFiles, fname)
 		if err != nil {
 			return fmt.Errorf("update labels: %w", err)
 		}

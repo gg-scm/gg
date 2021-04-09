@@ -23,10 +23,10 @@ import (
 	"strconv"
 	"strings"
 
-	"crawshaw.io/sqlite"
 	"gg-scm.io/pkg/git/githash"
 	"gg-scm.io/tool/internal/savepoint"
-	"zombiezen.com/go/bass/sql/sqlitefile"
+	"zombiezen.com/go/sqlite"
+	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 // Revision is a parsed reference to a single commit.
@@ -75,7 +75,7 @@ func findTipRevision(conn *sqlite.Conn, rev string) (*Revision, error) {
 		return nil, errNotExist
 	}
 	var r *Revision
-	err := sqlitefile.Exec(conn, sqlFiles, "revision/find_tip.sql", &sqlitefile.ExecOptions{
+	err := sqlitex.ExecFS(conn, sqlFiles, "revision/find_tip.sql", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			r = new(Revision)
 			r.Revno = stmt.GetInt64("revno")
@@ -108,7 +108,7 @@ func findSHA1Revision(conn *sqlite.Conn, rev string) (*Revision, error) {
 	}
 	n := 0
 	r := new(Revision)
-	err := sqlitefile.Exec(conn, sqlFiles, "revision/find_sha1.sql", &sqlitefile.ExecOptions{
+	err := sqlitex.ExecFS(conn, sqlFiles, "revision/find_sha1.sql", &sqlitex.ExecOptions{
 		Named: params,
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			n++
@@ -139,7 +139,7 @@ func findRevisionByNumber(conn *sqlite.Conn, rev string) (*Revision, error) {
 		return nil, errNotExist
 	}
 	var r *Revision
-	err = sqlitefile.Exec(conn, sqlFiles, "revision/find_number.sql", &sqlitefile.ExecOptions{
+	err = sqlitex.ExecFS(conn, sqlFiles, "revision/find_number.sql", &sqlitex.ExecOptions{
 		Named: map[string]interface{}{":revno": revno},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			r = new(Revision)
@@ -162,7 +162,7 @@ func findRefRevision(conn *sqlite.Conn, rev string) (*Revision, error) {
 		rev = githash.Head.String()
 	}
 	var r *Revision
-	err := sqlitefile.Exec(conn, sqlFiles, "revision/find_ref.sql", &sqlitefile.ExecOptions{
+	err := sqlitex.ExecFS(conn, sqlFiles, "revision/find_ref.sql", &sqlitex.ExecOptions{
 		Named: map[string]interface{}{":ref": rev},
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			name := githash.Ref(stmt.GetText("name"))
@@ -193,7 +193,7 @@ func findRefRevision(conn *sqlite.Conn, rev string) (*Revision, error) {
 func ListRefs(ctx context.Context, conn *sqlite.Conn) (map[githash.Ref]githash.SHA1, error) {
 	defer conn.SetInterrupt(conn.SetInterrupt(ctx.Done()))
 	refs := make(map[githash.Ref]githash.SHA1)
-	err := sqlitefile.Exec(conn, sqlFiles, "revision/list_refs.sql", &sqlitefile.ExecOptions{
+	err := sqlitex.ExecFS(conn, sqlFiles, "revision/list_refs.sql", &sqlitex.ExecOptions{
 		ResultFunc: func(stmt *sqlite.Stmt) error {
 			var sum githash.SHA1
 			stmt.GetBytes("sha1sum", sum[:])

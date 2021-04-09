@@ -17,13 +17,10 @@ module gg-scm.io/tool
 go 1.16
 
 require (
-	crawshaw.io/sqlite v0.3.3-zombiezen
 	gg-scm.io/pkg/ghdevice v0.1.0
 	gg-scm.io/pkg/git v0.9.1-0.20210206173336-581070ae6e74
 	github.com/google/go-cmp v0.5.5
-	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68
-	golang.org/x/tools v0.0.0-20200825202427-b303f430e36d
-	zombiezen.com/go/bass v0.0.0-20210206054613-221958025604
+	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
+	golang.org/x/tools v0.0.0-20201124115921-2c860bdd6e78
+	zombiezen.com/go/sqlite v0.2.0
 )
-
-replace crawshaw.io/sqlite v0.3.3-zombiezen => github.com/zombiezen/sqlite v0.3.3-0.20201229170853-3aff1a1a78df

@@ -19,10 +19,9 @@ package repodb
 import (
 	"fmt"
 
-	"crawshaw.io/sqlite"
-	"crawshaw.io/sqlite/sqlitex"
 	"gg-scm.io/pkg/git/object"
-	"zombiezen.com/go/bass/sql/sqlitefile"
+	"zombiezen.com/go/sqlite"
+	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 // InsertCommit creates a new commit from the given information.
@@ -46,7 +45,7 @@ func InsertCommit(conn *sqlite.Conn, c *object.Commit) (revno int64, err error) 
 	_, authorTZOffset := c.AuthorTime.Zone()
 	commitTime := c.CommitTime.UTC().Format(sqliteTimestampFormat)
 	_, commitTZOffset := c.CommitTime.Zone()
-	err = sqlitefile.Exec(conn, sqlFiles, "commit/insert.sql", &sqlitefile.ExecOptions{
+	err = sqlitex.ExecFS(conn, sqlFiles, "commit/insert.sql", &sqlitex.ExecOptions{
 		Named: map[string]interface{}{
 			":revno":           revno,
 			":sha1sum":         commitSHA1[:],
@@ -65,7 +64,7 @@ func InsertCommit(conn *sqlite.Conn, c *object.Commit) (revno int64, err error) 
 		return -1, fmt.Errorf("insert commit %v: %w", commitSHA1, err)
 	}
 	for i, par := range c.Parents {
-		err := sqlitefile.Exec(conn, sqlFiles, "commit/insert_parent.sql", &sqlitefile.ExecOptions{
+		err := sqlitex.ExecFS(conn, sqlFiles, "commit/insert_parent.sql", &sqlitex.ExecOptions{
 			Named: map[string]interface{}{
 				":revno":          revno,
 				":index":          i,

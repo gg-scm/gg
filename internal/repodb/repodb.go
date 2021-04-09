@@ -29,9 +29,9 @@ import (
 	"sync"
 	"time"
 
-	"crawshaw.io/sqlite"
-	"crawshaw.io/sqlite/sqlitex"
-	"zombiezen.com/go/bass/sql/sqlitemigration"
+	"zombiezen.com/go/sqlite"
+	"zombiezen.com/go/sqlite/sqlitemigration"
+	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 //go:embed *.sql
@@ -43,7 +43,7 @@ var sqlFiles embed.FS
 // Create opens the database for the given Git common directory, creating it if
 // necessary.
 func Create(ctx context.Context, gitDir string) (*sqlite.Conn, error) {
-	return open(ctx, gitDir, sqlite.SQLITE_OPEN_CREATE)
+	return open(ctx, gitDir, sqlite.OpenCreate)
 }
 
 // Open opens the database for the given Git common directory. If there is no
@@ -60,11 +60,11 @@ func open(ctx context.Context, gitDir string, mode sqlite.OpenFlags) (*sqlite.Co
 	}
 	conn, err := sqlite.OpenConn(filepath.Join(gitDir, "gg.sqlite"),
 		mode,
-		sqlite.SQLITE_OPEN_READWRITE,
-		sqlite.SQLITE_OPEN_WAL,
-		sqlite.SQLITE_OPEN_NOMUTEX,
+		sqlite.OpenReadWrite,
+		sqlite.OpenWAL,
+		sqlite.OpenNoMutex,
 	)
-	if mode == 0 && sqlite.ErrCode(err)&0xff == sqlite.SQLITE_CANTOPEN {
+	if mode == 0 && sqlite.ErrCode(err)&0xff == sqlite.ResultCantOpen {
 		return nil, fmt.Errorf("open commit index: %w", errMissingDatabase)
 	}
 	if err != nil {
