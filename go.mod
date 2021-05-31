@@ -19,7 +19,7 @@ go 1.16
 require (
 	gg-scm.io/pkg/ghdevice v0.1.0
 	gg-scm.io/pkg/git v0.9.1-0.20210206173336-581070ae6e74
-	github.com/google/go-cmp v0.5.5
+	github.com/google/go-cmp v0.5.6
 	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
 	golang.org/x/tools v0.0.0-20201124115921-2c860bdd6e78
 	zombiezen.com/go/sqlite v0.5.0
