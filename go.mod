@@ -22,5 +22,5 @@ require (
 	github.com/google/go-cmp v0.5.6
 	golang.org/x/sys v0.0.0-20210902050250-f475640dd07b
 	golang.org/x/tools v0.0.0-20201124115921-2c860bdd6e78
-	zombiezen.com/go/sqlite v0.7.2
+	zombiezen.com/go/sqlite v0.8.0
 )
