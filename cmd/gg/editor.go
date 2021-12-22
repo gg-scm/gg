@@ -48,16 +48,22 @@ func (e *editor) open(ctx context.Context, basename string, initial []byte) ([]b
 		return nil, fmt.Errorf("open editor: %w", err)
 	}
 	editor = strings.TrimSuffix(editor, "\n")
-	dir, err := ioutil.TempDir(e.tempRoot, "gg_editor")
+
+	workDir, err := e.git.WorkTree(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("open editor: %w", err)
+	}
+
+	editDir, err := ioutil.TempDir(e.tempRoot, "gg_editor")
 	if err != nil {
 		return nil, fmt.Errorf("open editor: %w", err)
 	}
 	defer func() {
-		if err := os.RemoveAll(dir); err != nil {
+		if err := os.RemoveAll(editDir); err != nil {
 			e.log(fmt.Errorf("clean up editor: %w", err))
 		}
 	}()
-	path := filepath.Join(dir, basename)
+	path := filepath.Join(editDir, basename)
 	if err := ioutil.WriteFile(path, initial, 0600); err != nil {
 		return nil, fmt.Errorf("open editor: %w", err)
 	}
@@ -65,6 +71,7 @@ func (e *editor) open(ctx context.Context, basename string, initial []byte) ([]b
 	if err != nil {
 		return nil, fmt.Errorf("open editor: %w", err)
 	}
+	c.Dir = workDir
 	c.Stdin = e.stdin
 	c.Stdout = e.stdout
 	c.Stderr = e.stderr

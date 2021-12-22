@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Unreleased]: https://github.com/gg-scm/gg/compare/v1.1.0...HEAD
 
+## [Unreleased][]
+
+### Fixed
+
+- `GIT_EDITOR` is now always invoked from the root of the working copy
+  to match with the behavior of Git.
+  ([#152](https://github.com/gg-scm/gg/issues/152))
+
 ## [1.1.0][] - 2020-12-13
 
 Version 1.1 is the second stable release of gg and includes new commands,
