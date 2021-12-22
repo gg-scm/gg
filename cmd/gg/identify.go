@@ -20,10 +20,7 @@ import (
 	"sort"
 
 	"gg-scm.io/pkg/git"
-	"gg-scm.io/pkg/git/githash"
 	"gg-scm.io/tool/internal/flag"
-	"gg-scm.io/tool/internal/repodb"
-	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 const identifySynopsis = "identify the working directory or specified revision"
@@ -49,33 +46,9 @@ aliases: id
 		return usagef("identify takes no arguments")
 	}
 
-	dir, err := cc.git.GitDir(ctx)
+	rev, err := cc.git.ParseRev(ctx, *revFlag)
 	if err != nil {
 		return err
-	}
-	db, err := repodb.Open(ctx, dir)
-	var rev *repodb.Revision
-	if repodb.IsMissingDatabase(err) {
-		gitRev, err := cc.git.ParseRev(ctx, *revFlag)
-		if err != nil {
-			return err
-		}
-		rev = &repodb.Revision{
-			SHA1: gitRev.Commit,
-			Ref:  gitRev.Ref,
-		}
-	} else if err != nil {
-		return err
-	} else {
-		defer db.Close()
-		defer sqlitex.Save(db)(&err)
-		if err := repodb.Sync(ctx, db, dir); err != nil {
-			return err
-		}
-		rev, err = repodb.ParseRevision(ctx, db, *revFlag)
-		if err != nil {
-			return err
-		}
 	}
 
 	hasChanges := false
@@ -92,22 +65,14 @@ aliases: id
 		}
 	}
 
-	var refs map[githash.Ref]githash.SHA1
-	if db == nil {
-		refs, err = cc.git.ListRefs(ctx)
-		if err != nil {
-			return err
-		}
-	} else {
-		refs, err = repodb.ListRefs(ctx, db)
-		if err != nil {
-			return err
-		}
+	refs, err := cc.git.ListRefs(ctx)
+	if err != nil {
+		return err
 	}
 	var branchNames []string
 	var tagNames []string
 	for ref, hash := range refs {
-		if rev.SHA1 != hash {
+		if rev.Commit != hash {
 			continue
 		}
 		if b := ref.Branch(); b != "" {
@@ -123,7 +88,7 @@ aliases: id
 	sort.Strings(tagNames)
 
 	out := new(bytes.Buffer)
-	out.WriteString(rev.SHA1.String())
+	out.WriteString(rev.Commit.String())
 	if hasChanges {
 		out.WriteByte('+')
 	}

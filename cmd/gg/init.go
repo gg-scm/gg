@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"gg-scm.io/tool/internal/flag"
-	"gg-scm.io/tool/internal/repodb"
 )
 
 const initSynopsis = "create a new repository in the given directory"
@@ -27,7 +26,6 @@ func init_(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg init [DEST]", initSynopsis+`
 
 	If no directory is given, the current directory is used.`)
-	useRepoDB := f.Bool("experimental-index", false, "enable experimental indexing")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -42,20 +40,6 @@ func init_(ctx context.Context, cc *cmdContext, args []string) error {
 		dst = "."
 	}
 	if err := cc.git.Init(ctx, dst); err != nil {
-		return err
-	}
-	if !*useRepoDB {
-		return nil
-	}
-	dir, err := cc.git.WithDir(dst).CommonDir(ctx)
-	if err != nil {
-		return err
-	}
-	db, err := repodb.Create(ctx, dir)
-	if err != nil {
-		return err
-	}
-	if err := repodb.Sync(ctx, db, dir); err != nil {
 		return err
 	}
 	return nil
