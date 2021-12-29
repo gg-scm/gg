@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog][], and this project adheres to
 - `GIT_EDITOR` is now always invoked from the root of the working copy
   to match with the behavior of Git.
   ([#152](https://github.com/gg-scm/gg/issues/152))
+- `revert` now prints an error message
+  if used on a nonexistent file in a new repository.
 
 ## [1.1.0][] - 2020-12-13
 

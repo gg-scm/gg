@@ -55,6 +55,9 @@ func revert(ctx context.Context, cc *cmdContext, args []string) error {
 			// If HEAD fails to parse (empty repo), then just use reset.
 			rmArgs := []string{"reset", "--"}
 			for _, f := range f.Args() {
+				if _, err := os.Stat(cc.abs(f)); err != nil {
+					return err
+				}
 				rmArgs = append(rmArgs, git.LiteralPath(f).String())
 			}
 			return cc.git.Run(ctx, rmArgs...)
