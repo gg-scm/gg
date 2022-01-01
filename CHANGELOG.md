@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 ## [Unreleased][]
 
+### Added
+
+- gg can now be installed via [Nix](https://nixos.org/)!
+  See https://gg-scm.io/install for instructions.
+
 ### Fixed
 
 - `GIT_EDITOR` is now always invoked from the root of the working copy
