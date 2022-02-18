@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -35,7 +36,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	Branches are references to commits to help track lines of
 	development. Branches are unversioned and can be moved, renamed, and
 	deleted.
-	
+
 	Creating or updating to a branch causes it to be marked as active.
 	When a commit is made, the active branch will advance to the new
 	commit. A plain `+"`gg update`"+` will also advance an active branch, if
@@ -46,6 +47,8 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	force := f.Bool("f", false, "force")
 	f.Alias("f", "force")
 	rev := f.String("r", "", "`rev`ision to place branches on")
+	pattern := f.String("p", "", "`regexp` of branches to list")
+	f.Alias("p", "pattern")
 	ord := branchSortOrder{key: branchSortDate, dir: descending}
 	f.Var(&ord, "sort", "sort `order` when listing: 'name' or 'date'. May be prefixed by '-' for descending.")
 	if err := f.Parse(args); flag.IsHelp(err) {
@@ -71,7 +74,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		if *rev != "" {
 			return usagef("can't pass -r without branch names")
 		}
-		return listBranches(ctx, cc, ord)
+		return listBranches(ctx, cc, *pattern, ord)
 	default:
 		// Create or update
 		for _, b := range f.Args() {
@@ -130,13 +133,21 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	return nil
 }
 
-func listBranches(ctx context.Context, cc *cmdContext, ord branchSortOrder) error {
+func listBranches(ctx context.Context, cc *cmdContext, pattern string, ord branchSortOrder) error {
 	// Get color settings. Most errors can be ignored without impacting
 	// the command output.
 	var (
 		currentColor []byte
 		localColor   []byte
 	)
+	var re *regexp.Regexp
+	if pattern != "" {
+		var err error
+		re, err = regexp.Compile(pattern)
+		if err != nil {
+			return err
+		}
+	}
 	cfg, err := cc.git.ReadConfig(ctx)
 	if err != nil {
 		return err
@@ -171,7 +182,9 @@ func listBranches(ctx context.Context, cc *cmdContext, ord branchSortOrder) erro
 	branches := make([]git.Ref, 0, len(refs))
 	for ref := range refs {
 		if ref.IsBranch() {
-			branches = append(branches, ref)
+			if re == nil || re.MatchString(ref.Branch()) {
+				branches = append(branches, ref)
+			}
 		}
 	}
 	switch ord {

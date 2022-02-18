@@ -89,7 +89,7 @@ _gg_complete() {
         return 0
         ;;
       branch)
-        COMPREPLY=( $(compgen -W '-d -delete --delete -f -force --force -r -sort --sort' -- "$curr_word") )
+        COMPREPLY=( $(compgen -W '-d -delete --delete -f -force --force -p -pattern --pattern -r -sort --sort' -- "$curr_word") )
         return 0
         ;;
       clone)

@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog][], and this project adheres to
   See https://gg-scm.io/install for instructions.
 - `push` and `commit` have a new `-hooks=0` flag.
   ([#153](https://github.com/gg-scm/gg/issues/153))
+- `branch` has a new `--pattern` flag to filter listed branches.
+  ([#156](https://github.com/gg-scm/gg/issues/156))
 
 ### Fixed
 
