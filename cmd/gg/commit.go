@@ -44,6 +44,7 @@ aliases: ci
 	index. This approximates the behavior of `+"`git commit -a`"+`, but
 	this command will only change the index if the commit succeeds.`)
 	amend := f.Bool("amend", false, "amend the parent of the working directory")
+	runHooks := f.Bool("hooks", true, "whether to run Git hooks")
 	msg := f.String("m", "", "use text as commit `message`")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
@@ -59,14 +60,14 @@ aliases: ci
 		pathspecs = append(pathspecs, git.LiteralPath(arg))
 	}
 	if *amend {
-		return doAmend(ctx, cc, *msg, pathspecs)
+		return doAmend(ctx, cc, *msg, pathspecs, *runHooks)
 	}
-	return doCommit(ctx, cc, *msg, pathspecs)
+	return doCommit(ctx, cc, *msg, pathspecs, *runHooks)
 }
 
 const commitMsgFilename = "COMMIT_MSG"
 
-func doCommit(ctx context.Context, cc *cmdContext, msg string, pathspecs []git.Pathspec) error {
+func doCommit(ctx context.Context, cc *cmdContext, msg string, pathspecs []git.Pathspec, runHooks bool) error {
 	// Get status on files. First level of assurance is to stop empty commits.
 	// This status info may get used for interactive commit message template.
 	status, err := cc.git.Status(ctx, git.StatusOptions{
@@ -119,10 +120,13 @@ func doCommit(ctx context.Context, cc *cmdContext, msg string, pathspecs []git.P
 	}
 
 	// Commit as appropriate.
-	if len(pathspecs) > 0 {
-		return cc.git.CommitFiles(ctx, msg, pathspecs, git.CommitOptions{})
+	opts := git.CommitOptions{
+		SkipHooks: !runHooks,
 	}
-	return cc.git.CommitAll(ctx, msg, git.CommitOptions{})
+	if len(pathspecs) > 0 {
+		return cc.git.CommitFiles(ctx, msg, pathspecs, opts)
+	}
+	return cc.git.CommitAll(ctx, msg, opts)
 }
 
 func maybeMergeMessage(ctx context.Context, g *git.Git) []byte {
@@ -137,7 +141,7 @@ func maybeMergeMessage(ctx context.Context, g *git.Git) []byte {
 	return mergeMsg
 }
 
-func doAmend(ctx context.Context, cc *cmdContext, msg string, pathspecs []git.Pathspec) error {
+func doAmend(ctx context.Context, cc *cmdContext, msg string, pathspecs []git.Pathspec, runHooks bool) error {
 
 	// Get status on files (may get used for interactive commit message template).
 	status, err := cc.git.Status(ctx, git.StatusOptions{
@@ -200,10 +204,14 @@ func doAmend(ctx context.Context, cc *cmdContext, msg string, pathspecs []git.Pa
 	}
 
 	// Amend as appropriate.
-	if len(pathspecs) > 0 {
-		return cc.git.AmendFiles(ctx, pathspecs, git.AmendOptions{Message: msg})
+	opts := git.AmendOptions{
+		Message:   msg,
+		SkipHooks: !runHooks,
 	}
-	return cc.git.AmendAll(ctx, git.AmendOptions{Message: msg})
+	if len(pathspecs) > 0 {
+		return cc.git.AmendFiles(ctx, pathspecs, opts)
+	}
+	return cc.git.AmendAll(ctx, opts)
 }
 
 func amendedDiffStatus(ctx context.Context, g *git.Git, baseRev string, pathspecs []git.Pathspec) ([]git.DiffStatusEntry, error) {

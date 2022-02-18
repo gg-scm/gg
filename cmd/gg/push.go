@@ -48,6 +48,7 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	create := f.Bool("new-branch", false, "allow pushing a new ref")
 	force := f.Bool("f", false, "allow overwriting ref if it is not an ancestor, as long as it matches the remote-tracking branch")
 	f.Alias("f", "force")
+	runHooks := f.Bool("hooks", true, "whether to run Git hooks")
 	refArgs := f.MultiString("r", "source `ref`s")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
@@ -132,6 +133,9 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	pushArgs = append(pushArgs, "push")
 	if *force {
 		pushArgs = append(pushArgs, "--force-with-lease")
+	}
+	if !*runHooks {
+		pushArgs = append(pushArgs, "--no-verify")
 	}
 	pushArgs = append(pushArgs, "--", dstRepo)
 	for _, ref := range refsToPush {

@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 - gg can now be installed via [Nix](https://nixos.org/)!
   See https://gg-scm.io/install for instructions.
+- `push` and `commit` have a new `-hooks=0` flag.
 
 ### Fixed
 
