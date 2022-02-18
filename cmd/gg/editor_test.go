@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -75,7 +76,13 @@ func TestEditorDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	config := fmt.Sprintf("[core]\neditor = %s\n", escape.GitConfig("pwd | tee"))
+	editorCmd := "pwd | tee"
+	if runtime.GOOS == "windows" {
+		// -W is an msys-specific flag that prints the Windows path
+		// instead of the translated path.
+		editorCmd = "pwd -W | tee"
+	}
+	config := fmt.Sprintf("[core]\neditor = %s\n", escape.GitConfig(editorCmd))
 	if err := env.writeConfig([]byte(config)); err != nil {
 		t.Fatal(err)
 	}
