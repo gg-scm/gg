@@ -97,7 +97,7 @@ _gg_complete() {
         return 0
         ;;
       ci|commit)
-        COMPREPLY=( $(compgen -W '-amend --amend -m' -- "$curr_word") )
+        COMPREPLY=( $(compgen -W '-amend --amend -hooks --hooks -m' -- "$curr_word") )
         return 0
         ;;
       diff)
@@ -137,7 +137,7 @@ _gg_complete() {
         return 0
         ;;
       push)
-        COMPREPLY=( $(compgen -W '-f -force --force -new-branch --new-branch -r' -- "$curr_word") )
+        COMPREPLY=( $(compgen -W '-f -force --force -hooks --hooks -new-branch --new-branch -r' -- "$curr_word") )
         return 0
         ;;
       rebase)
