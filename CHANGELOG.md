@@ -17,6 +17,12 @@ The format is based on [Keep a Changelog][], and this project adheres to
 - `branch` has a new `--pattern` flag to filter listed branches.
   ([#156](https://github.com/gg-scm/gg/issues/156))
 
+### Changed
+
+- Local branches are moved under `refs/gg-old/` during `pull`
+  when they are deleted from a remote.
+  ([#118](https://github.com/gg-scm/gg/issues/118))
+
 ### Fixed
 
 - `GIT_EDITOR` is now always invoked from the root of the working copy
