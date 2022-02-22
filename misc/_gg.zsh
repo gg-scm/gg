@@ -206,7 +206,7 @@ case "${words[2]}" in
     _arguments -S : \
       ':command:' \
       '-r=[remote reference intended to be pulled]:remote ref:branches' \
-      '-tags[pull all tags from remote]' \
+      '-force-tags[update any tags pulled]' \
       '-u[update to new head if new descendants were pulled]' \
       ':source:remotes'
     ;;

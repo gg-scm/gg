@@ -42,6 +42,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	will be fetched. If the source is a named remote, then its remote
 	tracking branches will be pruned.`)
 	remoteRefArgs := f.MultiString("r", "`ref`s to pull")
+	forceTags := f.Bool("force-tags", false, "update any tags pulled")
 	update := f.Bool("u", false, "update to new head if new descendants were pulled")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
@@ -75,7 +76,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 
 	remote := remotes[repo]
-	gitArgs, ops, err := buildFetchArgs(repo, remotes, allLocalRefs, allRemoteRefs, *remoteRefArgs)
+	gitArgs, ops, err := buildFetchArgs(repo, remotes, allLocalRefs, allRemoteRefs, *remoteRefArgs, *forceTags)
 	if err != nil {
 		return err
 	}
@@ -134,7 +135,7 @@ type deferredFetchOps struct {
 // buildFetchArgs computes the set of branches and tags to fetch.
 // If buildFetchArgs returns an empty list of arguments,
 // then fetch should not be run.
-func buildFetchArgs(repo string, remotes map[string]*git.Remote, localRefs, remoteRefs map[git.Ref]git.Hash, remoteRefArgs []string) (gitArgs []string, ops *deferredFetchOps, _ error) {
+func buildFetchArgs(repo string, remotes map[string]*git.Remote, localRefs, remoteRefs map[git.Ref]git.Hash, remoteRefArgs []string, forceTags bool) (gitArgs []string, ops *deferredFetchOps, _ error) {
 	ops = &deferredFetchOps{
 		remote:      remotes[repo],
 		localRefs:   localRefs,
@@ -208,13 +209,19 @@ func buildFetchArgs(repo string, remotes map[string]*git.Remote, localRefs, remo
 				return nil, nil, fmt.Errorf("can't find ref %q on remote %q", ref, repo)
 			}
 		case ref.IsTag():
-			if localHash, hasTag := localRefs[ref]; hasTag {
-				if remoteHash, remoteHasTag := remoteRefs[ref]; remoteHasTag && localHash != remoteHash {
-					return nil, nil, fmt.Errorf("tag %q is %v on remote, does not match %v locally", ref.Tag(), remoteHash, localHash)
-				}
-				continue
+			localHash, hasLocalTag := localRefs[ref]
+			remoteHash, hasRemoteTag := remoteRefs[ref]
+			refspec := ref.String() + ":" + ref.String()
+			switch {
+			case !hasRemoteTag:
+				return nil, nil, fmt.Errorf("tag %q does not exist on remote", ref.Tag())
+			case !hasLocalTag:
+				gitArgs = append(gitArgs, refspec)
+			case localHash != remoteHash && forceTags:
+				gitArgs = append(gitArgs, "+"+refspec)
+			case localHash != remoteHash && !forceTags:
+				return nil, nil, fmt.Errorf("tag %q is %v on remote, does not match %v locally", ref.Tag(), remoteHash, localHash)
 			}
-			gitArgs = append(gitArgs, "+"+ref.String()+":"+ref.String())
 		default:
 			panic("unsupported ref " + ref.String())
 		}
