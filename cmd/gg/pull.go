@@ -124,11 +124,11 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 }
 
 type deferredFetchOps struct {
-	remoteName      string
-	localRefs       map[git.Ref]git.Hash
-	remoteRefs      map[git.Ref]git.Hash
-	branches        []git.Ref
-	deletedBranches map[git.Ref]git.Hash
+	remote      *git.Remote
+	localRefs   map[git.Ref]git.Hash
+	remoteRefs  map[git.Ref]git.Hash
+	branches    []git.Ref
+	deletedRefs map[git.Ref]git.Hash
 }
 
 // buildFetchArgs computes the set of branches and tags to fetch.
@@ -136,94 +136,91 @@ type deferredFetchOps struct {
 // then fetch should not be run.
 func buildFetchArgs(repo string, remotes map[string]*git.Remote, localRefs, remoteRefs map[git.Ref]git.Hash, remoteRefArgs []string) (gitArgs []string, ops *deferredFetchOps, _ error) {
 	ops = &deferredFetchOps{
-		localRefs:       localRefs,
-		remoteRefs:      remoteRefs,
-		deletedBranches: make(map[git.Ref]git.Hash),
+		remote:      remotes[repo],
+		localRefs:   localRefs,
+		remoteRefs:  remoteRefs,
+		deletedRefs: make(map[git.Ref]git.Hash),
 	}
 	gitArgs = []string{"fetch"}
 	var prevRemoteRefs map[git.Ref]git.Hash
-	remote := remotes[repo]
-	if remote != nil {
-		ops.remoteName = repo
-		prevRemoteRefs = reverseFetchMap(remote.Fetch, localRefs)
+	if ops.remote != nil {
+		prevRemoteRefs = reverseFetchMap(ops.remote.Fetch, localRefs)
 	} else {
 		gitArgs = append(gitArgs, "--refmap=+refs/heads/*:refs/ggpull/*")
 	}
-	var tags []git.Ref
+
+	// Convert remoteRefArgs into a set of refs.
+	var resolvedRefs []git.Ref
 	if len(remoteRefArgs) == 0 {
+		// Empty means everything.
 		for ref := range remoteRefs {
-			switch {
-			case ref.IsBranch():
-				ops.branches = append(ops.branches, ref)
-			case ref.IsTag():
-				tags = append(tags, ref)
+			if ref.IsBranch() || ref.IsTag() {
+				resolvedRefs = append(resolvedRefs, ref)
 			}
 		}
 		for ref := range prevRemoteRefs {
-			if _, exists := remoteRefs[ref]; ref.IsBranch() && !exists && isRefOrphaned(remotes, localRefs, repo, ref) {
-				ops.deletedBranches[ref] = localRefs[ref]
+			if _, exists := remoteRefs[ref]; ref.IsBranch() && !exists {
+				resolvedRefs = append(resolvedRefs, ref)
 			}
 		}
-		if remote != nil {
-			// Don't specify refs so remote-tracking branches can be pruned.
-			gitArgs = append(gitArgs, "--prune", "--tags", "--", repo)
-			return gitArgs, ops, nil
-		}
 	} else {
-		// -r flag given. Filter remote refs by given set.
+		// Add refs/heads/ or refs/tags/ as appropriate.
 		for _, arg := range remoteRefArgs {
-			switch ref := git.Ref(arg); {
-			case ref.IsBranch():
-				_, exists := remoteRefs[ref]
-				_, prevExists := prevRemoteRefs[ref]
-				if !exists && !prevExists {
-					return nil, nil, fmt.Errorf("can't find ref %q on remote %q", arg, repo)
-				}
-				if exists {
-					ops.branches = append(ops.branches, ref)
-				} else if isRefOrphaned(remotes, localRefs, repo, ref) {
-					ops.deletedBranches[ref] = localRefs[ref]
-				}
-				continue
-			case ref.IsTag():
-				_, exists := remoteRefs[ref]
-				if !exists {
-					return nil, nil, fmt.Errorf("can't find ref %q on remote %q", arg, repo)
-				}
-				tags = append(tags, ref)
+			if ref := git.Ref(arg); ref.IsBranch() || ref.IsTag() {
+				resolvedRefs = append(resolvedRefs, ref)
 				continue
 			}
 			branchRef := git.BranchRef(arg)
-			if _, hasBranch := remoteRefs[branchRef]; hasBranch {
-				ops.branches = append(ops.branches, branchRef)
-				continue
-			} else if _, hasPrevBranch := prevRemoteRefs[branchRef]; hasPrevBranch && isRefOrphaned(remotes, localRefs, repo, branchRef) {
-				ops.deletedBranches[branchRef] = localRefs[branchRef]
+			_, hasBranch := remoteRefs[branchRef]
+			_, hasPrevBranch := prevRemoteRefs[branchRef]
+			if hasBranch || hasPrevBranch {
+				resolvedRefs = append(resolvedRefs, branchRef)
 				continue
 			}
 			tagRef := git.TagRef(arg)
 			if _, hasTag := remoteRefs[tagRef]; hasTag {
-				tags = append(tags, tagRef)
+				resolvedRefs = append(resolvedRefs, tagRef)
 				continue
 			}
 			return nil, nil, fmt.Errorf("can't find ref %q on remote %q", arg, repo)
 		}
 	}
-	if len(ops.branches)+len(tags) == 0 {
-		return nil, ops, nil
-	}
+
+	// Build fetch arguments and validate ref selection.
 	gitArgs = append(gitArgs, "--", repo)
-	for _, branch := range ops.branches {
-		gitArgs = append(gitArgs, branch.String()+":")
-	}
-	for _, tag := range tags {
-		if localHash, hasTag := localRefs[tag]; hasTag {
-			if remoteHash, remoteHasTag := remoteRefs[tag]; remoteHasTag && localHash != remoteHash {
-				return nil, nil, fmt.Errorf("tag %q is %v on remote, does not match %v locally", tag.Tag(), remoteHash, localHash)
+	zeroFetchArgsLen := len(gitArgs)
+	for _, ref := range resolvedRefs {
+		switch {
+		case ref.IsBranch():
+			_, hasBranch := remoteRefs[ref]
+			_, hasPrevBranch := prevRemoteRefs[ref]
+			switch {
+			case hasBranch:
+				gitArgs = append(gitArgs, ref.String()+":")
+				ops.branches = append(ops.branches, ref)
+			case hasPrevBranch:
+				trackingRef := ops.remote.MapFetch(ref)
+				ops.deletedRefs[trackingRef] = localRefs[trackingRef]
+				if isRefOrphaned(remotes, localRefs, repo, ref) {
+					ops.deletedRefs[ref] = localRefs[ref]
+				}
+			default:
+				return nil, nil, fmt.Errorf("can't find ref %q on remote %q", ref, repo)
 			}
-			continue
+		case ref.IsTag():
+			if localHash, hasTag := localRefs[ref]; hasTag {
+				if remoteHash, remoteHasTag := remoteRefs[ref]; remoteHasTag && localHash != remoteHash {
+					return nil, nil, fmt.Errorf("tag %q is %v on remote, does not match %v locally", ref.Tag(), remoteHash, localHash)
+				}
+				continue
+			}
+			gitArgs = append(gitArgs, "+"+ref.String()+":"+ref.String())
+		default:
+			panic("unsupported ref " + ref.String())
 		}
-		gitArgs = append(gitArgs, "+"+tag.String()+":"+tag.String())
+	}
+	if len(gitArgs) == zeroFetchArgsLen {
+		return nil, ops, nil
 	}
 	return gitArgs, ops, nil
 }
@@ -246,8 +243,8 @@ func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, headBran
 				return err
 			}
 			// And set upstream, if necessary.
-			if ops.remoteName != "" {
-				if err := g.Run(ctx, "config", "branch."+branchName+".remote", ops.remoteName); err != nil {
+			if ops.remote != nil {
+				if err := g.Run(ctx, "config", "branch."+branchName+".remote", ops.remote.Name); err != nil {
 					return err
 				}
 				if err := g.Run(ctx, "config", "branch."+branchName+".merge", branchRef.String()); err != nil {
@@ -278,26 +275,32 @@ func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, headBran
 			continue
 		}
 	}
-	if len(ops.deletedBranches) > 0 {
-		inserts := make(map[git.Ref]git.RefMutation)
+
+	if len(ops.deletedRefs) > 0 {
+		mutations := make(map[git.Ref]git.RefMutation)
 		branchDeleteArgs := []string{"branch", "-D", "--"}
-		for branchRef, expectHash := range ops.deletedBranches {
-			branchName := branchRef.Branch()
+		for ref, expectHash := range ops.deletedRefs {
 			val := expectHash.String()
-			inserts[git.Ref("refs/gg-old/"+branchName)] = git.SetRef(val)
-			branchDeleteArgs = append(branchDeleteArgs, branchName)
+			if branchName := ref.Branch(); branchName != "" {
+				mutations[git.Ref("refs/gg-old/"+branchName)] = git.SetRef(val)
+				branchDeleteArgs = append(branchDeleteArgs, branchName)
+			} else {
+				mutations[ref] = git.DeleteRefIfMatches(val)
+			}
 		}
-		if err := g.MutateRefs(ctx, inserts); err != nil {
+		if err := g.MutateRefs(ctx, mutations); err != nil {
 			return err
 		}
 		if err := g.Run(ctx, branchDeleteArgs...); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
 // reverseFetchMap returns the refs last fetched from the remote.
+// `refs/remotes/<name>/HEAD` is ignored.
 func reverseFetchMap(fetch []git.FetchRefspec, localRefs map[git.Ref]git.Hash) map[git.Ref]git.Hash {
 	result := make(map[git.Ref]git.Hash)
 	for _, spec := range fetch {
@@ -313,7 +316,14 @@ func reverseFetchMap(fetch []git.FetchRefspec, localRefs map[git.Ref]git.Hash) m
 			}
 			continue
 		}
+		const remoteHeadPrefix = "refs/remotes/"
+		const remoteHeadSuffix = "/HEAD"
 		for ref, hash := range localRefs {
+			if strings.HasPrefix(string(ref), remoteHeadPrefix) &&
+				strings.HasSuffix(string(ref), remoteHeadSuffix) &&
+				len(ref) > len(remoteHeadPrefix+remoteHeadSuffix) {
+				continue
+			}
 			if suffix, ok := dst.Match(ref); ok {
 				result[git.Ref(srcPrefix+suffix)] = hash
 			}
