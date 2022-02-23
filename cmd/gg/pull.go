@@ -284,13 +284,24 @@ func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, headBran
 	}
 
 	if len(ops.deletedRefs) > 0 {
+		const oldNamespace = "refs/gg-old/"
+		deleteOldOlds := make(map[git.Ref]git.RefMutation)
+		for ref := range ops.localRefs {
+			if strings.HasPrefix(string(ref), oldNamespace) {
+				deleteOldOlds[ref] = git.DeleteRef()
+			}
+		}
+		if err := g.MutateRefs(ctx, deleteOldOlds); err != nil {
+			return err
+		}
+
 		mutations := make(map[git.Ref]git.RefMutation)
-		branchDeleteArgs := []string{"branch", "-D", "--"}
+		var branchesToDelete []string
 		for ref, expectHash := range ops.deletedRefs {
 			val := expectHash.String()
 			if branchName := ref.Branch(); branchName != "" {
-				mutations[git.Ref("refs/gg-old/"+branchName)] = git.SetRef(val)
-				branchDeleteArgs = append(branchDeleteArgs, branchName)
+				mutations[git.Ref(oldNamespace+branchName)] = git.SetRef(val)
+				branchesToDelete = append(branchesToDelete, branchName)
 			} else {
 				mutations[ref] = git.DeleteRefIfMatches(val)
 			}
@@ -298,7 +309,10 @@ func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, headBran
 		if err := g.MutateRefs(ctx, mutations); err != nil {
 			return err
 		}
-		if err := g.Run(ctx, branchDeleteArgs...); err != nil {
+		err := g.DeleteBranches(ctx, branchesToDelete, git.DeleteBranchOptions{
+			Force: true,
+		})
+		if err != nil {
 			return err
 		}
 	}
