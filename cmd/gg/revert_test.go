@@ -606,7 +606,7 @@ func TestRevert_UnknownFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if _, err := env.gg(ctx, ".", "revert", "bar.txt"); err == nil {
+		if _, err := env.gg(ctx, env.root.String(), "revert", "bar.txt"); err == nil {
 			t.Error("gg did not return an error")
 		} else if isUsage(err) {
 			t.Fatal(err)
@@ -628,7 +628,7 @@ func TestRevert_UnknownFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if _, err := env.gg(ctx, ".", "revert", "bar.txt"); err == nil {
+		if _, err := env.gg(ctx, env.root.String(), "revert", "bar.txt"); err == nil {
 			t.Error("gg did not return an error")
 		} else if isUsage(err) {
 			t.Fatal(err)

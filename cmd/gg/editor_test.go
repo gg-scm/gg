@@ -18,9 +18,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 
 	"gg-scm.io/tool/internal/escape"
+	"gg-scm.io/tool/internal/filesystem"
 )
 
 func TestEditor(t *testing.T) {
@@ -37,6 +41,9 @@ func TestEditor(t *testing.T) {
 	}
 	config := fmt.Sprintf("[core]\neditor = %s\n", escape.GitConfig(cmd))
 	if err := env.writeConfig([]byte(config)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
 		t.Fatal(err)
 	}
 
@@ -58,5 +65,60 @@ func TestEditor(t *testing.T) {
 	}
 	if string(got) != want {
 		t.Errorf("open(...) = %q; want %q", got, want)
+	}
+}
+
+// Test for https://github.com/gg-scm/gg/issues/152
+func TestEditorDirectory(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	editorCmd := "pwd | tee"
+	if runtime.GOOS == "windows" {
+		// -W is an msys-specific flag that prints the Windows path
+		// instead of the translated path.
+		editorCmd = "pwd -W | tee"
+	}
+	config := fmt.Sprintf("[core]\neditor = %s\n", escape.GitConfig(editorCmd))
+	if err := env.writeConfig([]byte(config)); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.initEmptyRepo(ctx, "."); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.root.Apply(filesystem.Mkdir("foo")); err != nil {
+		t.Fatal(err)
+	}
+
+	stderr := new(bytes.Buffer)
+	e := &editor{
+		git:      env.git.WithDir("foo"),
+		tempRoot: env.topDir.FromSlash("temp"),
+		log: func(e error) {
+			t.Error("Editor error:", e)
+		},
+		stderr: stderr,
+	}
+	got, err := e.open(ctx, "foo.txt", []byte("This is the initial content.\n"))
+	if stderr.Len() > 0 {
+		t.Log(stderr)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotPath := strings.TrimSuffix(string(got), "\n")
+	gotPath, err = filepath.EvalSymlinks(gotPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantPath, err := filepath.EvalSymlinks(env.root.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotPath != wantPath {
+		t.Errorf("open(...) = %q; want %q", gotPath, wantPath)
 	}
 }

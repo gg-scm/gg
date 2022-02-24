@@ -18,10 +18,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
 	"gg-scm.io/pkg/git"
+	"gg-scm.io/pkg/git/object"
 	"gg-scm.io/tool/internal/flag"
 	"gg-scm.io/tool/internal/terminal"
 )
@@ -34,7 +36,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	Branches are references to commits to help track lines of
 	development. Branches are unversioned and can be moved, renamed, and
 	deleted.
-	
+
 	Creating or updating to a branch causes it to be marked as active.
 	When a commit is made, the active branch will advance to the new
 	commit. A plain `+"`gg update`"+` will also advance an active branch, if
@@ -45,6 +47,8 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	force := f.Bool("f", false, "force")
 	f.Alias("f", "force")
 	rev := f.String("r", "", "`rev`ision to place branches on")
+	pattern := f.String("p", "", "`regexp` of branches to list")
+	f.Alias("p", "pattern")
 	ord := branchSortOrder{key: branchSortDate, dir: descending}
 	f.Var(&ord, "sort", "sort `order` when listing: 'name' or 'date'. May be prefixed by '-' for descending.")
 	if err := f.Parse(args); flag.IsHelp(err) {
@@ -70,7 +74,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 		if *rev != "" {
 			return usagef("can't pass -r without branch names")
 		}
-		return listBranches(ctx, cc, ord)
+		return listBranches(ctx, cc, *pattern, ord)
 	default:
 		// Create or update
 		for _, b := range f.Args() {
@@ -129,13 +133,21 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	return nil
 }
 
-func listBranches(ctx context.Context, cc *cmdContext, ord branchSortOrder) error {
+func listBranches(ctx context.Context, cc *cmdContext, pattern string, ord branchSortOrder) error {
 	// Get color settings. Most errors can be ignored without impacting
 	// the command output.
 	var (
 		currentColor []byte
 		localColor   []byte
 	)
+	var re *regexp.Regexp
+	if pattern != "" {
+		var err error
+		re, err = regexp.Compile(pattern)
+		if err != nil {
+			return err
+		}
+	}
 	cfg, err := cc.git.ReadConfig(ctx)
 	if err != nil {
 		return err
@@ -170,7 +182,9 @@ func listBranches(ctx context.Context, cc *cmdContext, ord branchSortOrder) erro
 	branches := make([]git.Ref, 0, len(refs))
 	for ref := range refs {
 		if ref.IsBranch() {
-			branches = append(branches, ref)
+			if re == nil || re.MatchString(ref.Branch()) {
+				branches = append(branches, ref)
+			}
 		}
 	}
 	switch ord {
@@ -208,7 +222,7 @@ func listBranches(ctx context.Context, cc *cmdContext, ord branchSortOrder) erro
 			color, marker = currentColor, '*'
 		}
 		commit := commits[refs[b]]
-		_, err := fmt.Fprintf(cc.stdout, "%s%c %-30s %s %s\n    %s\n", color, marker, b.Branch(), refs[b].Short(), commit.Author.Name, commit.Summary())
+		_, err := fmt.Fprintf(cc.stdout, "%s%c %-30s %s %s\n    %s\n", color, marker, b.Branch(), refs[b].Short(), commit.Author.Name(), commit.Summary())
 		if err != nil {
 			return err
 		}
@@ -221,7 +235,10 @@ func listBranches(ctx context.Context, cc *cmdContext, ord branchSortOrder) erro
 	return nil
 }
 
-func refsCommitInfo(ctx context.Context, g *git.Git, refs map[git.Ref]git.Hash) (map[git.Hash]*git.CommitInfo, error) {
+func refsCommitInfo(ctx context.Context, g *git.Git, refs map[git.Ref]git.Hash) (map[git.Hash]*object.Commit, error) {
+	if len(refs) == 0 {
+		return nil, nil
+	}
 	hashes := make([]string, 0, len(refs))
 	for _, c := range refs {
 		present := false
@@ -243,10 +260,10 @@ func refsCommitInfo(ctx context.Context, g *git.Git, refs map[git.Ref]git.Hash) 
 	if err != nil {
 		return nil, err
 	}
-	commits := make(map[git.Hash]*git.CommitInfo)
+	commits := make(map[git.Hash]*object.Commit)
 	for commitLog.Next() {
 		info := commitLog.CommitInfo()
-		commits[info.Hash] = info
+		commits[info.SHA1()] = info
 	}
 	err = commitLog.Close()
 	return commits, err

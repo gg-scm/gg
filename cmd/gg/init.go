@@ -39,5 +39,8 @@ func init_(ctx context.Context, cc *cmdContext, args []string) error {
 	if dst == "" {
 		dst = "."
 	}
-	return cc.git.Init(ctx, dst)
+	if err := cc.git.Init(ctx, dst); err != nil {
+		return err
+	}
+	return nil
 }

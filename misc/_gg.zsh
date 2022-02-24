@@ -87,6 +87,7 @@ case "${words[2]}" in
       ':command:' \
       {-d,-delete}'[delete the given branch]' \
       {-f,-force}'[force]' \
+      {-p,-pattern}'=[regexp of branches to list]' \
       '-r=[revision]:rev:named_revs' \
       '-sort=[sort order for listing]:order:(name -name date -date)' \
       '*:name:branches'
@@ -104,6 +105,7 @@ case "${words[2]}" in
     _arguments -S : \
       ':command:' \
       '-amend[amend the parent of the working directory]' \
+      '-hooks[whether to run Git hooks]' \
       '-m=[use text as commit message]:message:' \
       '*:file:_files'
     ;;
@@ -204,7 +206,7 @@ case "${words[2]}" in
     _arguments -S : \
       ':command:' \
       '-r=[remote reference intended to be pulled]:remote ref:branches' \
-      '-tags[pull all tags from remote]' \
+      '-force-tags[update any tags pulled]' \
       '-u[update to new head if new descendants were pulled]' \
       ':source:remotes'
     ;;
@@ -212,6 +214,7 @@ case "${words[2]}" in
     _arguments -S : \
       ':command:' \
       '-f[allow overwriting ref if it is not an ancestor, as long as it matches the remote-tracking branch]' \
+      '-hooks[whether to run Git hooks]' \
       '-new-branch[allow pushing a new ref]' \
       '-r=[source refs]:rev:named_revs' \
       ':destination:remotes'

@@ -4,7 +4,38 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
-[Unreleased]: https://github.com/gg-scm/gg/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/gg-scm/gg/compare/v1.2.0...HEAD
+
+## [1.2.0][] - 2022-02-24
+
+Version 1.2 includes features to handle repositories with lots of branches.
+
+[1.2.0]: https://github.com/gg-scm/gg/releases/tag/v1.2.0
+
+### Added
+
+- gg can now be installed via [Nix](https://nixos.org/)!
+  See https://gg-scm.io/install for instructions.
+- `push` and `commit` have a new `-hooks=0` flag.
+  ([#153](https://github.com/gg-scm/gg/issues/153))
+- `pull` has a new `--force-tags` flag.
+  ([#155](https://github.com/gg-scm/gg/issues/155))
+- `branch` has a new `--pattern` flag to filter listed branches.
+  ([#156](https://github.com/gg-scm/gg/issues/156))
+
+### Changed
+
+- Local branches are moved under `refs/gg-old/` during `pull`
+  when they are deleted from a remote.
+  ([#118](https://github.com/gg-scm/gg/issues/118))
+
+### Fixed
+
+- `GIT_EDITOR` is now always invoked from the root of the working copy
+  to match with the behavior of Git.
+  ([#152](https://github.com/gg-scm/gg/issues/152))
+- `revert` now prints an error message
+  if used on a nonexistent file in a new repository.
 
 ## [1.1.0][] - 2020-12-13
 

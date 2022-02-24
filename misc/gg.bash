@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Copyright 2019 The gg Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -91,7 +89,7 @@ _gg_complete() {
         return 0
         ;;
       branch)
-        COMPREPLY=( $(compgen -W '-d -delete --delete -f -force --force -r -sort --sort' -- "$curr_word") )
+        COMPREPLY=( $(compgen -W '-d -delete --delete -f -force --force -p -pattern --pattern -r -sort --sort' -- "$curr_word") )
         return 0
         ;;
       clone)
@@ -99,7 +97,7 @@ _gg_complete() {
         return 0
         ;;
       ci|commit)
-        COMPREPLY=( $(compgen -W '-amend --amend -m' -- "$curr_word") )
+        COMPREPLY=( $(compgen -W '-amend --amend -hooks --hooks -m' -- "$curr_word") )
         return 0
         ;;
       diff)
@@ -135,11 +133,11 @@ _gg_complete() {
         return 0
         ;;
       pull)
-        COMPREPLY=( $(compgen -W '-r -tags --tags -u' -- "$curr_word") )
+        COMPREPLY=( $(compgen -W '-force-tags --force-tags -r -u' -- "$curr_word") )
         return 0
         ;;
       push)
-        COMPREPLY=( $(compgen -W '-f -force --force -new-branch --new-branch -r' -- "$curr_word") )
+        COMPREPLY=( $(compgen -W '-f -force --force -hooks --hooks -new-branch --new-branch -r' -- "$curr_word") )
         return 0
         ;;
       rebase)

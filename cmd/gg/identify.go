@@ -25,7 +25,7 @@ import (
 
 const identifySynopsis = "identify the working directory or specified revision"
 
-func identify(ctx context.Context, cc *cmdContext, args []string) error {
+func identify(ctx context.Context, cc *cmdContext, args []string) (err error) {
 	f := flag.NewFlagSet(true, "gg identify [-r REV]", identifySynopsis+`
 
 aliases: id

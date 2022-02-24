@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -35,12 +34,15 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 
 	Local branches with the same name as a remote branch will be
 	fast-forwarded if possible. The currently checked out branch will not be
-	fast-forwarded unless `+"`-u`"+` is passed.
+	fast-forwarded unless `+"`-u`"+` is passed. If a branch is removed from
+	all known remotes and the local branch points to the last-known commit for
+	that branch, then it will be moved under `+"`refs/gg-old/`"+`.
 
 	If no revisions are specified, then all the remote's branches and tags
 	will be fetched. If the source is a named remote, then its remote
 	tracking branches will be pruned.`)
 	remoteRefArgs := f.MultiString("r", "`ref`s to pull")
+	forceTags := f.Bool("force-tags", false, "update any tags pulled")
 	update := f.Bool("u", false, "update to new head if new descendants were pulled")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
@@ -59,10 +61,10 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	headBranch := currentBranch(ctx, cc)
 	repo := f.Arg(0)
 	if repo == "" {
-		if _, ok := remotes["origin"]; !ok {
-			return errors.New("no source given and no remote named \"origin\" found")
-		}
 		repo = "origin"
+		if _, ok := remotes[repo]; !ok {
+			return fmt.Errorf("no source given and no remote named %q found", repo)
+		}
 	}
 	allLocalRefs, err := cc.git.ListRefsVerbatim(ctx)
 	if err != nil {
@@ -73,12 +75,12 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		return err
 	}
 
-	_, isNamedRemote := remotes[repo]
-	gitArgs, branches, err := buildFetchArgs(repo, isNamedRemote, allLocalRefs, allRemoteRefs, *remoteRefArgs)
+	remote := remotes[repo]
+	gitArgs, ops, err := buildFetchArgs(repo, remotes, allLocalRefs, allRemoteRefs, *remoteRefArgs, *forceTags)
 	if err != nil {
 		return err
 	}
-	if !isNamedRemote {
+	if remote == nil {
 		// Delete anything under refs/ggpull/...
 		// (Need to do this before fetching, but after validating that this
 		// invocation will be reasonable.)
@@ -93,20 +95,18 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 
-	err = cc.interactiveGit(ctx, gitArgs...)
-	if err != nil {
-		return err
+	if len(gitArgs) > 0 {
+		err = cc.interactiveGit(ctx, gitArgs...)
+		if err != nil {
+			return err
+		}
 	}
-	remoteName := ""
-	if isNamedRemote {
-		remoteName = repo
-	}
-	if err := reconcileBranches(ctx, cc.git, headBranch, remoteName, allLocalRefs, allRemoteRefs, branches); err != nil {
+	if err := ops.reconcile(ctx, cc.git, headBranch); err != nil {
 		return err
 	}
 	if *update && headBranch != "" {
 		var target git.Ref
-		if isNamedRemote {
+		if remote != nil {
 			headRef := git.BranchRef(headBranch)
 			for _, spec := range remotes[repo].Fetch {
 				target = spec.Map(headRef)
@@ -124,81 +124,122 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 	return nil
 }
 
-func buildFetchArgs(repo string, isNamedRemote bool, localRefs, remoteRefs map[git.Ref]git.Hash, remoteRefArgs []string) (gitArgs []string, branches []git.Ref, _ error) {
+type deferredFetchOps struct {
+	remote      *git.Remote
+	localRefs   map[git.Ref]git.Hash
+	remoteRefs  map[git.Ref]git.Hash
+	branches    []git.Ref
+	deletedRefs map[git.Ref]git.Hash
+}
+
+// buildFetchArgs computes the set of branches and tags to fetch.
+// If buildFetchArgs returns an empty list of arguments,
+// then fetch should not be run.
+func buildFetchArgs(repo string, remotes map[string]*git.Remote, localRefs, remoteRefs map[git.Ref]git.Hash, remoteRefArgs []string, forceTags bool) (gitArgs []string, ops *deferredFetchOps, _ error) {
+	ops = &deferredFetchOps{
+		remote:      remotes[repo],
+		localRefs:   localRefs,
+		remoteRefs:  remoteRefs,
+		deletedRefs: make(map[git.Ref]git.Hash),
+	}
 	gitArgs = []string{"fetch"}
-	if !isNamedRemote {
+	var prevRemoteRefs map[git.Ref]git.Hash
+	if ops.remote != nil {
+		prevRemoteRefs = reverseFetchMap(ops.remote.Fetch, localRefs)
+	} else {
 		gitArgs = append(gitArgs, "--refmap=+refs/heads/*:refs/ggpull/*")
 	}
-	var tags []git.Ref
+
+	// Convert remoteRefArgs into a set of refs.
+	var resolvedRefs []git.Ref
 	if len(remoteRefArgs) == 0 {
+		// Empty means everything.
 		for ref := range remoteRefs {
-			switch {
-			case ref.IsBranch():
-				branches = append(branches, ref)
-			case ref.IsTag():
-				tags = append(tags, ref)
+			if ref.IsBranch() || ref.IsTag() {
+				resolvedRefs = append(resolvedRefs, ref)
 			}
 		}
-		if isNamedRemote {
-			// Don't specify refs so remote-tracking branches can be pruned.
-			gitArgs = append(gitArgs, "--prune", "--tags", "--", repo)
-			return gitArgs, branches, nil
+		for ref := range prevRemoteRefs {
+			if _, exists := remoteRefs[ref]; ref.IsBranch() && !exists {
+				resolvedRefs = append(resolvedRefs, ref)
+			}
 		}
 	} else {
-		// -r flag given. Filter remote refs by given set.
+		// Add refs/heads/ or refs/tags/ as appropriate.
 		for _, arg := range remoteRefArgs {
-			switch ref := git.Ref(arg); {
-			case ref.IsBranch():
-				if _, exists := remoteRefs[ref]; !exists {
-					return nil, nil, fmt.Errorf("can't find ref %q on remote %q", arg, repo)
-				}
-				branches = append(branches, ref)
-				continue
-			case ref.IsTag():
-				if _, exists := remoteRefs[ref]; !exists {
-					return nil, nil, fmt.Errorf("can't find ref %q on remote %q", arg, repo)
-				}
-				tags = append(tags, ref)
+			if ref := git.Ref(arg); ref.IsBranch() || ref.IsTag() {
+				resolvedRefs = append(resolvedRefs, ref)
 				continue
 			}
 			branchRef := git.BranchRef(arg)
-			if _, hasBranch := remoteRefs[branchRef]; hasBranch {
-				branches = append(branches, branchRef)
+			_, hasBranch := remoteRefs[branchRef]
+			_, hasPrevBranch := prevRemoteRefs[branchRef]
+			if hasBranch || hasPrevBranch {
+				resolvedRefs = append(resolvedRefs, branchRef)
 				continue
 			}
 			tagRef := git.TagRef(arg)
 			if _, hasTag := remoteRefs[tagRef]; hasTag {
-				tags = append(tags, tagRef)
+				resolvedRefs = append(resolvedRefs, tagRef)
 				continue
 			}
 			return nil, nil, fmt.Errorf("can't find ref %q on remote %q", arg, repo)
 		}
 	}
+
+	// Build fetch arguments and validate ref selection.
 	gitArgs = append(gitArgs, "--", repo)
-	for _, branch := range branches {
-		gitArgs = append(gitArgs, branch.String()+":")
-	}
-	for _, tag := range tags {
-		if localHash, hasTag := localRefs[tag]; hasTag {
-			// (Already validated above that ref exists on remote.)
-			if remoteHash := remoteRefs[tag]; localHash != remoteHash {
-				return nil, nil, fmt.Errorf("tag %q is %v on remote, does not match %v locally", tag.Tag(), remoteHash, localHash)
+	zeroFetchArgsLen := len(gitArgs)
+	for _, ref := range resolvedRefs {
+		switch {
+		case ref.IsBranch():
+			_, hasBranch := remoteRefs[ref]
+			_, hasPrevBranch := prevRemoteRefs[ref]
+			switch {
+			case hasBranch:
+				gitArgs = append(gitArgs, ref.String()+":")
+				ops.branches = append(ops.branches, ref)
+			case hasPrevBranch:
+				trackingRef := ops.remote.MapFetch(ref)
+				ops.deletedRefs[trackingRef] = localRefs[trackingRef]
+				if isRefOrphaned(remotes, localRefs, repo, ref) {
+					ops.deletedRefs[ref] = localRefs[ref]
+				}
+			default:
+				return nil, nil, fmt.Errorf("can't find ref %q on remote %q", ref, repo)
 			}
-			continue
+		case ref.IsTag():
+			localHash, hasLocalTag := localRefs[ref]
+			remoteHash, hasRemoteTag := remoteRefs[ref]
+			refspec := ref.String() + ":" + ref.String()
+			switch {
+			case !hasRemoteTag:
+				return nil, nil, fmt.Errorf("tag %q does not exist on remote", ref.Tag())
+			case !hasLocalTag:
+				gitArgs = append(gitArgs, refspec)
+			case localHash != remoteHash && forceTags:
+				gitArgs = append(gitArgs, "+"+refspec)
+			case localHash != remoteHash && !forceTags:
+				return nil, nil, fmt.Errorf("tag %q is %v on remote, does not match %v locally", ref.Tag(), remoteHash, localHash)
+			}
+		default:
+			panic("unsupported ref " + ref.String())
 		}
-		gitArgs = append(gitArgs, "+"+tag.String()+":"+tag.String())
 	}
-	return gitArgs, branches, nil
+	if len(gitArgs) == zeroFetchArgsLen {
+		return nil, ops, nil
+	}
+	return gitArgs, ops, nil
 }
 
-func reconcileBranches(ctx context.Context, g *git.Git, headBranch, remoteName string, localRefs, remoteRefs map[git.Ref]git.Hash, branches []git.Ref) error {
-	for _, branchRef := range branches {
+func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, headBranch string) error {
+	for _, branchRef := range ops.branches {
 		branchName := branchRef.Branch()
 		if branchName == headBranch {
 			continue
 		}
-		localCommit, existsLocally := localRefs[branchRef]
-		remoteCommit := remoteRefs[branchRef]
+		localCommit, existsLocally := ops.localRefs[branchRef]
+		remoteCommit := ops.remoteRefs[branchRef]
 
 		// If the branch doesn't exist yet, then create it.
 		if !existsLocally {
@@ -209,8 +250,8 @@ func reconcileBranches(ctx context.Context, g *git.Git, headBranch, remoteName s
 				return err
 			}
 			// And set upstream, if necessary.
-			if remoteName != "" {
-				if err := g.Run(ctx, "config", "branch."+branchName+".remote", remoteName); err != nil {
+			if ops.remote != nil {
+				if err := g.Run(ctx, "config", "branch."+branchName+".remote", ops.remote.Name); err != nil {
 					return err
 				}
 				if err := g.Run(ctx, "config", "branch."+branchName+".merge", branchRef.String()); err != nil {
@@ -241,7 +282,107 @@ func reconcileBranches(ctx context.Context, g *git.Git, headBranch, remoteName s
 			continue
 		}
 	}
+
+	if len(ops.deletedRefs) > 0 {
+		const oldNamespace = "refs/gg-old/"
+		deleteOldOlds := make(map[git.Ref]git.RefMutation)
+		for ref := range ops.localRefs {
+			if strings.HasPrefix(string(ref), oldNamespace) {
+				deleteOldOlds[ref] = git.DeleteRef()
+			}
+		}
+		if err := g.MutateRefs(ctx, deleteOldOlds); err != nil {
+			return err
+		}
+
+		mutations := make(map[git.Ref]git.RefMutation)
+		var branchesToDelete []string
+		for ref, expectHash := range ops.deletedRefs {
+			val := expectHash.String()
+			if branchName := ref.Branch(); branchName != "" {
+				mutations[git.Ref(oldNamespace+branchName)] = git.SetRef(val)
+				branchesToDelete = append(branchesToDelete, branchName)
+			} else {
+				mutations[ref] = git.DeleteRefIfMatches(val)
+			}
+		}
+		if err := g.MutateRefs(ctx, mutations); err != nil {
+			return err
+		}
+		err := g.DeleteBranches(ctx, branchesToDelete, git.DeleteBranchOptions{
+			Force: true,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+// reverseFetchMap returns the refs last fetched from the remote.
+// `refs/remotes/<name>/HEAD` is ignored.
+func reverseFetchMap(fetch []git.FetchRefspec, localRefs map[git.Ref]git.Hash) map[git.Ref]git.Hash {
+	result := make(map[git.Ref]git.Hash)
+	for _, spec := range fetch {
+		src, dst, _ := spec.Parse()
+		srcPrefix, srcWildcard := src.Prefix()
+		_, dstWildcard := dst.Prefix()
+		if srcWildcard != dstWildcard {
+			continue
+		}
+		if !dstWildcard {
+			if hash, ok := localRefs[git.Ref(dst)]; ok {
+				result[git.Ref(src)] = hash
+			}
+			continue
+		}
+		const remoteHeadPrefix = "refs/remotes/"
+		const remoteHeadSuffix = "/HEAD"
+		for ref, hash := range localRefs {
+			if strings.HasPrefix(string(ref), remoteHeadPrefix) &&
+				strings.HasSuffix(string(ref), remoteHeadSuffix) &&
+				len(ref) > len(remoteHeadPrefix+remoteHeadSuffix) {
+				continue
+			}
+			if suffix, ok := dst.Match(ref); ok {
+				result[git.Ref(srcPrefix+suffix)] = hash
+			}
+		}
+	}
+	return result
+}
+
+// isRefOrphaned reports whether the given remote
+// is the last one to contain the given ref.
+// It will always return false if the local ref
+// does not match the remote ref.
+func isRefOrphaned(remotes map[string]*git.Remote, localRefs map[git.Ref]git.Hash, currRemoteName string, ref git.Ref) bool {
+	localHash, ok := localRefs[ref]
+	if !ok {
+		return false
+	}
+	currRemote := remotes[currRemoteName]
+	if currRemote == nil {
+		return false
+	}
+	trackingRef := currRemote.MapFetch(ref)
+	if trackingRef == "" || localRefs[trackingRef] != localHash {
+		return false
+	}
+	for remoteName, remote := range remotes {
+		if remoteName == currRemoteName {
+			continue
+		}
+		trackingRef := remote.MapFetch(ref)
+		if trackingRef == "" {
+			continue
+		}
+		if _, ok := localRefs[trackingRef]; ok {
+			return false
+		}
+	}
+	return true
 }
 
 func currentBranch(ctx context.Context, cc *cmdContext) string {

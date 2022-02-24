@@ -128,7 +128,7 @@ func readChanges(ctx context.Context, g *git.Git, head, base string) ([]change, 
 		info := commits.CommitInfo()
 		changes = append(changes, change{
 			id:        findChangeID(info.Message),
-			commitHex: info.Hash.String(),
+			commitHex: info.SHA1().String(),
 		})
 	}
 	if err := commits.Close(); err != nil {

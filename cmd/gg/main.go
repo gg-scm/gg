@@ -71,6 +71,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 	const description = "Git with less typing\n\n" +
 		"basic commands:\n" +
 		"  add           " + addSynopsis + "\n" +
+		"  addremove     " + addRemoveSynopsis + "\n" +
 		"  branch        " + branchSynopsis + "\n" +
 		"  cat           " + catSynopsis + "\n" +
 		"  clone         " + cloneSynopsis + "\n" +
