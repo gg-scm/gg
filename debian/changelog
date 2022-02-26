@@ -1,3 +1,9 @@
+gg (1.2.1-2) gg; urgency=low
+
+  * Update metadata to gg-scm organization
+
+ -- Ross Light <ross@zombiezen.com>  Sat, 26 Feb 2022 23:04:44 +0000
+
 gg (1.2.1-1) gg; urgency=medium
 
   * New upstream release.
