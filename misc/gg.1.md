@@ -1,4 +1,4 @@
-% gg(1) gg 1.0.2 | gg Manual
+% gg(1) gg 1.2.1 | gg Manual
 
 # NAME
 

@@ -261,6 +261,7 @@ func (env *testEnv) gg(ctx context.Context, dir string, args ...string) ([]byte,
 		env: []string{
 			"GIT_CONFIG_NOSYSTEM=1",
 			"HOME=" + env.topDir.String(),
+			"PATH=" + os.Getenv("PATH"),
 			"XDG_CONFIG_HOME=" + xdgConfigDir,
 			"XDG_CONFIG_DIRS=" + xdgConfigDir,
 		},

@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -54,6 +55,7 @@ func TestEditor(t *testing.T) {
 		log: func(e error) {
 			t.Error("Editor error:", e)
 		},
+		env:    os.Environ(),
 		stderr: stderr,
 	}
 	got, err := e.open(ctx, "foo.txt", []byte("This is the initial content.\n"))
@@ -100,6 +102,7 @@ func TestEditorDirectory(t *testing.T) {
 		log: func(e error) {
 			t.Error("Editor error:", e)
 		},
+		env:    os.Environ(),
 		stderr: stderr,
 	}
 	got, err := e.open(ctx, "foo.txt", []byte("This is the initial content.\n"))
