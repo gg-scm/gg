@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Unreleased]: https://github.com/gg-scm/gg/compare/v1.2.0...HEAD
 
+## [Unreleased][]
+
+### Fixed
+
+- The test suite now propagates `PATH` to the editor and gg.
+  This fixes the check phase in Nix packaging.
+
 ## [1.2.0][] - 2022-02-24
 
 Version 1.2 includes features to handle repositories with lots of branches.
