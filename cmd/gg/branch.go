@@ -47,7 +47,7 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	force := f.Bool("f", false, "force")
 	f.Alias("f", "force")
 	rev := f.String("r", "", "`rev`ision to place branches on")
-	pattern := f.String("p", "", "`regexp` of branches to list")
+	pattern := f.Regexp("p", "`regexp` of branches to list (can be specified multiple times)")
 	f.Alias("p", "pattern")
 	ord := branchSortOrder{key: branchSortDate, dir: descending}
 	f.Var(&ord, "sort", "sort `order` when listing: 'name' or 'date'. May be prefixed by '-' for descending.")
@@ -133,21 +133,13 @@ func branch(ctx context.Context, cc *cmdContext, args []string) error {
 	return nil
 }
 
-func listBranches(ctx context.Context, cc *cmdContext, pattern string, ord branchSortOrder) error {
+func listBranches(ctx context.Context, cc *cmdContext, pattern *regexp.Regexp, ord branchSortOrder) error {
 	// Get color settings. Most errors can be ignored without impacting
 	// the command output.
 	var (
 		currentColor []byte
 		localColor   []byte
 	)
-	var re *regexp.Regexp
-	if pattern != "" {
-		var err error
-		re, err = regexp.Compile(pattern)
-		if err != nil {
-			return err
-		}
-	}
 	cfg, err := cc.git.ReadConfig(ctx)
 	if err != nil {
 		return err
@@ -182,7 +174,7 @@ func listBranches(ctx context.Context, cc *cmdContext, pattern string, ord branc
 	branches := make([]git.Ref, 0, len(refs))
 	for ref := range refs {
 		if ref.IsBranch() {
-			if re == nil || re.MatchString(ref.Branch()) {
+			if pattern == nil || pattern.MatchString(ref.Branch()) {
 				branches = append(branches, ref)
 			}
 		}

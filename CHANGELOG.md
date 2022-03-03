@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 ## [Unreleased][]
 
+### Changed
+
+- If multiple `--pattern` flags are given to `branch`,
+  the union of the patterns will be used.
+
 ### Fixed
 
 - `pull` no longer will attempt to delete a currently checked-out branch.
