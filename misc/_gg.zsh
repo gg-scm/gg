@@ -87,7 +87,7 @@ case "${words[2]}" in
       ':command:' \
       {-d,-delete}'[delete the given branch]' \
       {-f,-force}'[force]' \
-      {-p,-pattern}'=[regexp of branches to list]' \
+      '*'{-p,-pattern}'=[regexp of branches to list]' \
       '-r=[revision]:rev:named_revs' \
       '-sort=[sort order for listing]:order:(name -name date -date)' \
       '*:name:branches'
@@ -206,6 +206,7 @@ case "${words[2]}" in
     _arguments -S : \
       ':command:' \
       '-r=[remote reference intended to be pulled]:remote ref:branches' \
+      '*'{-p,-pattern}'=[regexp of branch or tag names to pull]' \
       '-force-tags[update any tags pulled]' \
       '-u[update to new head if new descendants were pulled]' \
       ':source:remotes'

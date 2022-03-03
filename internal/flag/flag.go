@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -125,6 +126,30 @@ func (f *FlagSet) MultiString(name string, usage string) *[]string {
 // store the value of each passed flag.
 func (f *FlagSet) MultiStringVar(p *[]string, name string, usage string) {
 	f.Var((*multiStringValue)(p), name, usage)
+}
+
+// Regexp defines a regular expression flag
+// with specified name and usage string.
+// If the flag is given multiple times,
+// then the resulting regular expression
+// is equivalent to joining all the arguments with "|".
+// The return value is the address of a *regexp.Regexp variable
+// that will be nil if no arguments are given.
+func (f *FlagSet) Regexp(name string, usage string) **regexp.Regexp {
+	v := regexpValue{new(*regexp.Regexp)}
+	f.Var(v, name, usage)
+	return v.rePtr
+}
+
+// RegexpVar defines a regular expression flag
+// with specified name and usage string.
+// If the flag is given multiple times,
+// then the resulting regular expression
+// is equivalent to joining all the arguments with "|".
+// The argument p points to a *regexp.Regexp variable in which to
+// store the resulting regular expression.
+func (f *FlagSet) RegexpVar(p **regexp.Regexp, name string, usage string) {
+	f.Var(regexpValue{p}, name, usage)
 }
 
 // Var defines a flag with the specified name and usage string.
@@ -434,6 +459,38 @@ func (s *multiStringValue) Get() interface{} {
 }
 
 func (s *multiStringValue) IsBoolFlag() bool {
+	return false
+}
+
+type regexpValue struct {
+	rePtr **regexp.Regexp
+}
+
+func (v regexpValue) String() string {
+	if *v.rePtr == nil {
+		return ""
+	}
+	return (*v.rePtr).String()
+}
+
+func (v regexpValue) Set(pat string) error {
+	newPat := pat
+	if *v.rePtr != nil {
+		newPat = (*v.rePtr).String() + "|" + pat
+	}
+	re, err := regexp.Compile(newPat)
+	if err != nil {
+		return err
+	}
+	*v.rePtr = re
+	return nil
+}
+
+func (v regexpValue) Get() interface{} {
+	return *v.rePtr
+}
+
+func (v regexpValue) IsBoolFlag() bool {
 	return false
 }
 
