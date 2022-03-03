@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Unreleased]: https://github.com/gg-scm/gg/compare/v1.2.1...HEAD
 
+## [Unreleased][]
+
+### Fixed
+
+- `pull` no longer will attempt to delete a currently checked-out branch.
+- `pull` will no longer stop on the first failing branch mutation
+  after a successful fetch.
+
 ## [1.2.1][] - 2022-02-26
 
 1.2.1 contains a packaging/testing bugfix,

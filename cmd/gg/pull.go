@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"gg-scm.io/pkg/git"
@@ -101,7 +102,7 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 			return err
 		}
 	}
-	if err := ops.reconcile(ctx, cc.git, headBranch); err != nil {
+	if err := ops.reconcile(ctx, cc.git, cc.stderr, headBranch); err != nil {
 		return err
 	}
 	if *update && headBranch != "" {
@@ -232,7 +233,12 @@ func buildFetchArgs(repo string, remotes map[string]*git.Remote, localRefs, remo
 	return gitArgs, ops, nil
 }
 
-func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, headBranch string) error {
+func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, stderr io.Writer, headBranch string) error {
+	success := true
+	report := func(err error) {
+		success = false
+		fmt.Fprintln(stderr, "gg:", err)
+	}
 	for _, branchRef := range ops.branches {
 		branchName := branchRef.Branch()
 		if branchName == headBranch {
@@ -247,15 +253,16 @@ func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, headBran
 				StartPoint: remoteCommit.String(),
 			})
 			if err != nil {
-				return err
+				report(err)
+				continue
 			}
 			// And set upstream, if necessary.
 			if ops.remote != nil {
 				if err := g.Run(ctx, "config", "branch."+branchName+".remote", ops.remote.Name); err != nil {
-					return err
+					report(err)
 				}
 				if err := g.Run(ctx, "config", "branch."+branchName+".merge", branchRef.String()); err != nil {
-					return err
+					report(err)
 				}
 			}
 			continue
@@ -269,7 +276,8 @@ func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, headBran
 		// If branch can be fast-forwarded, then do it.
 		isOlder, err := g.IsAncestor(ctx, localCommit.String(), remoteCommit.String())
 		if err != nil {
-			return err
+			report(err)
+			continue
 		}
 		if isOlder {
 			err := g.NewBranch(ctx, branchName, git.BranchOptions{
@@ -277,7 +285,7 @@ func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, headBran
 				Overwrite:  true,
 			})
 			if err != nil {
-				return err
+				report(err)
 			}
 			continue
 		}
@@ -292,7 +300,7 @@ func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, headBran
 			}
 		}
 		if err := g.MutateRefs(ctx, deleteOldOlds); err != nil {
-			return err
+			report(err)
 		}
 
 		mutations := make(map[git.Ref]git.RefMutation)
@@ -301,22 +309,35 @@ func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, headBran
 			val := expectHash.String()
 			if branchName := ref.Branch(); branchName != "" {
 				mutations[git.Ref(oldNamespace+branchName)] = git.SetRef(val)
-				branchesToDelete = append(branchesToDelete, branchName)
+				if branchName == headBranch {
+					fmt.Fprintf(stderr, "gg: currently-checked out branch '%s' was deleted on remote\n", headBranch)
+					if err := g.Run(ctx, "config", "--unset-all", "branch."+branchName+".remote"); err != nil {
+						report(err)
+					}
+					if err := g.Run(ctx, "config", "--unset-all", "branch."+branchName+".merge"); err != nil {
+						report(err)
+					}
+				} else {
+					branchesToDelete = append(branchesToDelete, branchName)
+				}
 			} else {
 				mutations[ref] = git.DeleteRefIfMatches(val)
 			}
 		}
 		if err := g.MutateRefs(ctx, mutations); err != nil {
-			return err
+			report(err)
 		}
 		err := g.DeleteBranches(ctx, branchesToDelete, git.DeleteBranchOptions{
 			Force: true,
 		})
 		if err != nil {
-			return err
+			report(err)
 		}
 	}
 
+	if !success {
+		return fmt.Errorf("did not update all local branches")
+	}
 	return nil
 }
 

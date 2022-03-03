@@ -635,6 +635,95 @@ func TestPullDeletedRev(t *testing.T) {
 	}
 }
 
+func TestPullDeletedRefCheckedOut(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	env, err := newTestEnv(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	commits, err := setupPullTest(ctx, env)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Call gg to pull from A into B.
+	repoBPath := env.root.FromSlash("repoB")
+	gitB := env.git.WithDir(repoBPath)
+	if err := gitB.CheckoutBranch(ctx, "delbranch", git.CheckoutOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.gg(ctx, repoBPath, "pull"); err != nil {
+		t.Error(err)
+	}
+
+	refs, err := gitB.ListRefs(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := gitB.ReadConfig(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	refChecks := []struct {
+		ref        git.Ref
+		want       git.Hash
+		wantGone   bool
+		wantRemote string
+		wantMerge  string
+	}{
+		{ref: git.Head, want: commits.originalMain},
+		{ref: "refs/remotes/origin/main", want: commits.newMain},
+		{ref: "refs/remotes/origin/local", want: commits.originalMain},
+		{ref: "refs/remotes/origin/diverge", want: commits.divergeCommitA},
+		{ref: "refs/remotes/origin/newbranch", want: commits.originalMain},
+		{ref: "refs/remotes/origin/delbranch", wantGone: true},
+		{ref: "refs/remotes/origin/delbranch-local", wantGone: true},
+		{ref: "refs/ggpull/main", wantGone: true},
+		{ref: "refs/ggpull/local", wantGone: true},
+		{ref: "refs/ggpull/diverge", wantGone: true},
+		{ref: "refs/ggpull/newbranch", wantGone: true},
+		{ref: "refs/ggpull/delbranch", wantGone: true},
+		{ref: "refs/ggpull/delbranch-local", wantGone: true},
+		{ref: "refs/gg-old/delbranch", want: commits.originalMain},
+		{ref: "refs/heads/main", want: commits.newMain, wantRemote: "origin", wantMerge: "refs/heads/main"},
+		{ref: "refs/heads/local", want: commits.localCommit, wantRemote: "origin", wantMerge: "refs/heads/local"},
+		{ref: "refs/heads/diverge", want: commits.divergeCommitB, wantRemote: "origin", wantMerge: "refs/heads/diverge"},
+		{ref: "refs/heads/newbranch", want: commits.originalMain, wantRemote: "origin", wantMerge: "refs/heads/newbranch"},
+		{ref: "refs/heads/delbranch", want: commits.originalMain},
+		{ref: "refs/heads/delbranch-local", want: commits.localCommit, wantRemote: "origin", wantMerge: "refs/heads/delbranch-local"},
+		{ref: "refs/tags/zero", want: commits.originalMain},
+		{ref: "refs/tags/first", want: commits.originalMain},
+		{ref: "refs/tags/second", want: commits.newMain},
+	}
+	for _, check := range refChecks {
+		if branch := check.ref.Branch(); branch != "" {
+			gotRemote := cfg.Value("branch." + branch + ".remote")
+			gotMerge := cfg.Value("branch." + branch + ".merge")
+			if gotRemote != check.wantRemote || gotMerge != check.wantMerge {
+				t.Errorf("branch %q remote = %q, merge = %q; want remote = %q, merge = %q", branch, gotRemote, gotMerge, check.wantRemote, check.wantMerge)
+			}
+		}
+		got, exists := refs[check.ref]
+		if !exists {
+			if !check.wantGone {
+				t.Errorf("%v is missing; want %s", check.ref, prettyCommit(check.want, commits.Names()))
+			}
+			continue
+		}
+		if check.wantGone {
+			t.Errorf("%v = %s; should not exist", check.ref, prettyCommit(got, commits.Names()))
+			continue
+		}
+		if got != check.want {
+			names := commits.Names()
+			t.Errorf("%v = %s; want %s", check.ref, prettyCommit(got, names), prettyCommit(check.want, names))
+		}
+	}
+}
+
 func TestPullChangedTags(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
