@@ -18,6 +18,7 @@ This directory holds release automation scripts for gg.
   - `schroot -c sid -- gbp buildpackage --no-sign`
   - `schroot -c sid -- gbp tag`
 1. `gg push`
+1. [Publish new release on GitHub](https://github.com/gg-scm/gg/releases/new)
 1. [Update Homebrew formula](https://github.com/gg-scm/homebrew-gg/edit/main/Formula/gg.rb)
 1. `go run ./misc/extractdocs -touch=false ../docs/content/commands/`
 1. [Update docs version](https://github.com/gg-scm/gg-scm.io/edit/main/config.toml)
