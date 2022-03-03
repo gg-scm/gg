@@ -4,9 +4,14 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
-[Unreleased]: https://github.com/gg-scm/gg/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/gg-scm/gg/compare/v1.3.0...HEAD
 
-## [Unreleased][]
+## [1.3.0][] - 2022-03-03
+
+Version 1.3 improves the behavior of the `pull` command
+on repositories with lots of branches.
+
+[1.3.0]: https://github.com/gg-scm/gg/releases/tag/v1.3.0
 
 ### Added
 
@@ -15,7 +20,8 @@ The format is based on [Keep a Changelog][], and this project adheres to
 ### Changed
 
 - If multiple `--pattern` flags are given to `branch`,
-  the union of the patterns will be used.
+  the union of the patterns will be used
+  instead of just the last one.
 
 ### Fixed
 

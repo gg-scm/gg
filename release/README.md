@@ -7,8 +7,8 @@ This directory holds release automation scripts for gg.
 1. Push last code commit up to CI
 1. Prepare Nix PR
 1. New CHANGELOG section
-1. Updated [misc/gg.1.md](../misc/gg.1.md) version number
-1. `git tag -a vX.Y.Z`
+1. Update [misc/gg.1.md](../misc/gg.1.md) version number
+1. `gg commit && git tag -a vX.Y.Z`
 1. Update Debian branches. Start with libraries, then this repository.
   - `gg update debian`
   - `gg merge vX.Y.Z`
