@@ -371,9 +371,9 @@ func isFlagMethod(fn funcExpr) (namePos, usagePos int, hasArg bool) {
 		return 1, 3, false
 	case "IntVar", "StringVar":
 		return 1, 3, true
-	case "MultiString":
+	case "MultiString", "Regexp":
 		return 0, 1, true
-	case "MultiStringVar", "Var":
+	case "MultiStringVar", "RegexpVar", "Var":
 		return 1, 2, true
 	default:
 		return -1, -1, false
