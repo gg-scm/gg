@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 ## [Unreleased][]
 
+### Added
+
+- `pull` now accepts a `--pattern` flag.
+
 ### Changed
 
 - If multiple `--pattern` flags are given to `branch`,

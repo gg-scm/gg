@@ -133,7 +133,7 @@ _gg_complete() {
         return 0
         ;;
       pull)
-        COMPREPLY=( $(compgen -W '-force-tags --force-tags -r -u' -- "$curr_word") )
+        COMPREPLY=( $(compgen -W '-force-tags --force-tags -p -pattern --pattern -r -u' -- "$curr_word") )
         return 0
         ;;
       push)
