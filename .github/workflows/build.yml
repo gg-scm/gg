@@ -70,7 +70,7 @@ jobs:
         GO111MODULE: on
       if: matrix.git == '2.27.0'
     - name: Upload binary
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: Linux binary
         path: gg
@@ -99,7 +99,7 @@ jobs:
       env:
         GO111MODULE: on
     - name: Upload binary
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: macOS binary
         path: gg
@@ -127,7 +127,7 @@ jobs:
       env:
         GO111MODULE: on
     - name: Upload binary
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: Windows binary
         path: gg.exe
