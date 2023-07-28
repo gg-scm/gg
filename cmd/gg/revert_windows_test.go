@@ -17,21 +17,13 @@
 package main
 
 import (
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestEvalSymlinksSloppy(t *testing.T) {
 	t.Parallel()
-	dir, err := ioutil.TempDir("", "gg_evaltest")
-	if err != nil {
-		t.Fatal(err)
-	}
-	origDir := dir
-	t.Cleanup(func() { os.RemoveAll(origDir) })
-	dir, err = filepath.EvalSymlinks(dir)
+	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

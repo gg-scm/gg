@@ -15,7 +15,6 @@
 package filesystem
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,21 +23,13 @@ import (
 func TestApply(t *testing.T) {
 	t.Run("Write/Top", func(t *testing.T) {
 		t.Parallel()
-		dir, err := ioutil.TempDir("", "gg_filesystem")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() {
-			if err := os.RemoveAll(dir); err != nil {
-				t.Error("clean up temp dir:", err)
-			}
-		}()
+		dir := t.TempDir()
 		const wantContent = "Hello, World!\n"
-		err = Dir(dir).Apply(Write("foo.txt", wantContent))
+		err := Dir(dir).Apply(Write("foo.txt", wantContent))
 		if err != nil {
 			t.Error("Apply(...) =", err)
 		}
-		got, err := ioutil.ReadFile(filepath.Join(dir, "foo.txt"))
+		got, err := os.ReadFile(filepath.Join(dir, "foo.txt"))
 		if err != nil {
 			t.Error(err)
 		} else if string(got) != wantContent {
@@ -47,21 +38,13 @@ func TestApply(t *testing.T) {
 	})
 	t.Run("Write/SubDir", func(t *testing.T) {
 		t.Parallel()
-		dir, err := ioutil.TempDir("", "gg_filesystem")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() {
-			if err := os.RemoveAll(dir); err != nil {
-				t.Error("clean up temp dir:", err)
-			}
-		}()
+		dir := t.TempDir()
 		const wantContent = "Hello, World!\n"
-		err = Dir(dir).Apply(Write("foo/bar/baz.txt", wantContent))
+		err := Dir(dir).Apply(Write("foo/bar/baz.txt", wantContent))
 		if err != nil {
 			t.Error("Apply(...) =", err)
 		}
-		got, err := ioutil.ReadFile(filepath.Join(dir, "foo", "bar", "baz.txt"))
+		got, err := os.ReadFile(filepath.Join(dir, "foo", "bar", "baz.txt"))
 		if err != nil {
 			t.Error(err)
 		} else if string(got) != wantContent {
@@ -70,21 +53,13 @@ func TestApply(t *testing.T) {
 	})
 	t.Run("Mkdir/New", func(t *testing.T) {
 		t.Parallel()
-		dir, err := ioutil.TempDir("", "gg_filesystem")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() {
-			if err := os.RemoveAll(dir); err != nil {
-				t.Error("clean up temp dir:", err)
-			}
-		}()
-		err = Dir(dir).Apply(Mkdir("foo/bar/baz"))
+		dir := t.TempDir()
+		err := Dir(dir).Apply(Mkdir("foo/bar/baz"))
 		if err != nil {
 			t.Error("Apply(...) =", err)
 		}
 		madeDir := filepath.Join(dir, "foo", "bar", "baz")
-		got, err := ioutil.ReadDir(madeDir)
+		got, err := os.ReadDir(madeDir)
 		if err != nil {
 			t.Error(err)
 		} else if len(got) > 0 {
@@ -93,46 +68,30 @@ func TestApply(t *testing.T) {
 	})
 	t.Run("Mkdir/Exists", func(t *testing.T) {
 		t.Parallel()
-		dir, err := ioutil.TempDir("", "gg_filesystem")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() {
-			if err := os.RemoveAll(dir); err != nil {
-				t.Error("clean up temp dir:", err)
-			}
-		}()
+		dir := t.TempDir()
 		if err := os.MkdirAll(filepath.Join(dir, "foo", "bar"), 0777); err != nil {
 			t.Fatal(err)
 		}
-		err = Dir(dir).Apply(Mkdir("foo/bar"))
+		err := Dir(dir).Apply(Mkdir("foo/bar"))
 		if err == nil {
 			t.Error("Apply(...) = nil; want error")
 		}
 	})
 	t.Run("Remove/Exists", func(t *testing.T) {
 		t.Parallel()
-		dir, err := ioutil.TempDir("", "gg_filesystem")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() {
-			if err := os.RemoveAll(dir); err != nil {
-				t.Error("clean up temp dir:", err)
-			}
-		}()
+		dir := t.TempDir()
 		parent := filepath.Join(dir, "foo")
 		if err := os.Mkdir(parent, 0777); err != nil {
 			t.Fatal(err)
 		}
-		if err := ioutil.WriteFile(filepath.Join(parent, "bar.txt"), []byte("sup"), 0666); err != nil {
+		if err := os.WriteFile(filepath.Join(parent, "bar.txt"), []byte("sup"), 0666); err != nil {
 			t.Fatal(err)
 		}
-		err = Dir(dir).Apply(Remove("foo/bar.txt"))
+		err := Dir(dir).Apply(Remove("foo/bar.txt"))
 		if err != nil {
 			t.Error("Apply(...) =", err)
 		}
-		got, err := ioutil.ReadDir(parent)
+		got, err := os.ReadDir(parent)
 		if err != nil {
 			t.Error(err)
 		} else if len(got) > 0 {
@@ -141,24 +100,16 @@ func TestApply(t *testing.T) {
 	})
 	t.Run("Remove/DoesNotExist", func(t *testing.T) {
 		t.Parallel()
-		dir, err := ioutil.TempDir("", "gg_filesystem")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() {
-			if err := os.RemoveAll(dir); err != nil {
-				t.Error("clean up temp dir:", err)
-			}
-		}()
+		dir := t.TempDir()
 		parent := filepath.Join(dir, "foo")
 		if err := os.Mkdir(parent, 0777); err != nil {
 			t.Fatal(err)
 		}
-		err = Dir(dir).Apply(Remove("foo/bar.txt"))
+		err := Dir(dir).Apply(Remove("foo/bar.txt"))
 		if err == nil {
 			t.Error("Apply(...) = nil; want error")
 		}
-		got, err := ioutil.ReadDir(parent)
+		got, err := os.ReadDir(parent)
 		if err != nil {
 			t.Error(err)
 		} else if len(got) > 0 {
@@ -168,21 +119,13 @@ func TestApply(t *testing.T) {
 }
 
 func TestReadFile(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gg_filesystem")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Error("clean up temp dir:", err)
-		}
-	}()
+	dir := t.TempDir()
 	parent := filepath.Join(dir, "foo")
 	if err := os.Mkdir(parent, 0777); err != nil {
 		t.Fatal(err)
 	}
 	const want = "Hello, World!\n"
-	if err := ioutil.WriteFile(filepath.Join(parent, "bar.txt"), []byte(want), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(parent, "bar.txt"), []byte(want), 0666); err != nil {
 		t.Fatal(err)
 	}
 	got, err := Dir(dir).ReadFile("foo/bar.txt")

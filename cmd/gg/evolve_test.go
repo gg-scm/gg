@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -368,7 +368,7 @@ func dummyRev(ctx context.Context, g *git.Git, dir string, branch string, file s
 			return git.Hash{}, fmt.Errorf("make dummy rev: %w", err)
 		}
 	}
-	err = ioutil.WriteFile(filepath.Join(dir, file), []byte("dummy content"), 0666)
+	err = os.WriteFile(filepath.Join(dir, file), []byte("dummy content"), 0666)
 	if err != nil {
 		return git.Hash{}, fmt.Errorf("make dummy rev: %w", err)
 	}

@@ -19,7 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -143,7 +143,7 @@ func newTestEnv(ctx context.Context, tb testing.TB) (*testEnv, error) {
 	if globalGitError != nil {
 		tb.Skipf("could not find git, skipping (error: %v)", globalGitError)
 	}
-	topDir, err := ioutil.TempDir("", "gg_integration_test")
+	topDir, err := os.MkdirTemp("", "gg_integration_test")
 	if err != nil {
 		return nil, err
 	}
@@ -404,7 +404,7 @@ func (stubRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 			http.CanonicalHeaderKey("Content-Type"):   {"text/plain; charset=utf-8"},
 			http.CanonicalHeaderKey("Content-Length"): {fmt.Sprint(body.Len())},
 		},
-		Body:          ioutil.NopCloser(body),
+		Body:          io.NopCloser(body),
 		ContentLength: int64(body.Len()),
 		Request:       r,
 	}, nil

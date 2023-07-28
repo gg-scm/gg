@@ -152,8 +152,8 @@ func findChangeID(commitMsg string) string {
 		} else {
 			line = trailers
 		}
-		if strings.HasPrefix(line, prefix) {
-			return strings.TrimSpace(line[len(prefix):])
+		if changeID, ok := strings.CutPrefix(line, prefix); ok {
+			return strings.TrimSpace(changeID)
 		}
 		trailers = trailers[:len(trailers)-len(line)]
 		trailers = strings.TrimSuffix(trailers, "\n")

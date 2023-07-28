@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,7 +53,7 @@ func (e *editor) open(ctx context.Context, basename string, initial []byte) ([]b
 		return nil, fmt.Errorf("open editor: %w", err)
 	}
 
-	editDir, err := ioutil.TempDir(e.tempRoot, "gg_editor")
+	editDir, err := os.MkdirTemp(e.tempRoot, "gg_editor")
 	if err != nil {
 		return nil, fmt.Errorf("open editor: %w", err)
 	}
@@ -64,7 +63,7 @@ func (e *editor) open(ctx context.Context, basename string, initial []byte) ([]b
 		}
 	}()
 	path := filepath.Join(editDir, basename)
-	if err := ioutil.WriteFile(path, initial, 0600); err != nil {
+	if err := os.WriteFile(path, initial, 0600); err != nil {
 		return nil, fmt.Errorf("open editor: %w", err)
 	}
 	c, err := bashCommand(e.git.Exe(), string(editor)+" "+escape.Bash(path))
@@ -82,7 +81,7 @@ func (e *editor) open(ctx context.Context, basename string, initial []byte) ([]b
 	if err := sigterm.Run(ctx, c); err != nil {
 		return nil, fmt.Errorf("open editor: %w", err)
 	}
-	edited, err := ioutil.ReadFile(path)
+	edited, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("open editor: read result: %w", err)
 	}

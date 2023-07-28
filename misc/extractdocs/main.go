@@ -27,7 +27,6 @@ import (
 	"go/types"
 	"html"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -184,7 +183,7 @@ const hugoDateFormat = "2006-01-02 15:04:05Z07:00"
 func writePage(path string, c *command, genTime time.Time, touch bool) error {
 	// Get or create front matter.
 	var frontMatter map[string]interface{}
-	if content, err := ioutil.ReadFile(path); err == nil {
+	if content, err := os.ReadFile(path); err == nil {
 		frontMatter, err = parseFrontMatter(content)
 		if err != nil {
 			return fmt.Errorf("write page for %s: %w", c.name, err)
@@ -243,7 +242,7 @@ func writePage(path string, c *command, genTime time.Time, touch bool) error {
 		}
 		buf.WriteString("</dl>\n")
 	}
-	if err := ioutil.WriteFile(path, buf.Bytes(), 0666); err != nil {
+	if err := os.WriteFile(path, buf.Bytes(), 0666); err != nil {
 		return fmt.Errorf("write page for %s: %w", c.name, err)
 	}
 	return nil

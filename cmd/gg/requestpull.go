@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 	"net/url"
@@ -454,7 +453,7 @@ func addPullRequestReviewers(ctx context.Context, client *http.Client, params pu
 	if err != nil {
 		return fmt.Errorf("add pull request reviewers: %w", err)
 	}
-	req.Body = ioutil.NopCloser(bytes.NewReader(reqBodyJSON))
+	req.Body = io.NopCloser(bytes.NewReader(reqBodyJSON))
 	req.Header.Set("Content-Length", fmt.Sprint(len(reqBodyJSON)))
 
 	resp, err := client.Do(req.WithContext(ctx))

@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -317,11 +316,7 @@ var (
 )
 
 func showVersion(ctx context.Context, cc *cmdContext) error {
-	commit := buildCommit
-	localMods := strings.HasSuffix(buildCommit, "+")
-	if localMods {
-		commit = commit[:len(commit)-1]
-	}
+	commit, localMods := strings.CutSuffix(buildCommit, "+")
 	var err error
 	switch {
 	case versionInfo != "" && buildTime != "":
@@ -452,7 +447,7 @@ const configDirname = "gg"
 func (x *xdgDirs) readConfig(name string) ([]byte, error) {
 	relpath := filepath.Join(configDirname, filepath.FromSlash(name))
 	for _, dir := range x.configPaths() {
-		data, err := ioutil.ReadFile(filepath.Join(dir, relpath))
+		data, err := os.ReadFile(filepath.Join(dir, relpath))
 		if err == nil {
 			return data, nil
 		}
@@ -474,7 +469,7 @@ func (x *xdgDirs) writeSecret(name string, value []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(path, value, 0600); err != nil {
+	if err := os.WriteFile(path, value, 0600); err != nil {
 		return err
 	}
 	return nil

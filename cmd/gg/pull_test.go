@@ -46,20 +46,20 @@ func (commits pullTestCommits) Names() map[git.Hash]string {
 // repoB, with repoB as a clone of repoA. repoA and repoB are then modified to
 // test a bunch of salient conditions:
 //
-//     - repoB will have a branch "main" that is one commit behind repoA.
-//       This will be the checked out branch.
-//     - repoB will have a branch "local" that is one commit ahead repoA.
-//     - repoB will have a branch "diverge" that is one commit ahead and one
-//       commit behind repoA.
-//     - repoA will have a branch "newbranch" that isn't present in repoB.
-//     - repoB will have a branch "delbranch" that was originally in repoA, but
-//       was deleted after the initial clone.
-//     - repoB will have a branch "delbranch-local" that was originally
-//       in repoA, but was deleted after the initial clone. It will contain
-//       a commit that wasn't in repoA.
-//     - repoB will have a tag "zero" for the original main commit.
-//     - repoA and repoB will have a tag "first" on the original main commit.
-//     - repoA will have a tag "second" for the new main branch.
+//   - repoB will have a branch "main" that is one commit behind repoA.
+//     This will be the checked out branch.
+//   - repoB will have a branch "local" that is one commit ahead repoA.
+//   - repoB will have a branch "diverge" that is one commit ahead and one
+//     commit behind repoA.
+//   - repoA will have a branch "newbranch" that isn't present in repoB.
+//   - repoB will have a branch "delbranch" that was originally in repoA, but
+//     was deleted after the initial clone.
+//   - repoB will have a branch "delbranch-local" that was originally
+//     in repoA, but was deleted after the initial clone. It will contain
+//     a commit that wasn't in repoA.
+//   - repoB will have a tag "zero" for the original main commit.
+//   - repoA and repoB will have a tag "first" on the original main commit.
+//   - repoA will have a tag "second" for the new main branch.
 func setupPullTest(ctx context.Context, env *testEnv) (pullTestCommits, error) {
 	var commits pullTestCommits
 

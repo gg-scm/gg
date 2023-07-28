@@ -19,7 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -134,7 +134,7 @@ func maybeMergeMessage(ctx context.Context, g *git.Git) []byte {
 	if err != nil {
 		return nil
 	}
-	mergeMsg, err := ioutil.ReadFile(filepath.Join(gitDir, "MERGE_MSG"))
+	mergeMsg, err := os.ReadFile(filepath.Join(gitDir, "MERGE_MSG"))
 	if err != nil {
 		return nil
 	}

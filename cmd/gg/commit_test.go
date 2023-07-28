@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"path/filepath"
 	"testing"
 
@@ -1181,7 +1181,7 @@ func catBlob(ctx context.Context, g *git.Git, rev string, path git.TopPath) ([]b
 	if err != nil {
 		return nil, err
 	}
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	closeErr := r.Close()
 	if err != nil {
 		return nil, err

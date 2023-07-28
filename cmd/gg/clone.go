@@ -98,10 +98,9 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 }
 
 func defaultCloneDest(url string) string {
-	if strings.HasSuffix(url, "/.git") {
-		url = url[:len(url)-5]
-	} else if strings.HasSuffix(url, ".git") {
-		url = url[:len(url)-4]
+	url, trimmed := strings.CutSuffix(url, "/.git")
+	if !trimmed {
+		url = strings.TrimSuffix(url, ".git")
 	}
 	if i := strings.LastIndexByte(url, '/'); i != -1 {
 		return url[i+1:]
