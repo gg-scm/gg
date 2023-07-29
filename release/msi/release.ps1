@@ -54,4 +54,4 @@ If ( $LastExitCode -ne 0 ) {
 If ( $LastExitCode -ne 0 ) {
   exit $LastExitCode
 }
-Write-Output "::set-output name=file::${filename}"
+"file=${filename}" >> $env:GITHUB_OUTPUT

@@ -24,23 +24,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, macOS-latest]
+        os: [ubuntu-latest, macOS-latest]
     steps:
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: "1.20"
     - name: Check out code
       uses: actions/checkout@v3
-    - name: Download dependencies
-      run: go mod download
-      env:
-        GO111MODULE: on
-    - name: Package release
-      run: release/release.bash
-      env:
-        GO111MODULE: on
-      id: package
+    - name: Install Nix
+      uses: cachix/install-nix-action@v22
+    - id: package
+      name: Package release
+      run: nix develop --command release/release.bash
     - name: Upload binary
       uses: actions/upload-release-asset@v1
       env:
@@ -60,16 +52,10 @@ jobs:
         go-version: "1.20"
     - name: Check out code
       uses: actions/checkout@v3
-    - name: Download dependencies
-      run: go mod download
-      env:
-        GO111MODULE: on
     - name: Package release
       run: .\release.ps1 -version ($Env:GITHUB_REF).trimstart('refs/tags/v')
       working-directory: .\release\msi
       id: package
-      env:
-        GO111MODULE: on
     - name: Upload binary
       uses: actions/upload-release-asset@v1
       env:

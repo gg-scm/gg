@@ -32,41 +32,23 @@ jobs:
         - "2.20.1"  # Debian buster
         - "2.17.1"  # Ubuntu LTS 18.04 bionic
     steps:
-    - name: Install Git dependencies
-      run: |
-        sudo apt-get update &&
-        sudo apt-get install -y --no-install-recommends \
-          gettext \
-          libcurl4-gnutls-dev \
-          libexpat1-dev \
-          libssl-dev \
-          libz-dev \
-          xz-utils
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: "1.20"
     - name: Check out code
       uses: actions/checkout@v3
-    - name: Install Git
-      run: release/build-git.bash ~/git ${{ matrix.git }}
-    - name: Download dependencies
-      run: go mod download
-      env:
-        GO111MODULE: on
+    - name: Install Nix
+      uses: cachix/install-nix-action@v22
     - name: Run tests
       run: |
-        PATH="$HOME/git/bin-wrappers:$PATH" \
+        git_attr="git_$(echo "$GIT_VERSION" | sed -e 's/\./_/g')"
+        nix shell ".#$git_attr" '.#default.go' --command \
           go test \
             -mod=readonly \
             -v \
+            -race \
             ./...
       env:
-        GO111MODULE: on
+        GIT_VERSION: ${{ matrix.git }}
     - name: Build binary
-      run: release/build.bash gg
-      env:
-        GO111MODULE: on
+      run: nix develop --command release/build.bash gg
       if: matrix.git == '2.27.0'
     - name: Upload binary
       uses: actions/upload-artifact@v3
@@ -78,24 +60,23 @@ jobs:
     name: macOS
     runs-on: macOS-latest
     steps:
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: "1.20"
     - name: Check out code
       uses: actions/checkout@v3
-    - name: Download dependencies
-      run: go mod download
-      env:
-        GO111MODULE: on
+    - name: Install Nix
+      uses: cachix/install-nix-action@v22
     - name: Run tests
-      run: go test -mod=readonly -v ./...
+      run: |
+        git_attr="git_$(echo "$GIT_VERSION" | sed -e 's/\./_/g')"
+        nix shell ".#$git_attr" '.#default.go' --command \
+          go test \
+            -mod=readonly \
+            -v \
+            -race \
+            ./...
       env:
-        GO111MODULE: on
+        GIT_VERSION: "2.27.0"
     - name: Build binary
-      run: release/build.bash gg
-      env:
-        GO111MODULE: on
+      run: nix develop --command release/build.bash gg
     - name: Upload binary
       uses: actions/upload-artifact@v3
       with:
@@ -105,24 +86,16 @@ jobs:
     name: Windows
     runs-on: windows-latest
     steps:
+    - name: Check out code
+      uses: actions/checkout@v3
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
         go-version: "1.20"
-    - name: Check out code
-      uses: actions/checkout@v3
-    - name: Download dependencies
-      run: go mod download
-      env:
-        GO111MODULE: on
     - name: Run tests
       run: go test -mod=readonly -v ./...
-      env:
-        GO111MODULE: on
     - name: Build binary
       run: release\build.ps1 -out gg.exe
-      env:
-        GO111MODULE: on
     - name: Upload binary
       uses: actions/upload-artifact@v3
       with:
