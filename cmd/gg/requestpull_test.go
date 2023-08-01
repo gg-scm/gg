@@ -444,18 +444,29 @@ func TestRequestPull_Editor(t *testing.T) {
 			body:          "\tThis is TMI\n\tAnd even more",
 		},
 		{
+			name:          "Heading",
+			editorContent: "Hello, World\n\n# Heading\nWords\n",
+			title:         "Hello, World",
+			body:          "# Heading\nWords",
+		},
+		{
 			name:          "Comment",
-			editorContent: "Hello, World\n# First line is the title, rest is body.\n",
+			editorContent: "Hello, World\n[comment]: # (First line is the title, rest is body.)\n",
 			title:         "Hello, World",
 		},
 		{
 			name:          "OnlyComments",
-			editorContent: "# First line is the title, rest is body.\n",
+			editorContent: "[comment]: # (First line is the title, rest is body.)\n",
 			fail:          true,
 		},
 		{
 			name:          "CommentFirstLine",
-			editorContent: "# First line is the title, rest is body.\nHello, World",
+			editorContent: "[comment]: # (First line is the title, rest is body.)\nHello, World",
+			title:         "Hello, World",
+		},
+		{
+			name:          "CommentTrailingSpace",
+			editorContent: "Hello, World\n[comment]: # (First line is the title, rest is body.) \t \n",
 			title:         "Hello, World",
 		},
 	}

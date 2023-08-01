@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"unicode"
 
 	"gg-scm.io/pkg/git"
 	"gg-scm.io/tool/internal/flag"
@@ -184,11 +185,12 @@ aliases: pr
 			editorInit.WriteString("\n\n")
 			editorInit.WriteString(body)
 		}
-		editorInit.WriteString("\n# Please enter the pull request message. Lines starting with '#' will\n" +
-			"# be ignored, and an empty message aborts the pull request. The first\n" +
-			"# line will be used as the title and must not be empty.\n")
-		fmt.Fprintf(editorInit, "# %s/%s: merge into %s:%s from %s:%s\n",
-			baseOwner, baseRepo, baseOwner, baseBranch, headOwner, branch)
+		editorInit.WriteString("\n" + prCommentPrefix + "Please enter the pull request message." + prCommentSuffix + "\n" +
+			prCommentPrefix + "Lines formatted like this will be ignored," + prCommentSuffix + "\n" +
+			prCommentPrefix + "and an empty message aborts the pull request." + prCommentSuffix + "\n" +
+			prCommentPrefix + "The first line will be used as the title and must not be empty." + prCommentSuffix + "\n")
+		fmt.Fprintf(editorInit, "%s%s/%s: merge into %s:%s from %s:%s%s\n",
+			prCommentPrefix, baseOwner, baseRepo, baseOwner, baseBranch, headOwner, branch, prCommentSuffix)
 		newMsg, err := cc.editor.open(ctx, "PR_EDITMSG.md", editorInit.Bytes())
 		if err != nil {
 			return err
@@ -304,13 +306,19 @@ func readPullRequestTemplate(ctx context.Context, g *git.Git) string {
 	return ""
 }
 
+const (
+	prCommentPrefix = "[comment]: # ("
+	prCommentSuffix = ")"
+)
+
 func parseEditedPullRequestMessage(b []byte) (title, body string, _ error) {
 	// Split into lines.
 	lines := bytes.Split(b, []byte{'\n'})
 	// Strip comment lines.
 	n := 0
 	for i := range lines {
-		if !bytes.HasPrefix(lines[i], []byte{'#'}) {
+		if !bytes.HasPrefix(lines[i], []byte(prCommentPrefix)) ||
+			!bytes.HasSuffix(bytes.TrimRightFunc(lines[i], unicode.IsSpace), []byte(prCommentSuffix)) {
 			lines[n] = lines[i]
 			n++
 		}

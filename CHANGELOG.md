@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 ## [Unreleased][]
 
+### Changed
+
+- `requestpull` now uses a Markdown-compatible comment syntax
+  for its editor template.
+  This means that headings can be included without strange spacing
+  and that editor previews work out-of-the-box.
+
 ### Fixed
 
 - `branch`, `clone`, `identify`, `pull`, and `push`
