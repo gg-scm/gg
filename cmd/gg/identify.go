@@ -65,24 +65,26 @@ aliases: id
 		}
 	}
 
-	refs, err := cc.git.ListRefs(ctx)
-	if err != nil {
-		return err
-	}
+	iter := cc.git.IterateRefs(ctx, git.IterateRefsOptions{
+		DereferenceTags: true,
+	})
 	var branchNames []string
 	var tagNames []string
-	for ref, hash := range refs {
-		if rev.Commit != hash {
+	for iter.Next() {
+		if rev.Commit != iter.ObjectSHA1() {
 			continue
 		}
-		if b := ref.Branch(); b != "" {
+		if b := iter.Ref().Branch(); b != "" {
 			branchNames = append(branchNames, b)
 			continue
 		}
-		if t := ref.Tag(); t != "" {
+		if t := iter.Ref().Tag(); t != "" {
 			tagNames = append(tagNames, t)
 			continue
 		}
+	}
+	if err := iter.Close(); err != nil {
+		return err
 	}
 	sort.Strings(branchNames)
 	sort.Strings(tagNames)

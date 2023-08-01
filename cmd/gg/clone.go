@@ -59,29 +59,27 @@ func clone(ctx context.Context, cc *cmdContext, args []string) error {
 		}
 	}
 	cc = cc.withDir(dst)
-	refs, err := cc.git.ListRefs(ctx)
-	if err != nil {
+
+	// Guaranteed to be the mapping used by clone.
+	const originPrefix = "refs/remotes/origin/"
+
+	iter := cc.git.IterateRefs(ctx, git.IterateRefsOptions{})
+	localBranches := make(map[string]struct{})
+	var remoteBranchNames []string
+	for iter.Next() {
+		if b := iter.Ref().Branch(); b != "" {
+			localBranches[b] = struct{}{}
+		} else if name, isRemote := strings.CutPrefix(iter.Ref().String(), originPrefix); isRemote && name != git.Head.String() {
+			remoteBranchNames = append(remoteBranchNames, name)
+		}
+	}
+	if err := iter.Close(); err != nil {
 		return err
 	}
-	branches := make(map[string]struct{}, len(refs))
-	for r := range refs {
-		if b := r.Branch(); b != "" {
-			branches[b] = struct{}{}
-		}
-	}
-	for r := range refs {
-		// Guaranteed to be the mapping used by clone.
-		const originPrefix = "refs/remotes/origin/"
-		if !strings.HasPrefix(r.String(), originPrefix) {
-			continue
-		}
-		name := string(r[len(originPrefix):])
-		if name == git.Head.String() {
-			continue
-		}
-		if _, hasLocal := branches[string(name)]; !hasLocal {
+	for _, name := range remoteBranchNames {
+		if _, hasLocal := localBranches[name]; !hasLocal {
 			err := cc.git.NewBranch(ctx, name, git.BranchOptions{
-				StartPoint: r.String(),
+				StartPoint: git.Ref(originPrefix + name).String(),
 				Track:      true,
 			})
 			if err != nil {

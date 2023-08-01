@@ -71,11 +71,16 @@ func pull(ctx context.Context, cc *cmdContext, args []string) error {
 			return fmt.Errorf("no source given and no remote named %q found", input.repo)
 		}
 	}
-	input.localRefs, err = cc.git.ListRefsVerbatim(ctx)
+	input.localRefs, err = refIteratorToMap(cc.git.IterateRefs(ctx, git.IterateRefsOptions{
+		IncludeHead: true,
+	}))
 	if err != nil {
 		return err
 	}
-	input.remoteRefs, err = cc.git.ListRemoteRefs(ctx, input.repo)
+	input.remoteRefs, err = refIteratorToMap(cc.git.IterateRemoteRefs(ctx, input.repo, git.IterateRemoteRefsOptions{
+		LimitToBranches: true,
+		LimitToTags:     true,
+	}))
 	if err != nil {
 		return err
 	}
@@ -140,7 +145,7 @@ type pullInput struct {
 	remotes map[string]*git.Remote
 	// localRefs is the set of refs in the local repository.
 	localRefs map[git.Ref]git.Hash
-	// remoteRefs is the set of refs in the repository being fetched.
+	// remoteRefs is the set of branches and tags in the repository being fetched.
 	remoteRefs map[git.Ref]git.Hash
 }
 
@@ -383,6 +388,26 @@ func (ops *deferredFetchOps) reconcile(ctx context.Context, g *git.Git, stderr i
 		return fmt.Errorf("did not update all local branches")
 	}
 	return nil
+}
+
+func refIteratorToMap(iter *git.RefIterator) (map[git.Ref]git.Hash, error) {
+	defer iter.Close()
+
+	refs := make(map[git.Ref]git.Hash)
+	tags := make(map[git.Ref]struct{})
+	for iter.Next() {
+		if iter.IsDereference() {
+			// Dereferenced tag. This takes precedence over the previous hash stored in the map.
+			if _, used := tags[iter.Ref()]; used {
+				return refs, fmt.Errorf("multiple hashes found for tag %v", iter.Ref())
+			}
+			tags[iter.Ref()] = struct{}{}
+		} else if _, exists := refs[iter.Ref()]; exists {
+			return refs, fmt.Errorf("multiple hashes found for %v", iter.Ref())
+		}
+		refs[iter.Ref()] = iter.ObjectSHA1()
+	}
+	return refs, iter.Close()
 }
 
 // reverseFetchMap returns the refs last fetched from the remote.

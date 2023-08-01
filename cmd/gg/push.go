@@ -76,14 +76,15 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 	var refsToPush []git.Ref
 	if refsImplicit {
-		localRefs, err := cc.git.ListRefs(ctx)
-		if err != nil {
-			return err
+		iter := cc.git.IterateRefs(ctx, git.IterateRefsOptions{
+			LimitToBranches: true,
+			LimitToTags:     true,
+		})
+		for iter.Next() {
+			refsToPush = append(refsToPush, iter.Ref())
 		}
-		for ref := range localRefs {
-			if ref.IsBranch() || ref.IsTag() {
-				refsToPush = append(refsToPush, ref)
-			}
+		if err := iter.Close(); err != nil {
+			return err
 		}
 		sort.Slice(refsToPush, func(i, j int) bool { return refsToPush[i] < refsToPush[j] })
 	} else {
@@ -100,14 +101,26 @@ func push(ctx context.Context, cc *cmdContext, args []string) error {
 	}
 
 	if !*force && !*create {
-		remoteRefs, err := cc.git.ListRemoteRefs(ctx, dstRepo)
-		if err != nil {
+		sharedRefs := make(map[git.Ref]bool)
+		for _, ref := range refsToPush {
+			sharedRefs[ref] = false
+		}
+		remoteIter := cc.git.IterateRemoteRefs(ctx, dstRepo, git.IterateRemoteRefsOptions{
+			LimitToBranches: true,
+			LimitToTags:     true,
+		})
+		for remoteIter.Next() {
+			if _, presentLocally := sharedRefs[remoteIter.Ref()]; presentLocally {
+				sharedRefs[remoteIter.Ref()] = true
+			}
+		}
+		if err := remoteIter.Close(); err != nil {
 			return err
 		}
 		n := 0
 		conflicts := false
 		for _, ref := range refsToPush {
-			if _, exists := remoteRefs[ref]; exists || ref.IsTag() {
+			if presentOnRemote := sharedRefs[ref]; presentOnRemote || ref.IsTag() {
 				refsToPush[n] = ref
 				n++
 				continue

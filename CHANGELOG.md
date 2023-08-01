@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Unreleased]: https://github.com/gg-scm/gg/compare/v1.3.0...HEAD
 
+## [Unreleased][]
+
+### Fixed
+
+- `branch`, `clone`, `identify`, `pull`, and `push`
+  now handle repositories with >100K refs.
+
 ## [1.3.0][] - 2022-03-03
 
 Version 1.3 improves the behavior of the `pull` command

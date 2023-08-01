@@ -37,7 +37,7 @@ in buildGoModule {
     "-X" "main.buildCommit=${commit}"
   ];
 
-  vendorHash = "sha256-2z3PdyJ2xq4R2uuwYreff2G/ZNgsPoFZ9UeQ0Ly3KhU=";
+  vendorHash = "sha256-56Sah030xbWsoOu8r3c3nN2UGHvQORheavebP+Z1Wc8=";
 
   nativeBuildInputs = [ pandoc installShellFiles makeWrapper ];
   nativeCheckInputs = [ bash coreutils git ];

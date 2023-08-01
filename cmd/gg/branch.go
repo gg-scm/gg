@@ -26,6 +26,7 @@ import (
 	"gg-scm.io/pkg/git/object"
 	"gg-scm.io/tool/internal/flag"
 	"gg-scm.io/tool/internal/terminal"
+	"golang.org/x/exp/slices"
 )
 
 const branchSynopsis = "list or manage branches"
@@ -163,21 +164,24 @@ func listBranches(ctx context.Context, cc *cmdContext, pattern *regexp.Regexp, o
 	if err != nil {
 		return err
 	}
-	refs, err := cc.git.ListRefs(ctx)
-	if err != nil {
+	iter := cc.git.IterateRefs(ctx, git.IterateRefsOptions{
+		LimitToBranches: true,
+	})
+	refs := make(map[git.Ref]git.Hash)
+	var branches []git.Ref
+	for iter.Next() {
+		if branchName := iter.Ref().Branch(); branchName != "" &&
+			(pattern == nil || pattern.MatchString(branchName)) {
+			refs[iter.Ref()] = iter.ObjectSHA1()
+			branches = append(branches, iter.Ref())
+		}
+	}
+	if err := iter.Close(); err != nil {
 		return err
 	}
 	commits, err := refsCommitInfo(ctx, cc.git, refs)
 	if err != nil {
 		return err
-	}
-	branches := make([]git.Ref, 0, len(refs))
-	for ref := range refs {
-		if ref.IsBranch() {
-			if pattern == nil || pattern.MatchString(ref.Branch()) {
-				branches = append(branches, ref)
-			}
-		}
 	}
 	switch ord {
 	case branchSortOrder{branchSortName, ascending}:
@@ -270,24 +274,29 @@ func deleteBranches(ctx context.Context, g *git.Git, branchNames []string, force
 		}
 		branchRefs = append(branchRefs, r)
 	}
-	head, err := g.Head(ctx)
+	headRef, err := g.HeadRef(ctx)
 	if err != nil {
 		return err
 	}
-	if head.Ref.IsValid() {
-		for _, ref := range branchRefs {
-			if head.Ref == ref {
-				return fmt.Errorf("cannot delete checked-out branch %q", head.Ref.Branch())
-			}
+	if headRef.IsValid() && slices.Contains(branchRefs, headRef) {
+		return fmt.Errorf("cannot delete checked-out branch %q", headRef.Branch())
+	}
+	branchRefLookup := make(map[git.Ref]git.Hash)
+	iter := g.IterateRefs(ctx, git.IterateRefsOptions{
+		IncludeHead:     true,
+		LimitToBranches: true,
+	})
+	for iter.Next() {
+		if slices.Contains(branchRefs, iter.Ref()) {
+			branchRefLookup[iter.Ref()] = iter.ObjectSHA1()
 		}
 	}
-	allRefs, err := g.ListRefs(ctx)
-	if err != nil {
+	if err := iter.Close(); err != nil {
 		return err
 	}
 	if !force {
 		for _, thisRef := range branchRefs {
-			others, err := branchesContaining(ctx, g, allRefs[thisRef].String())
+			others, err := branchesContaining(ctx, g, branchRefLookup[thisRef].String())
 			if err != nil {
 				return err
 			}
@@ -298,7 +307,7 @@ func deleteBranches(ctx context.Context, g *git.Git, branchNames []string, force
 	}
 	muts := make(map[git.Ref]git.RefMutation, len(branchRefs))
 	for _, ref := range branchRefs {
-		muts[ref] = git.DeleteRefIfMatches(allRefs[ref].String())
+		muts[ref] = git.DeleteRefIfMatches(branchRefLookup[ref].String())
 	}
 	if err := g.MutateRefs(ctx, muts); err != nil {
 		return err
