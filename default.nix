@@ -12,7 +12,7 @@
 
 let
   pname = "gg-scm";
-  version = "1.3.0";
+  version = "1.3.1";
 in buildGoModule {
   inherit pname version;
 
