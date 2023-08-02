@@ -35,7 +35,7 @@ buildtime="$(date -u '+%Y-%m-%dT%TZ')"
 cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")"
 commit="${GITHUB_SHA:-$(commitinfo)}"
 version="${2:-}"
-go build \
+CGO_ENABLED=0 go build \
   -o "$1" \
   -trimpath \
   -ldflags="-s -w -X main.versionInfo=${version} -X main.buildCommit=${commit} -X main.buildTime=${buildtime}" \
