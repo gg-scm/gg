@@ -17,6 +17,7 @@ package main
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"text/template"
 	"unicode"
 
 	"gg-scm.io/pkg/git"
@@ -33,6 +35,9 @@ import (
 )
 
 const requestPullSynopsis = "create a GitHub pull request"
+
+//go:embed pr_editor_template.md
+var requestPullEditorTemplate string
 
 func requestPull(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg requestpull [-n] [-e=0] [--title=MSG [--body=MSG]] [--draft] [-R user1[,user2]] [BRANCH]", requestPullSynopsis+`
@@ -179,18 +184,23 @@ aliases: pr
 		return nil
 	}
 	if *edit && *titleFlag == "" {
-		editorInit := new(bytes.Buffer)
-		editorInit.WriteString(title)
-		if body != "" {
-			editorInit.WriteString("\n\n")
-			editorInit.WriteString(body)
+		tmpl, err := template.New("pr_editor_template.md").Parse(requestPullEditorTemplate)
+		if err != nil {
+			return err
 		}
-		editorInit.WriteString("\n" + prCommentPrefix + "Please enter the pull request message." + prCommentSuffix + "\n" +
-			prCommentPrefix + "Lines formatted like this will be ignored," + prCommentSuffix + "\n" +
-			prCommentPrefix + "and an empty message aborts the pull request." + prCommentSuffix + "\n" +
-			prCommentPrefix + "The first line will be used as the title and must not be empty." + prCommentSuffix + "\n")
-		fmt.Fprintf(editorInit, "%s%s/%s: merge into %s:%s from %s:%s%s\n",
-			prCommentPrefix, baseOwner, baseRepo, baseOwner, baseBranch, headOwner, branch, prCommentSuffix)
+		editorInit := new(bytes.Buffer)
+		err = tmpl.Execute(editorInit, map[string]any{
+			"Title":      title,
+			"Body":       body,
+			"BaseOwner":  baseOwner,
+			"BaseRepo":   baseRepo,
+			"BaseBranch": baseBranch,
+			"HeadOwner":  headOwner,
+			"Branch":     branch,
+		})
+		if err != nil {
+			return err
+		}
 		newMsg, err := cc.editor.open(ctx, "PR_EDITMSG.md", editorInit.Bytes())
 		if err != nil {
 			return err
@@ -306,12 +316,10 @@ func readPullRequestTemplate(ctx context.Context, g *git.Git) string {
 	return ""
 }
 
-const (
-	prCommentPrefix = "[comment]: # ("
-	prCommentSuffix = ")"
-)
-
 func parseEditedPullRequestMessage(b []byte) (title, body string, _ error) {
+	const prCommentPrefix = "[comment]: # ("
+	const prCommentSuffix = ")"
+
 	// Split into lines.
 	lines := bytes.Split(b, []byte{'\n'})
 	// Strip comment lines.
