@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 Version 1.3.1 includes a small change to `requestpull` and performance improvements.
 
+[1.3.1]: https://github.com/gg-scm/gg/releases/tag/v1.3.1
+
 ### Changed
 
 - `requestpull` now uses a Markdown-compatible comment syntax
