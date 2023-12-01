@@ -4,9 +4,11 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
-[Unreleased]: https://github.com/gg-scm/gg/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/gg-scm/gg/compare/v1.3.1...HEAD
 
-## [Unreleased][]
+## [1.3.1][] - 2023-12-01
+
+Version 1.3.1 includes a small change to `requestpull` and performance improvements.
 
 ### Changed
 
