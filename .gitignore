@@ -4,6 +4,7 @@
 
 # Go
 ## Binaries
+/gg
 /cmd/gg/gg
 *.exe
 *.exe~
