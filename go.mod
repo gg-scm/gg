@@ -23,4 +23,16 @@ require (
 	golang.org/x/exp v0.0.0-20230728194245-b0cb94b80691
 	golang.org/x/sys v0.1.0
 	golang.org/x/tools v0.2.0
+	zombiezen.com/go/sqlite v0.13.1
+)
+
+require (
+	github.com/dustin/go-humanize v1.0.0 // indirect
+	github.com/google/uuid v1.3.0 // indirect
+	github.com/mattn/go-isatty v0.0.16 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	modernc.org/libc v1.22.3 // indirect
+	modernc.org/mathutil v1.5.0 // indirect
+	modernc.org/memory v1.5.0 // indirect
+	modernc.org/sqlite v1.21.1 // indirect
 )
