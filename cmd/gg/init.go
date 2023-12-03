@@ -16,6 +16,8 @@ package main
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	"gg-scm.io/tool/internal/flag"
 )
@@ -26,6 +28,7 @@ func init_(ctx context.Context, cc *cmdContext, args []string) error {
 	f := flag.NewFlagSet(true, "gg init [DEST]", initSynopsis+`
 
 	If no directory is given, the current directory is used.`)
+	reindex := f.Bool("reindex", false, "clean the gg repository cache")
 	if err := f.Parse(args); flag.IsHelp(err) {
 		f.Help(cc.stdout)
 		return nil
@@ -42,5 +45,21 @@ func init_(ctx context.Context, cc *cmdContext, args []string) error {
 	if err := cc.git.Init(ctx, dst); err != nil {
 		return err
 	}
+
+	newGit := cc.git.WithDir(dst)
+	commonDir, err := newGit.CommonDir(ctx)
+	if err != nil {
+		return err
+	}
+	if *reindex {
+		if err := os.Remove(filepath.Join(commonDir, repoCacheFileName)); err != nil {
+			return err
+		}
+	}
+	cache, err := openRepoCache(ctx, commonDir, true)
+	if err != nil {
+		return err
+	}
+	cache.Close()
 	return nil
 }

@@ -32,7 +32,9 @@ import (
 	"strings"
 
 	"gg-scm.io/pkg/git"
+	"gg-scm.io/pkg/git/packfile/client"
 	"gg-scm.io/tool/internal/flag"
+	"gg-scm.io/tool/internal/repocache"
 	"gg-scm.io/tool/internal/sigterm"
 )
 
@@ -299,6 +301,30 @@ func dispatch(ctx context.Context, cc *cmdContext, globalFlags *flag.FlagSet, na
 	default:
 		return usagef("unknown command %s", name)
 	}
+}
+
+const repoCacheFileName = "gg-cache.db"
+
+func openRepoCache(ctx context.Context, commonDir string, sync bool) (*repocache.Cache, error) {
+	cache, err := repocache.Open(ctx, filepath.Join(commonDir, repoCacheFileName))
+	if err != nil {
+		return nil, err
+	}
+	if !sync {
+		return cache, nil
+	}
+	remote, err := client.NewRemote(client.URLFromPath(commonDir), &client.Options{
+		UserAgent: userAgentString(),
+	})
+	if err != nil {
+		cache.Close()
+		return nil, fmt.Errorf("open repository cache for %s: %v", commonDir, err)
+	}
+	if err := cache.CopyFrom(ctx, remote); err != nil {
+		cache.Close()
+		return nil, fmt.Errorf("open repository cache for %s: %v", commonDir, err)
+	}
+	return cache, nil
 }
 
 // Build information filled in at link time (see -X link flag).
