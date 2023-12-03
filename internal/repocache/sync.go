@@ -58,6 +58,9 @@ func (c *Cache) CopyFrom(ctx context.Context, remote *client.Remote) (err error)
 	for _, ref := range refs {
 		req.Want = append(req.Want, ref.ObjectID)
 	}
+	if len(req.Want) == 0 {
+		return nil
+	}
 	resp, err := stream.Negotiate(req)
 	if err != nil {
 		return fmt.Errorf("cache git data: %v", err)
