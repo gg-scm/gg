@@ -42,9 +42,9 @@ create table "commits" (
 
   "committer" integer
     references "users",
-  "committer_timestamp" integer,
-  "committer_tzoffset_mins" integer
-    check ("committer_tzoffset_mins" is null or abs("committer_tzoffset_mins") < 60 * 100),
+  "commit_timestamp" integer,
+  "commit_tzoffset_mins" integer
+    check ("commit_tzoffset_mins" is null or abs("commit_tzoffset_mins") < 60 * 100),
 
   "message" text
 );

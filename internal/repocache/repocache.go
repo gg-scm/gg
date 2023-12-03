@@ -40,6 +40,7 @@ const (
 )
 
 //go:embed schema.sql
+//go:embed commits/*.sql
 //go:embed objects/*.sql
 var sqlFiles embed.FS
 
@@ -115,13 +116,13 @@ func (c *Cache) Cat(ctx context.Context, dst io.Writer, id githash.SHA1) (_ obje
 	c.conn.SetInterrupt(ctx.Done())
 	defer c.conn.SetInterrupt(nil)
 	defer sqlitex.Transaction(c.conn)(&err)
-
-	return c.cat(dst, id)
+	_, tp, err := cat(c.conn, dst, id)
+	return tp, err
 }
 
-func (c *Cache) stat(id githash.SHA1) (oid int64, tp object.Type, uncompressedSize int64, err error) {
+func stat(conn *sqlite.Conn, id githash.SHA1) (oid int64, tp object.Type, uncompressedSize int64, err error) {
 	uncompressedSize = -1
-	err = sqlitex.ExecuteTransientFS(c.conn, sqlFiles, "objects/find.sql", &sqlitex.ExecOptions{
+	err = sqlitex.ExecuteTransientFS(conn, sqlFiles, "objects/find.sql", &sqlitex.ExecOptions{
 		Named: map[string]any{
 			":sha1": id[:],
 		},
@@ -141,38 +142,38 @@ func (c *Cache) stat(id githash.SHA1) (oid int64, tp object.Type, uncompressedSi
 	return oid, tp, uncompressedSize, nil
 }
 
-func (c *Cache) cat(dst io.Writer, id githash.SHA1) (_ object.Type, err error) {
-	defer sqlitex.Save(c.conn)(&err)
+func cat(conn *sqlite.Conn, dst io.Writer, id githash.SHA1) (oid int64, _ object.Type, err error) {
+	defer sqlitex.Save(conn)(&err)
 
-	oid, tp, uncompressedSize, err := c.stat(id)
+	oid, tp, uncompressedSize, err := stat(conn, id)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
-	compressedContent, err := c.conn.OpenBlob("", objectsTable, contentColumn, oid, false)
+	compressedContent, err := conn.OpenBlob("", objectsTable, contentColumn, oid, false)
 	if err != nil {
-		return "", fmt.Errorf("read git object %v: %v", id, err)
+		return 0, "", fmt.Errorf("read git object %v: %v", id, err)
 	}
 	defer compressedContent.Close()
 	h := sha1.New()
 	h.Write(object.AppendPrefix(nil, tp, uncompressedSize))
 	uncompressedContent, err := zlib.NewReader(compressedContent)
 	if err != nil {
-		return "", fmt.Errorf("read git object %v: %v", id, err)
+		return 0, "", fmt.Errorf("read git object %v: %v", id, err)
 	}
 	gotSize, err := io.Copy(io.MultiWriter(h, dst), uncompressedContent)
 	uncompressedContent.Close()
 	if err != nil {
-		return "", fmt.Errorf("read git object %v: %v", id, err)
+		return 0, "", fmt.Errorf("read git object %v: %v", id, err)
 	}
 	if gotSize != uncompressedSize {
-		return "", fmt.Errorf("read git object %v: corrupted content (advertised size was %d bytes; found %d bytes)", id, uncompressedSize, gotSize)
+		return 0, "", fmt.Errorf("read git object %v: corrupted content (advertised size was %d bytes; found %d bytes)", id, uncompressedSize, gotSize)
 	}
 	var gotHash githash.SHA1
 	h.Sum(gotHash[:0])
 	if gotHash != id {
-		return "", fmt.Errorf("read git object %v: corrupted content (hash = %v)", id, gotHash)
+		return 0, "", fmt.Errorf("read git object %v: corrupted content (hash = %v)", id, gotHash)
 	}
-	return tp, nil
+	return oid, tp, nil
 }
 
 // Close releases all resources associated with the cache connection.

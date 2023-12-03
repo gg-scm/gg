@@ -18,11 +18,15 @@ package repocache
 
 import (
 	"bufio"
+	"bytes"
 	"compress/zlib"
 	"context"
 	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"strings"
+	"time"
 
 	"gg-scm.io/pkg/git/githash"
 	"gg-scm.io/pkg/git/object"
@@ -127,8 +131,12 @@ func (c *Cache) CopyFrom(ctx context.Context, remote *client.Remote) (err error)
 		}
 	}
 
-	// TODO(now): Index inserted objects.
-	_ = newCommits
+	for _, id := range newCommits {
+		if err := indexCommit(c.conn, id); err != nil {
+			// TODO(soon): Failing to index should not abort the entire operation.
+			return err
+		}
+	}
 
 	return nil
 }
@@ -173,6 +181,61 @@ func insertObject(conn *sqlite.Conn, insertStmt *sqlite.Stmt, name githash.SHA1,
 		return false, closeErr
 	}
 	return true, nil
+}
+
+func indexCommit(conn *sqlite.Conn, id githash.SHA1) (err error) {
+	defer sqlitex.Save(conn)(&err)
+
+	buf := new(bytes.Buffer)
+	oid, tp, err := cat(conn, buf, id)
+	if err != nil {
+		return fmt.Errorf("index commit %v: %v", id, err)
+	}
+	if tp != object.TypeCommit {
+		return fmt.Errorf("index commit %v: not a commit (found %v)", id, tp)
+	}
+	parsed, err := object.ParseCommit(buf.Bytes())
+	if err != nil {
+		return fmt.Errorf("index commit %v: %v", id, err)
+	}
+
+	err = sqlitex.ExecuteScriptFS(conn, sqlFiles, "commits/upsert.sql", &sqlitex.ExecOptions{
+		Named: map[string]any{
+			":oid":                  oid,
+			":tree":                 parsed.Tree[:],
+			":parents":              jsonSHA1Array(parsed.Parents),
+			":author":               string(parsed.Author),
+			":author_timestamp":     parsed.AuthorTime.Unix(),
+			":author_tzoffset_mins": tzOffsetMinutes(parsed.AuthorTime),
+			":committer":            string(parsed.Committer),
+			":commit_timestamp":     parsed.CommitTime.Unix(),
+			":commit_tzoffset_mins": tzOffsetMinutes(parsed.CommitTime),
+			":message":              parsed.Message,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("index commit %v: %v", id, err)
+	}
+
+	return nil
+}
+
+func tzOffsetMinutes(t time.Time) int {
+	_, off := t.Zone()
+	return off / 60
+}
+
+func jsonSHA1Array(s []githash.SHA1) string {
+	sb := new(strings.Builder)
+	sb.WriteString("[")
+	enc := hex.NewEncoder(sb)
+	for _, id := range s {
+		sb.WriteString(`"`)
+		enc.Write(id[:])
+		sb.WriteString(`"`)
+	}
+	sb.WriteString("]")
+	return sb.String()
 }
 
 const syncPageSize = 32 << 10 // 32 KiB
