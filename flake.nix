@@ -18,7 +18,7 @@
       {
         packages = gitPackages // {
           default = pkgs.callPackage ./. {
-            buildGoModule = pkgs.buildGo120Module;
+            buildGoModule = pkgs.buildGo121Module;
             commit = self.sourceInfo.rev or null;
           };
         };

@@ -14,7 +14,7 @@
 
 module gg-scm.io/tool
 
-go 1.20
+go 1.21.4
 
 require (
 	gg-scm.io/pkg/ghdevice v0.1.0
