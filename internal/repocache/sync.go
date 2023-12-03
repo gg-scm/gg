@@ -229,7 +229,10 @@ func jsonSHA1Array(s []githash.SHA1) string {
 	sb := new(strings.Builder)
 	sb.WriteString("[")
 	enc := hex.NewEncoder(sb)
-	for _, id := range s {
+	for i, id := range s {
+		if i > 0 {
+			sb.WriteString(`,`)
+		}
 		sb.WriteString(`"`)
 		enc.Write(id[:])
 		sb.WriteString(`"`)
