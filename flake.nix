@@ -14,6 +14,15 @@
         gitPackages = (pkgs.lib.attrsets.filterAttrs
           (k: _: pkgs.lib.strings.hasPrefix "git_" k)
           gg-git.packages.${system});
+
+        inherit (pkgs.lib.attrsets) mapAttrs' nameValuePair optionalAttrs;
+
+        mkCheck = git: self.packages.${system}.default.override {
+          inherit git;
+          doCheck = true;
+        };
+
+        gitChecks = mapAttrs' (name: git: nameValuePair ("with_" + name) (mkCheck git)) gitPackages;
       in
       {
         packages = gitPackages // {
@@ -29,15 +38,19 @@
         };
 
         devShells.default = pkgs.mkShell {
+          inputsFrom = [ self.packages.${system}.default ];
+
           packages = [
             pkgs.git
             pkgs.go-tools # static check
             pkgs.gotools  # stringer, etc.
             pkgs.python3
-
-            self.packages.${system}.default.go
           ];
         };
+
+        checks = {
+          default = mkCheck pkgs.git;
+        } // optionalAttrs pkgs.hostPlatform.isLinux gitChecks;
       }
     );
 }

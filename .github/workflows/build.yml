@@ -24,38 +24,20 @@ jobs:
   linux:
     name: Linux
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        git:
-        - "2.27.0"  # latest
-        - "2.25.1"  # Ubuntu LTS 20.04 focal
-        - "2.20.1"  # Debian buster
-        - "2.17.1"  # Ubuntu LTS 18.04 bionic
     steps:
     - name: Check out code
       uses: actions/checkout@v3
     - name: Install Nix
       uses: cachix/install-nix-action@v22
     - name: Run tests
-      run: |
-        git_attr="git_$(echo "$GIT_VERSION" | sed -e 's/\./_/g')"
-        nix shell ".#$git_attr" '.#default.go' --command \
-          go test \
-            -mod=readonly \
-            -v \
-            -race \
-            ./...
-      env:
-        GIT_VERSION: ${{ matrix.git }}
+      run: nix flake check
     - name: Build binary
       run: nix develop --command release/build.bash gg
-      if: matrix.git == '2.27.0'
     - name: Upload binary
       uses: actions/upload-artifact@v3
       with:
         name: Linux binary
         path: gg
-      if: matrix.git == '2.27.0'
   mac:
     name: macOS
     runs-on: macOS-latest
@@ -65,16 +47,7 @@ jobs:
     - name: Install Nix
       uses: cachix/install-nix-action@v22
     - name: Run tests
-      run: |
-        git_attr="git_$(echo "$GIT_VERSION" | sed -e 's/\./_/g')"
-        nix shell ".#$git_attr" '.#default.go' --command \
-          go test \
-            -mod=readonly \
-            -v \
-            -race \
-            ./...
-      env:
-        GIT_VERSION: "2.27.0"
+      run: nix flake check
     - name: Build binary
       run: nix develop --command release/build.bash gg
     - name: Upload binary

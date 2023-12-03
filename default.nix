@@ -8,6 +8,7 @@
 , git
 , pandoc
 , commit ? null
+, doCheck ? false
 }:
 
 let
@@ -45,6 +46,17 @@ in buildGoModule {
 
   postBuild = ''
     pandoc --standalone --to man misc/gg.1.md -o misc/gg.1
+  '';
+
+  inherit doCheck;
+  checkFlags = [ "-race" ];
+  checkPhase = ''
+    runHook preCheck
+    export GOFLAGS=''${GOFLAGS//-trimpath/}
+
+    buildGoDir test ./...
+
+    runHook postCheck
   '';
 
   postInstall = ''
