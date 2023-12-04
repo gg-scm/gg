@@ -56,20 +56,8 @@ jobs:
     steps:
     - name: Check out code
       uses: actions/checkout@v3
-    - name: Authenticate to Google Cloud Platform
-      uses: google-github-actions/auth@v1
-      with:
-        workload_identity_provider: ${{ vars.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
-        service_account: ${{ vars.GOOGLE_SERVICE_ACCOUNT }}
-        token_format: access_token
     - name: Install Nix
       uses: cachix/install-nix-action@v22
-    - name: Set up cache
-      uses: zombiezen/setup-nix-cache-action@v0.3.0
-      with:
-        substituters: ${{ vars.SUBSTITUTER }}
-        secret_keys: ${{ secrets.NIX_PRIVATE_KEY }}
-        use_nixcached: true
     - name: Run tests
       run: nix flake check
     - name: Build binary
