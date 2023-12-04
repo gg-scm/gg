@@ -98,4 +98,7 @@ jobs:
       with:
         name: Windows binary
         path: gg.exe
+permissions:
+  contents: read
+  id-token: write
 
