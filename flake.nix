@@ -17,9 +17,15 @@
 
         inherit (pkgs.lib.attrsets) mapAttrs' nameValuePair optionalAttrs;
 
-        mkCheck = git: self.packages.${system}.default.override {
+        mkCheck = git: (self.packages.${system}.default.override {
           inherit git;
           doCheck = true;
+        }).overrideAttrs {
+          name = "gg-check-${git.name}";
+          postInstall = ''
+            rm -rf "$out"
+            touch "$out"
+          '';
         };
 
         gitChecks = mapAttrs' (name: git: nameValuePair ("with_" + name) (mkCheck git)) gitPackages;
