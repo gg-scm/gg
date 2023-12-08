@@ -52,6 +52,8 @@
             pkgs.gotools  # stringer, etc.
             pkgs.python3
           ];
+
+          hardeningDisable = [ "fortify" ];
         };
 
         checks = {

@@ -35,8 +35,8 @@ crawshaw.io/iox v0.0.0-20181124134642-c51c3df30797/go.mod h1:sXBiorCo8c46JlQV3oX
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 gg-scm.io/pkg/ghdevice v0.1.0 h1:WF7J5QPL/D9jMCmycpvb87zJceQwsNTHjU9Mn/2wyAU=
 gg-scm.io/pkg/ghdevice v0.1.0/go.mod h1:Cm60XpVqtWmOy5W109MLJ9KBlw25oHEliw/9ivICTQA=
-gg-scm.io/pkg/git v0.11.0 h1:BJSOJD3sqdgTPVwa3Srj8FztP7IjyqUJuTk3+MvHJFA=
-gg-scm.io/pkg/git v0.11.0/go.mod h1:OcXL1djMu2vkFnUKp32fqRzAeKvPZOIwrQpPtKYDLCo=
+gg-scm.io/pkg/git v0.11.1-0.20231208183014-1bd41b3c42a8 h1:Dj+aRZE6WGElNja37gLgKMdOnDiqBxTGD/fYMA7kaQo=
+gg-scm.io/pkg/git v0.11.1-0.20231208183014-1bd41b3c42a8/go.mod h1:OcXL1djMu2vkFnUKp32fqRzAeKvPZOIwrQpPtKYDLCo=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=

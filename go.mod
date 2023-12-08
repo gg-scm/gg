@@ -18,7 +18,7 @@ go 1.21.4
 
 require (
 	gg-scm.io/pkg/ghdevice v0.1.0
-	gg-scm.io/pkg/git v0.11.0
+	gg-scm.io/pkg/git v0.11.1-0.20231208183014-1bd41b3c42a8
 	github.com/google/go-cmp v0.5.9
 	golang.org/x/exp v0.0.0-20230728194245-b0cb94b80691
 	golang.org/x/sys v0.1.0
