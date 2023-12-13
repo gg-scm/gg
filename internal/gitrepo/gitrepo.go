@@ -48,7 +48,7 @@ type Catter interface {
 	Cat(ctx context.Context, dst io.Writer, tp object.Type, id githash.SHA1) error
 }
 
-// Cat copies the content of the given object from the cache into dst.
+// Cat copies the content of the given object from the repository into dst.
 // If the type of the object requested does not match the requested type
 // and it can be trivially dereferenced to the requested type
 // (e.g. a commit is found during a request for a tree),
@@ -58,7 +58,7 @@ type Catter interface {
 // it's assumed that reading from buf will read the bytes
 // previously written to buf.
 //
-// If cat implements [TypeCatter], it is used instead of reading individual objects.
+// If cat implements [Catter], it is used instead of reading individual objects.
 // buf will not be used in this case.
 func Cat(ctx context.Context, repo Repository, dst io.Writer, wantType object.Type, id githash.SHA1) error {
 	if typeCat, ok := repo.(Catter); ok {
@@ -119,7 +119,6 @@ func Cat(ctx context.Context, repo Repository, dst io.Writer, wantType object.Ty
 			return fmt.Errorf("cat %v %v: %v is a %v", wantType, id, nextID, got.Type)
 		}
 	}
-
 }
 
 // Map is an in-memory implementation of [Repository].
@@ -142,6 +141,15 @@ func (m Map) Stat(ctx context.Context, id githash.SHA1) (object.Prefix, error) {
 		return object.Prefix{}, err
 	}
 	return obj.Prefix(), nil
+}
+
+// Cat copies the content of the given object from the map into dst.
+// If the type of the object requested does not match the requested type
+// and it can be trivially dereferenced to the requested type
+// (e.g. a commit is found during a request for a tree),
+// then the referenced object is written to dst.
+func (m Map) Cat(ctx context.Context, dst io.Writer, tp object.Type, id githash.SHA1) error {
+	return Cat(ctx, onlyRepository{m}, dst, tp, id)
 }
 
 func (m Map) get(ctx context.Context, id githash.SHA1) (Object, error) {
@@ -212,4 +220,9 @@ func (obj Object) SHA1() githash.SHA1 {
 	var id githash.SHA1
 	h.Sum(id[:0])
 	return id
+}
+
+// onlyRepository is a small wrapper type that hides any non-Repository methods.
+type onlyRepository struct {
+	Repository
 }

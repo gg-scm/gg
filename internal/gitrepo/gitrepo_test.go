@@ -29,7 +29,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-var _ Repository = Map(nil)
+var _ interface {
+	Repository
+	Catter
+} = Map(nil)
 
 func TestMap(t *testing.T) {
 	ctx := context.Background()
