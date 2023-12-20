@@ -28,47 +28,62 @@ import (
 	"gg-scm.io/pkg/git/object"
 )
 
-// A type that implements Repository can retrieve Git objects.
+// A type that implements ObjectReader can retrieve Git objects.
 //
 // OpenObject returns a reader for the object with the given hash.
 // If the reader returned from OpenObject returns an EOF,
 // it guarantees that the bytes read match the hash.
 //
 // Stat returns the same information but without returning a reader.
-// This is equivalent to calling OpenObject and immediately calling Close on rc,
-// but implementations may have a more efficient implementation.
-type Repository interface {
+// This is equivalent to calling OpenObject
+// and immediately calling Close on the io.ReadCloser,
+// but implementations may have optimizations.
+type ObjectReader interface {
 	OpenObject(ctx context.Context, id githash.SHA1) (object.Prefix, io.ReadCloser, error)
 	Stat(ctx context.Context, id githash.SHA1) (object.Prefix, error)
 }
 
 // A type that implements Catter can retrieve Git objects
 // and dereference objects to find the object of the correct type.
-type Catter interface {
-	Cat(ctx context.Context, dst io.Writer, tp object.Type, id githash.SHA1) error
-}
-
+//
 // Cat copies the content of the given object from the repository into dst.
 // If the type of the object requested does not match the requested type
 // and it can be trivially dereferenced to the requested type
 // (e.g. a commit is found during a request for a tree),
 // then the referenced object is written to dst.
-//
+type Catter interface {
+	Cat(ctx context.Context, dst io.Writer, tp object.Type, id githash.SHA1) error
+}
+
+// Repository groups the [ObjectReader] and [Catter] interfaces.
+type Repository interface {
+	ObjectReader
+	Catter
+}
+
+// fallbackCatter implements [Catter] by performing its own dereferences.
+type fallbackCatter struct {
+	ObjectReader
+}
+
+// NewRepository returns a [Repository] from an [ObjectReader].
+// If r implements [Repository], it is returned as-is.
+// Otherwise, the repository is wrapped with a fallback implementation of [Catter].
+func NewRepository(r ObjectReader) Repository {
+	if cr, ok := r.(Repository); ok {
+		return cr
+	}
+	return fallbackCatter{r}
+}
+
 // The given buffer will be used to store intermediate objects:
 // it's assumed that reading from buf will read the bytes
 // previously written to buf.
-//
-// If cat implements [Catter], it is used instead of reading individual objects.
-// buf will not be used in this case.
-func Cat(ctx context.Context, repo Repository, dst io.Writer, wantType object.Type, id githash.SHA1) error {
-	if typeCat, ok := repo.(Catter); ok {
-		return typeCat.Cat(ctx, dst, wantType, id)
-	}
-
+func (fc fallbackCatter) Cat(ctx context.Context, dst io.Writer, wantType object.Type, id githash.SHA1) error {
 	var nextType object.Type
 	buf := new(bytes.Buffer)
 	for nextID := id; ; {
-		got, r, err := repo.OpenObject(ctx, nextID)
+		got, r, err := fc.OpenObject(ctx, nextID)
 		if err != nil {
 			return fmt.Errorf("cat %v %v: %v", wantType, id, err)
 		}
@@ -149,7 +164,7 @@ func (m Map) Stat(ctx context.Context, id githash.SHA1) (object.Prefix, error) {
 // (e.g. a commit is found during a request for a tree),
 // then the referenced object is written to dst.
 func (m Map) Cat(ctx context.Context, dst io.Writer, tp object.Type, id githash.SHA1) error {
-	return Cat(ctx, onlyRepository{m}, dst, tp, id)
+	return fallbackCatter{m}.Cat(ctx, dst, tp, id)
 }
 
 func (m Map) get(ctx context.Context, id githash.SHA1) (Object, error) {
@@ -220,9 +235,4 @@ func (obj Object) SHA1() githash.SHA1 {
 	var id githash.SHA1
 	h.Sum(id[:0])
 	return id
-}
-
-// onlyRepository is a small wrapper type that hides any non-Repository methods.
-type onlyRepository struct {
-	Repository
 }

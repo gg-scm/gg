@@ -30,7 +30,7 @@ import (
 )
 
 var _ interface {
-	Repository
+	ObjectReader
 	Catter
 } = Map(nil)
 
@@ -75,7 +75,7 @@ func TestMap(t *testing.T) {
 	}
 }
 
-func TestCat(t *testing.T) {
+func TestFallbackCatter(t *testing.T) {
 	repo := make(Map)
 	blobID := repo.Add(Object{
 		Type: object.TypeBlob,
@@ -196,7 +196,7 @@ func TestCat(t *testing.T) {
 			for _, tp := range knownTypes {
 				buf := new(bytes.Buffer)
 				want, wantsType := test.want[tp]
-				err := Cat(ctx, repo, buf, tp, test.id)
+				err := repo.Cat(ctx, buf, tp, test.id)
 				if !wantsType {
 					if err == nil {
 						t.Errorf("Cat(ctx, repo, buf, %q, %v) did not return error", tp, test.id)
