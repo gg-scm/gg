@@ -85,7 +85,7 @@ func (fc fallbackCatter) Cat(ctx context.Context, dst io.Writer, wantType object
 	for nextID := id; ; {
 		got, r, err := fc.OpenObject(ctx, nextID)
 		if err != nil {
-			return fmt.Errorf("cat %v %v: %v", wantType, id, err)
+			return fmt.Errorf("cat %v %v: %w", wantType, id, err)
 		}
 		if got.Type == wantType {
 			_, err := io.Copy(dst, r)

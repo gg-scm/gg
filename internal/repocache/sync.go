@@ -18,7 +18,6 @@ package repocache
 
 import (
 	"bufio"
-	"bytes"
 	"compress/zlib"
 	"context"
 	"crypto/sha1"
@@ -189,15 +188,21 @@ func insertObject(conn *sqlite.Conn, insertStmt *sqlite.Stmt, name githash.SHA1,
 func indexCommit(conn *sqlite.Conn, id githash.SHA1) (err error) {
 	defer sqlitex.Save(conn)(&err)
 
-	buf := new(bytes.Buffer)
-	oid, tp, err := cat(conn, buf, id)
+	oid, prefix, rc, err := openObject(conn, id)
 	if err != nil {
 		return fmt.Errorf("index commit %v: %v", id, err)
 	}
-	if tp != object.TypeCommit {
-		return fmt.Errorf("index commit %v: not a commit (found %v)", id, tp)
+	if prefix.Type != object.TypeCommit {
+		rc.Close()
+		return fmt.Errorf("index commit %v: not a commit (found %v)", id, prefix.Type)
 	}
-	parsed, err := object.ParseCommit(buf.Bytes())
+	buf := make([]byte, prefix.Size)
+	_, err = io.ReadFull(rc, buf)
+	rc.Close()
+	if err != nil {
+		return fmt.Errorf("index commit %v: %v", id, err)
+	}
+	parsed, err := object.ParseCommit(buf)
 	if err != nil {
 		return fmt.Errorf("index commit %v: %v", id, err)
 	}

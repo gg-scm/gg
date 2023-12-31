@@ -29,6 +29,7 @@ import (
 	"gg-scm.io/pkg/git/object"
 	"gg-scm.io/pkg/git/packfile/client"
 	"gg-scm.io/tool/internal/filesystem"
+	"gg-scm.io/tool/internal/gitrepo"
 	"github.com/google/go-cmp/cmp"
 	"zombiezen.com/go/sqlite"
 	"zombiezen.com/go/sqlite/sqlitex"
@@ -185,12 +186,9 @@ func TestCopyFrom(t *testing.T) {
 	}
 
 	got := new(bytes.Buffer)
-	gotType, err := cache.Cat(ctx, got, commitObjectName)
+	err = gitrepo.NewRepository(cache).Cat(ctx, got, object.TypeCommit, commitObjectName)
 	if err != nil {
 		t.Fatal("Cat:", err)
-	}
-	if wantType := object.TypeCommit; gotType != wantType {
-		t.Errorf("type = %q; want %q", gotType, wantType)
 	}
 	if diff := cmp.Diff(want, got.Bytes()); diff != "" {
 		t.Errorf("content (-want +got):\n%s", diff)
